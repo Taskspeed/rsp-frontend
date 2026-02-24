@@ -113,9 +113,6 @@ import { ref, computed, onMounted, watch } from "vue";
 import { usePlantillaStore } from "stores/plantillaStore";
 import { uid } from "quasar";
 import PlantillaReport from "src/components/Reports/PlantillaReport.vue";
-import { usePlantillaReportStore } from "stores/plantillaReportStore"; // ✅ Import report store
-
-const plantillaReportStore = usePlantillaReportStore(); // ✅ Get store instance
 
 const props = defineProps({
   positions: {
@@ -123,9 +120,6 @@ const props = defineProps({
     required: true,
   },
 });
-const handleDialogClose = () => {
-  plantillaReportStore.reset();
-};
 
 const showPrintDialog = ref(false);
 
