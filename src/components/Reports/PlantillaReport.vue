@@ -3,7 +3,15 @@
     <q-card-section class="row items-center q-pb-none">
       <div class="text-h6">Plantilla Report</div>
       <q-space />
-      <q-btn icon="close" flat round dense v-close-popup />
+      <q-btn
+        icon="close"
+        flat
+        round
+        dense
+        @click="handleClose"
+        :loading="cancelling"
+        :disable="cancelling"
+      />
     </q-card-section>
 
     <q-separator />
@@ -58,7 +66,7 @@
 
       <!-- PDF Viewer -->
       <iframe
-        v-if="pdfUrl"
+        v-if="pdfUrl && !errorMessage"
         :src="pdfUrl"
         style="width: 100%; height: 100%; border: none"
         type="application/pdf"

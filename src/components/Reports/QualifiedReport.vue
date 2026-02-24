@@ -16,9 +16,9 @@
         <div>Loading report...</div>
       </div>
       <div
-        v-if="!  pdfUrl && ! isLoading"
+        v-if="!pdfUrl && !isLoading"
         class="column items-center justify-center text-grey q-gutter-sm"
-        style="height:   100%"
+        style="height: 100%"
       >
         <q-spinner color="primary" size="32px" />
         <div>Generating PDF preview...</div>
@@ -27,7 +27,7 @@
       <iframe
         v-if="pdfUrl"
         :src="pdfUrl"
-        style="width: 100%; height:   100%; border: none"
+        style="width: 100%; height: 100%; border: none"
         type="application/pdf"
       ></iframe>
     </div>
@@ -62,7 +62,7 @@
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result);
         reader.onerror = reject;
-        reader.  readAsDataURL(blob);
+        reader.readAsDataURL(blob);
       });
     } catch (error) {
       console.error('Error loading image:', error);
@@ -74,7 +74,7 @@
   async function fetchReportData() {
     try {
       isLoading.value = true;
-      const response = await summaryReportStore. fetchQualifiedReport(props.publicationDate);
+      const response = await summaryReportStore.fetchQualifiedReport(props.publicationDate);
       reportData.value = response;
       console.log('Report data:', response);
     } catch (error) {
@@ -92,10 +92,18 @@
   function formatDateRange(fromDate, toDate) {
     const from = new Date(fromDate);
     const to = new Date(toDate);
-    
-    const fromStr = from.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    const toStr = to.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    
+
+    const fromStr = from.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+    const toStr = to.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
     return `${fromStr} - ${toStr}`;
   }
 
@@ -106,7 +114,7 @@
     if (applicant.experience && applicant.experience.length > 0) {
       experienceList = applicant.experience
         .map((exp) => {
-          const dateRange = formatDateRange(exp. work_date_from, exp.work_date_to);
+          const dateRange = formatDateRange(exp.work_date_from, exp.work_date_to);
           const position = exp.position_title || 'N/A';
           const department = exp.department || '';
           return `• ${position}${department ? ' at ' + department : ''} (${dateRange})`;
@@ -116,19 +124,19 @@
 
     // If no experience required or empty, just return total experience
     if (
-      ! requiredExperience ||
+      !requiredExperience ||
       requiredExperience === 'None required' ||
       requiredExperience === '' ||
-      requiredExperience.  toLowerCase().includes('none')
+      requiredExperience.toLowerCase().includes('none')
     ) {
-      if (!  applicant.experience || applicant.  experience.  length === 0) {
+      if (!applicant.experience || applicant.experience.length === 0) {
         return { display: 'No experience', totalYears: 0, totalMonths: 0 };
       }
 
       let totalYears = 0;
       let totalMonths = 0;
 
-      applicant.experience.  forEach((exp) => {
+      applicant.experience.forEach((exp) => {
         const from = new Date(exp.work_date_from);
         const to = new Date(exp.work_date_to);
         const diffTime = Math.abs(to - from);
@@ -154,9 +162,9 @@
     let totalMonths = 0;
 
     if (applicant.experience && applicant.experience.length > 0) {
-      applicant.experience.  forEach((exp) => {
-        const from = new Date(exp.  work_date_from);
-        const to = new Date(exp.  work_date_to);
+      applicant.experience.forEach((exp) => {
+        const from = new Date(exp.work_date_from);
+        const to = new Date(exp.work_date_to);
         const diffTime = Math.abs(to - from);
         const diffMonths = diffTime / (1000 * 60 * 60 * 24 * 30.44);
 
@@ -174,7 +182,7 @@
     if (!requiredYearsMatch) {
       // Can't parse required experience, just return total
       if (totalYears === 0 && totalMonths === 0) {
-        return { display: 'No experience', totalYears:   0, totalMonths: 0 };
+        return { display: 'No experience', totalYears: 0, totalMonths: 0 };
       }
       return {
         display: `*${totalYears} year(s) and ${totalMonths} month(s)\n${experienceList}`,
@@ -184,7 +192,7 @@
     }
 
     const requiredYears = parseInt(requiredYearsMatch[1]);
-    
+
     // If no experience at all
     if (totalYears === 0 && totalMonths === 0) {
       return { display: 'Not enough experience', totalYears: 0, totalMonths: 0 };
@@ -205,12 +213,12 @@
     } else if (percentage >= 1) {
       percentageRange = '100%-199%';
     } else {
-      return { 
-        display: `Not enough experience\n${experienceList}`, 
-        totalYears, 
+      return {
+        display: `Not enough experience\n${experienceList}`,
+        totalYears,
         totalMonths,
         percentage,
-        isInsufficient: true
+        isInsufficient: true,
       };
     }
 
@@ -220,31 +228,32 @@
       totalMonths,
       percentage,
       percentageRange,
-      isInsufficient: false
+      isInsufficient: false,
     };
   }
 
   // Helper function to format education with units - DISPLAY ALL EDUCATION
   function formatEducation(applicant) {
     let educationText = 'N/A';
-    
+
     if (applicant.education && applicant.education.length > 0) {
       // Display ALL education entries
       educationText = applicant.education
         .map((edu) => {
           const degree = edu.degree || edu.course || edu.level;
           const units = edu.highest_units || '';
-          return degree ?   `${degree}${units ?   ' (' + units + ')' : ''}` : '';
+          return degree ? `${degree}${units ? ' (' + units + ')' : ''}` : '';
         })
         .filter((e) => e)
         .join('\n'); // Use newline to separate each education entry
     } else if (
-      applicant.education_text && 
-      applicant.education_text !== 'No relevant education based on the specific requirement of the position.'
+      applicant.education_text &&
+      applicant.education_text !==
+        'No relevant education based on the specific requirement of the position.'
     ) {
       educationText = applicant.education_text;
     }
-    
+
     return educationText;
   }
 
@@ -253,45 +262,45 @@
     // Calculate total training hours
     let totalHours = 0;
     if (applicant.training && applicant.training.length > 0) {
-      totalHours = applicant.training.  reduce(
+      totalHours = applicant.training.reduce(
         (sum, t) => sum + (parseInt(t.number_of_hours) || 0),
         0,
       );
     }
 
     // Check if no training is required
-    const noTrainingRequired = 
-      !requiredTraining || 
-      requiredTraining.  toUpperCase() === 'NONE REQUIRED' || 
+    const noTrainingRequired =
+      !requiredTraining ||
+      requiredTraining.toUpperCase() === 'NONE REQUIRED' ||
       requiredTraining === '';
 
     if (noTrainingRequired) {
       if (totalHours === 0) {
         return 'No training';
       }
-      
+
       // List all trainings with hours
       const trainingList = applicant.training
         .map((t) => `• ${t.training_title} (${t.number_of_hours} hours)`)
         .join('\n');
-      
+
       return `${totalHours} hours total trainings\n${trainingList}`;
     }
 
     // Extract required hours from the training requirement
-    const requiredHoursMatch = requiredTraining.  match(/(\d+)\s*hour/i);
-    
+    const requiredHoursMatch = requiredTraining.match(/(\d+)\s*hour/i);
+
     if (!requiredHoursMatch) {
       // Can't parse required hours, just show total
       if (totalHours === 0) {
         return 'No training';
       }
-      
+
       // List all trainings with hours
       const trainingList = applicant.training
         .map((t) => `• ${t.training_title} (${t.number_of_hours} hours)`)
         .join('\n');
-      
+
       return `${totalHours} hour(s)\n${trainingList}`;
     }
 
@@ -315,13 +324,13 @@
 
   // Generate table rows from report data
   function generateTableRows() {
-    if (!reportData.  value || !  reportData. value. jobPosts) {
+    if (!reportData.value || !reportData.value.jobPosts) {
       return [];
     }
 
     const rows = [];
 
-    reportData.value.jobPosts.  forEach((jobPost) => {
+    reportData.value.jobPosts.forEach((jobPost) => {
       // Position header row (gray background)
       rows.push([
         {
@@ -345,7 +354,7 @@
           fillColor: '#d9d9d9',
         },
         {
-          text: jobPost. criteria?.Training || '',
+          text: jobPost.criteria?.Training || '',
           style: 'positionRow',
           fillColor: '#d9d9d9',
         },
@@ -359,7 +368,7 @@
       // Applicant rows
       if (jobPost.applicants && jobPost.applicants.length > 0) {
         // Remove duplicates based on firstname + lastname
-        const uniqueApplicants = jobPost.applicants. filter(
+        const uniqueApplicants = jobPost.applicants.filter(
           (applicant, index, self) =>
             index ===
             self.findIndex(
@@ -367,7 +376,7 @@
             ),
         );
 
-        uniqueApplicants. forEach((applicant) => {
+        uniqueApplicants.forEach((applicant) => {
           // Applicant name
           const applicantName = `${applicant.firstname || ''} ${applicant.lastname || ''}`.trim();
           const statusLabel =
@@ -388,8 +397,8 @@
 
           // Eligibility
           let eligibilityText = 'None';
-          if (applicant.  eligibility && applicant.eligibility. length > 0) {
-            eligibilityText = applicant. eligibility
+          if (applicant.eligibility && applicant.eligibility.length > 0) {
+            eligibilityText = applicant.eligibility
               .map((e) => e.eligibility || e.title)
               .filter((e) => e)
               .join(', ');
@@ -398,7 +407,7 @@
             applicant.eligibility_text !==
               'No relevant eligibility based on the specific requirement of the position.'
           ) {
-            eligibilityText = applicant.  eligibility_text;
+            eligibilityText = applicant.eligibility_text;
           }
 
           rows.push([
@@ -407,7 +416,7 @@
               style: 'applicantRow',
             },
             {
-              text:   `${applicantName} ${statusLabel}`,
+              text: `${applicantName} ${statusLabel}`,
               style: 'applicantRow',
             },
             {
@@ -416,18 +425,18 @@
               fontSize: 8,
             },
             {
-              text:   experienceText,
-              style:   'applicantRow',
+              text: experienceText,
+              style: 'applicantRow',
               fontSize: 8,
-              color: experienceResult.isInsufficient ?   'red' : 'black',
+              color: experienceResult.isInsufficient ? 'red' : 'black',
             },
             {
               text: trainingText,
-              style:  'applicantRow',
+              style: 'applicantRow',
               fontSize: 8,
             },
             {
-              text:   eligibilityText,
+              text: eligibilityText,
               style: 'applicantRow',
               fontSize: 8,
             },
@@ -450,14 +459,14 @@
   }
 
   async function generatePdfContent() {
-    if (!reportData. value) {
+    if (!reportData.value) {
       console.error('No report data available');
       return;
     }
 
-    if (pdfUrl.  value) {
-      URL.revokeObjectURL(pdfUrl. value);
-      pdfUrl. value = null;
+    if (pdfUrl.value) {
+      URL.revokeObjectURL(pdfUrl.value);
+      pdfUrl.value = null;
     }
 
     // Load logo image
@@ -466,7 +475,7 @@
     import('pdfmake/build/pdfmake').then((pdfMakeModule) => {
       const pdfMake = pdfMakeModule.default || pdfMakeModule;
       import('pdfmake/build/vfs_fonts').then((vfsFontsModule) => {
-        pdfMake.vfs = vfsFontsModule?.pdfMake?. vfs || vfsFontsModule?.vfs || vfsFontsModule;
+        pdfMake.vfs = vfsFontsModule?.pdfMake?.vfs || vfsFontsModule?.vfs || vfsFontsModule;
 
         const tableRows = generateTableRows();
 
@@ -528,15 +537,15 @@
                       stack: [
                         {
                           text: 'REPUBLIC OF THE PHILIPPINES',
-                          fontSize:  8,
+                          fontSize: 8,
                           color: '#00703c',
                           alignment: 'left',
                           margin: [0, 20, 0, 2],
                         },
                         {
                           text: 'PROVINCE OF DAVAO DEL NORTE',
-                          fontSize:   8,
-                          color:   '#00703c',
+                          fontSize: 8,
+                          color: '#00703c',
                           alignment: 'left',
                           margin: [0, 0, 0, 2],
                         },
@@ -544,14 +553,14 @@
                           text: 'CITY OF TAGUM',
                           fontSize: 10,
                           bold: true,
-                          color:   '#00703c',
+                          color: '#00703c',
                           alignment: 'left',
                         },
                         {
                           text: 'CITY HUMAN RESOURCE MANAGEMENT OFFICE',
-                          fontSize:  13,
+                          fontSize: 13,
                           bold: true,
-                          color:  'white',
+                          color: 'white',
                           margin: [0, 5, 0, 0],
                         },
                       ],
@@ -588,8 +597,8 @@
                   [
                     { text: 'Plantilla Code', style: 'tableHeader', rowSpan: 2 },
                     {
-                      text:   "Position Title with Applicant's Name",
-                      style:  'tableHeader',
+                      text: "Position Title with Applicant's Name",
+                      style: 'tableHeader',
                       rowSpan: 2,
                     },
                     { text: 'Qualification Standards', style: 'tableHeader', colSpan: 4 },
@@ -601,14 +610,14 @@
                   [
                     {},
                     {},
-                    { text: 'Education', style:   'tableHeader' },
-                    { text: 'Experience', style:  'tableHeader' },
+                    { text: 'Education', style: 'tableHeader' },
+                    { text: 'Experience', style: 'tableHeader' },
                     { text: 'Training', style: 'tableHeader' },
-                    { text:   'Eligibility', style:   'tableHeader' },
+                    { text: 'Eligibility', style: 'tableHeader' },
                   ],
 
                   // Data rows
-                  ...  tableRows,
+                  ...tableRows,
                 ],
               },
               layout: {
@@ -633,7 +642,7 @@
                 paddingTop: function () {
                   return 2;
                 },
-                paddingBottom:   function () {
+                paddingBottom: function () {
                   return 2;
                 },
                 fillColor: function (rowIndex) {
@@ -648,11 +657,11 @@
           styles: {
             tableHeader: {
               fontSize: 10,
-              bold:   true,
+              bold: true,
               alignment: 'center',
             },
             positionRow: {
-              fontSize:   9,
+              fontSize: 9,
               bold: true,
               alignment: 'left',
             },
@@ -661,21 +670,21 @@
               alignment: 'left',
             },
           },
-          defaultStyle:   {
+          defaultStyle: {
             fontSize: 10,
           },
         };
 
         const pdfDocGenerator = pdfMake.createPdf(docDefinition);
         pdfDocGenerator.getBlob((blob) => {
-          pdfUrl.  value = URL.  createObjectURL(blob);
+          pdfUrl.value = URL.createObjectURL(blob);
         });
       });
     });
   }
 
   onUnmounted(() => {
-    if (pdfUrl. value) URL.revokeObjectURL(pdfUrl.value);
+    if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value);
   });
 
   onMounted(async () => {
@@ -694,6 +703,6 @@
     display: flex;
     flex-direction: column;
     border-radius: 12px;
-    box-shadow:   0 6px 24px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
   }
 </style>

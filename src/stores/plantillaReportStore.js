@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { adminApi } from 'src/boot/axios_admin';
+import axios from 'axios';
 
 export const usePlantillaReportStore = defineStore('plantillaReport', {
   state: () => ({

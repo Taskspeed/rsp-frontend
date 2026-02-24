@@ -17,11 +17,8 @@
         </div>
       </div>
 
-      <!-- <q-dialog v-model="showPrintDialog" persistent>
-        <PlantillaReport />
-      </q-dialog> -->
-      <q-dialog v-model="showPrintDialog" persistent @hide="handleDialogClose">
-        <PlantillaReport />
+      <q-dialog v-model="showPrintDialog" persistent>
+        <PlantillaReport @close="showPrintDialog = false" />
       </q-dialog>
 
       <q-select
