@@ -82,6 +82,7 @@ import { usePlantillaReportStore } from "src/stores/plantillaReportStore.js";
 const pdfUrl = ref(null);
 const plantillaReportStore = usePlantillaReportStore();
 const COLS_COUNT = 16;
+const emit = defineEmits(['close'])
 
 function officeAbbreviation(officeName) {
   if (!officeName) return "";
@@ -689,6 +690,15 @@ onMounted(async () => {
   console.log("Component mounted, fetching report...");
   await plantillaReportStore.fetchReport();
 });
+
+
+
+const handleClose = () =>{
+  plantillaReportStore.cancelRequest();
+  plantillaReportStore.reset();
+  emit('close')
+
+};
 
 onUnmounted(() => {
   console.log("Component unmounting, cancelling request...");

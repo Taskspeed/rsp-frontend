@@ -687,48 +687,92 @@
    * Convert modal format to API format for saving
    * FIXED: Sends proper flat structure with weight and description at section level
    */
-  function convertModalFormatToApiPayload(modalCriteria) {
+  // function convertModalFormatToApiPayload(modalCriteria) {
+  //   const payload = {
+  //     sg_min: String(salaryGradeData.value.sg_min),
+  //     sg_max: String(salaryGradeData.value.sg_max),
+  //   };
+
+  //   // If editing, include the ID
+  //   if (props.mode === 'edit' && props.criteriaId) {
+  //     payload.id = props.criteriaId;
+  //   }
+
+  //   // Helper to convert section to proper API format
+  //   const convertSection = (sectionKey) => {
+  //     const section = modalCriteria[sectionKey];
+  //     const sectionWeight = String(section.weight);
+
+  //     // Combine all breakdown descriptions for the main description field
+  //     let combinedDescription = '';
+  //     if (section.breakdownFields && section.breakdownFields.length > 0) {
+  //       combinedDescription = section.breakdownFields
+  //         .map((field) => field.description || '')
+  //         .filter((desc) => desc.trim())
+  //         .join(' | ');
+  //     }
+
+  //     // Return flat object structure (NOT an array)
+  //     return {
+  //       weight: sectionWeight,
+  //       description: combinedDescription || '',
+  //     };
+  //   };
+
+  //   // Convert all sections to flat objects (NOT arrays)
+  //   payload.education = convertSection('education');
+  //   payload.experience = convertSection('experience');
+  //   payload.training = convertSection('training');
+  //   payload.performance = convertSection('performance');
+  //   payload.behavioral = convertSection('bei');
+
+  //   console.log('=== FINAL PAYLOAD ===');
+  //   console.log(JSON.stringify(payload, null, 2));
+  //   console.log('=== END PAYLOAD ===');
+
+  //   return payload;
+  // }
+
+   function convertModalFormatToApiPayload(modalCriteria) {
     const payload = {
       sg_min: String(salaryGradeData.value.sg_min),
       sg_max: String(salaryGradeData.value.sg_max),
+      education: [],
+      experience: [],
+      training: [],
+      performance: [],
+      behavioral: [],
     };
 
-    // If editing, include the ID
-    if (props.mode === 'edit' && props.criteriaId) {
-      payload.id = props.criteriaId;
-    }
-
-    // Helper to convert section to proper API format
-    const convertSection = (sectionKey) => {
+    // Helper to convert each section
+    const convertSection = (sectionKey, apiKey) => {
       const section = modalCriteria[sectionKey];
-      const sectionWeight = String(section.weight);
 
-      // Combine all breakdown descriptions for the main description field
-      let combinedDescription = '';
       if (section.breakdownFields && section.breakdownFields.length > 0) {
-        combinedDescription = section.breakdownFields
-          .map((field) => field.description || '')
-          .filter((desc) => desc.trim())
-          .join(' | ');
+        // Map each breakdown field to an API item
+        payload[apiKey] = section.breakdownFields.map((field) => ({
+          weight: String(section.weight),
+          description: field.description,
+          percentage: String(field.weight),
+        }));
+      } else {
+        // If no breakdown fields, create a single item
+        payload[apiKey] = [
+          {
+            weight: String(section.weight),
+            description: section.title || '',
+            percentage: String(section.weight),
+          },
+        ];
       }
-
-      // Return flat object structure (NOT an array)
-      return {
-        weight: sectionWeight,
-        description: combinedDescription || '',
-      };
     };
 
-    // Convert all sections to flat objects (NOT arrays)
-    payload.education = convertSection('education');
-    payload.experience = convertSection('experience');
-    payload.training = convertSection('training');
-    payload.performance = convertSection('performance');
-    payload.behavioral = convertSection('bei');
-
-    console.log('=== FINAL PAYLOAD ===');
-    console.log(JSON.stringify(payload, null, 2));
-    console.log('=== END PAYLOAD ===');
+    // Convert all sections
+    convertSection('education', 'education');
+    convertSection('experience', 'experience');
+    convertSection('training', 'training');
+    convertSection('performance', 'performance');
+    convertSection('bei', 'behavioral');
 
     return payload;
   }
