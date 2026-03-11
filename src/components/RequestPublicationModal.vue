@@ -404,7 +404,7 @@
   const filteredOfficeOptions = ref([]);
   const usePublication = usePlantillaPublicationStore();
 
-  // Vacancy status filter — default to 'vacant' (Funded === '1')
+  // Vacancy status filter — default to 'vacant'
   const vacancyFilter = ref('vacant');
   const vacancyOptions = [
     { label: 'All', value: 'all' },
@@ -430,6 +430,24 @@
       field: 'ID',
       align: 'left',
       sortable: true,
+      style: 'width: 4%',
+      headerStyle: 'width: 4%',
+    },
+    {
+      name: 'PageNo',
+      label: 'Page No',
+      field: 'PageNo',
+      align: 'center',
+      sortable: true,
+      style: 'width: 5%',
+      headerStyle: 'width: 5%',
+    },
+    {
+      name: 'ItemNo',
+      label: 'Item No',
+      field: 'ItemNo',
+      align: 'center',
+      sortable: true,
       style: 'width: 5%',
       headerStyle: 'width: 5%',
     },
@@ -440,7 +458,7 @@
       align: 'left',
       sortable: true,
       classes: 'wrap-cell',
-      style: 'width: 39%',
+      style: 'width: 35%',
       headerStyle: 'width: 35%',
     },
     {
@@ -459,8 +477,8 @@
       field: 'Funded',
       align: 'center',
       sortable: true,
-      style: 'width: 10%',
-      headerStyle: 'width: 10%',
+      style: 'width: 5%',
+      headerStyle: 'width: 5%',
     },
     {
       name: 'vacancyStatus',
@@ -473,24 +491,38 @@
     },
   ];
 
+  // Review columns: same base columns + remove button (4+6+6+30+27+7+11+5 = 96% + 3% remove = 99%)
   const reviewColumns = [
-    ...columns,
+    ...columns.map((col) => {
+      // Slightly compress to make room for the remove column
+      const adjustments = {
+        position: '30%',
+        office: '27%',
+        Funded: '7%',
+        vacancyStatus: '11%',
+      };
+      return adjustments[col.name]
+        ? {
+            ...col,
+            style: `width: ${adjustments[col.name]}`,
+            headerStyle: `width: ${adjustments[col.name]}`,
+          }
+        : col;
+    }),
     {
       name: 'remove',
       label: '',
       field: 'remove',
       align: 'center',
-      style: 'width: 50px; max-width: 50px',
-      headerStyle: 'width: 50px; max-width: 50px',
+      style: 'width: 3%',
+      headerStyle: 'width: 3%',
     },
   ];
 
   // ── Helpers ───────────────────────────────────────────────────────
-  // A position is "filled" when Name1 or Name4 has an actual value
+  // A position is "filled" when ControlNo has an actual value
   const isFilled = (row) => {
-    const hasName1 = row.Name1 && row.Name1.trim() !== '';
-    const hasName4 = row.Name4 && row.Name4.trim() !== '';
-    return hasName1 || hasName4;
+    return row.ControlNo && String(row.ControlNo).trim() !== '';
   };
 
   // ── Computed ──────────────────────────────────────────────────────
@@ -513,7 +545,7 @@
       // Office dropdown filter
       const matchOffice = !selectedOfficeFilter.value || row.office === selectedOfficeFilter.value;
 
-      // Vacancy: based on Name1/Name4 presence
+      // Vacancy: based on ControlNo presence
       const filled = isFilled(row);
       const matchVacancy =
         vacancyFilter.value === 'all' ||
