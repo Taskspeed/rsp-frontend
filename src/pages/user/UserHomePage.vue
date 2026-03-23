@@ -222,7 +222,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('tagum-city-hall.webp');
+    background-image: url('tagum-city-hall.png');
     background-size: cover;
     background-position: center;
     filter: brightness(0.5);
