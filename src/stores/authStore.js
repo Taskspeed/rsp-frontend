@@ -1,8 +1,6 @@
-//auth store.js
 import { defineStore } from 'pinia';
 import { adminApi } from 'boot/axios_admin';
-import { toast } from 'src/boot/toast'; // Import toast instance
-// import { useLogsStore } from 'stores/logsStore';
+import { toast } from 'src/boot/toast';
 import { usePlantillaStore } from 'stores/plantillaStore';
 import { Notify } from 'quasar';
 
@@ -10,41 +8,34 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     token: null,
     isAuthenticated: false,
-    user: null, // Store user information
+    user: null,
     loading: false,
     loadUser: false,
-    errors: [],
-    users: [], // Store list of users for management
-    selectedUser: null, // Store selected user details
 
+    // FIX: should be object, because you access errors.name, errors.username, etc.
+    errors: {},
+
+    users: [],
+    selectedUser: null,
   }),
-  actions: {
 
+  actions: {
     async resetPassword(userId) {
       try {
-        await adminApi.post(`/users/reset-password/${userId}`)
-
-        Notify.create({
-          type: 'positive',
-          message: 'Password reset successfully',
-        });
-
+        await adminApi.post(`/users/reset-password/${userId}`);
+        Notify.create({ type: 'positive', message: 'Password reset successfully' });
       } catch (error) {
-        console.log(error)
-        Notify.create({
-          type: 'negative',
-          message: 'Failed to reset password',
-        })
+        console.log(error);
+        Notify.create({ type: 'negative', message: 'Failed to reset password' });
       }
     },
+
     async rater_edit(id, userData) {
       this.loading = true;
       this.errors = {};
       try {
         const token = this.getToken();
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const plantillaStore = usePlantillaStore();
         await plantillaStore.fetch_office_rater();
@@ -59,42 +50,29 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const response = await adminApi.post(`rater/edit/${id}`, formattedData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.data.status) {
           await this.get_all_raters();
           toast.success('Rater updated successfully');
-          return {
-            success: true,
-            data: response.data.data,
-            message: response.data.message,
-          };
-        } else {
-          toast.error(response.data.message || 'Failed to update rater');
-          return {
-            success: false,
-            message: response.data.message || 'Failed to update rater',
-          };
+          return { success: true, data: response.data.data, message: response.data.message };
         }
+
+        toast.error(response.data.message || 'Failed to update rater');
+        return { success: false, message: response.data.message || 'Failed to update rater' };
       } catch (error) {
         this.handleError(error, error.message || 'Failed to update rater');
-        return {
-          success: false,
-          message: error.message || 'Failed to update rater',
-        };
+        return { success: false, message: error.message || 'Failed to update rater' };
       } finally {
         this.loading = false;
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction('update New Rater');
       }
     },
 
     async login(username, password) {
-      this.errors = {}; // Clear previous errors
-      this.loading = true; // Set loading state
+      this.errors = {};
+      this.loading = true;
+
       try {
         const response = await adminApi.post('/login', { username, password });
 
@@ -103,28 +81,24 @@ export const useAuthStore = defineStore('auth', {
           this.isAuthenticated = true;
           this.user = response.data.user;
 
-          // document.cookie = `admin_token=${this.token}; path=/; SameSite=None; Secure`;
           document.cookie = `admin_token=${response.data.token}; path=/`;
 
-          // ✅ Fetch full user with permissions BEFORE redirecting
-           await this.checkAuth();
+          await this.checkAuth();
 
           toast.success('You are now logged in!');
-          this.router.push({ name: 'Admin Dashboard' });
-          this.loading = false;
-        } else {
-          this.loading = false;
-          // Handle backend message
-          if (response.data.errors?.role_id) {
-            toast.error(response.data.errors.role_id[0] || 'Login Failed!');
-          } else {
-            toast.error(response.data.message || 'Login Failed!');
-          }
+          this.router?.push?.({ name: 'Admin Dashboard' });
+          return true;
         }
+
+        if (response.data.errors?.role_id) {
+          toast.error(response.data.errors.role_id[0] || 'Login Failed!');
+        } else {
+          toast.error(response.data.message || 'Login Failed!');
+        }
+
+        return false;
       } catch (error) {
-        // Handle inactive user or other errors
         if (error.response?.status === 403) {
-          // Handle error from backend for non-admin login
           if (error.response.data.errors?.role_id) {
             toast.error(error.response.data.errors.role_id[0]);
           } else {
@@ -134,38 +108,36 @@ export const useAuthStore = defineStore('auth', {
             );
           }
         } else if (error.response?.status === 0 || !error.response) {
-          toast.error(' Please check your internet connection and try again later.');
+          toast.error('Please check your internet connection and try again later.');
         } else {
           toast.error('Login Failed!');
         }
+
         this.errors = error.response?.data?.errors || {};
-        this.loading = false;
+        return false;
       } finally {
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction('Logged In');
+        this.loading = false;
       }
     },
-    // Logout function when it has token
+
     async logout() {
-      this.loading = true; // Set loading state
-      const token = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('admin_token='))
-        ?.split('=')[1];
+      this.loading = true;
+      const token = this.getToken();
+
       try {
         await adminApi.post('/users/logout', null, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        // Clear the local state
+      } catch (error) {
+        toast.error('An error occurred during logout or token error');
+        console.log(error);
+      } finally {
         this.token = null;
         this.isAuthenticated = false;
         this.user = null;
-        this.errors = {}; // Clear previous errors
-        this.loading = false; // Set loading state
-        // Remove the token from cookies (try multiple variants to ensure deletion)
+        this.errors = {};
+        this.loading = false;
+
         const cookieSettings = [
           'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;',
           'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure;',
@@ -175,104 +147,64 @@ export const useAuthStore = defineStore('auth', {
         ];
         cookieSettings.forEach((setting) => (document.cookie = setting));
 
-        toast.success('Logout Success!');
-        this.router.push({ name: 'Admin Login' });
-      } catch (error) {
-        toast.error('An error occurred during logout or token error');
-        console.log(error);
-        this.router.push({ name: 'Admin Login' });
+        this.router?.push?.({ name: 'Admin Login' });
       }
     },
 
-    // checking if the user is authenticated
     async checkAuth() {
-      const token = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('admin_token='))
-        ?.split('=')[1];
-
-      if (token) {
-        try {
-          const res = await adminApi.get('/user', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          // console.log(res);
-          this.token = token;
-          this.isAuthenticated = true;
-          this.user = res.data.data;
-          this.errors = {};
-          this.loading = false;
-          // console.log(res.data.data);
-        } catch (error) {
-          toast.error('Error: ' + error.response.data.message);
-          // Clear all auth-related state and cookies
-          this.token = null;
-          this.isAuthenticated = false;
-          this.user = null;
-          this.errors = {};
-          this.loading = false;
-          const cookieSettings = [
-            'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;',
-            'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure;',
-            'admin_token=; path=/; domain=' +
-              window.location.hostname +
-              '; expires=Thu, 01 Jan 1970 00:00:00 GMT;',
-          ];
-          cookieSettings.forEach((setting) => (document.cookie = setting));
-          this.router.push({ name: 'Admin Login' });
-        }
-      } else {
+      const token = this.getToken();
+      if (!token) {
         this.token = null;
         this.isAuthenticated = false;
         this.user = null;
         this.errors = {};
-        this.loading = false;
+        return false;
       }
 
+      try {
+        const res = await adminApi.get('/user', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        this.token = token;
+        this.isAuthenticated = true;
+        this.user = res.data.data;
+        this.errors = {};
+        return true;
+      } catch (error) {
+        toast.error('Error: ' + (error.response?.data?.message || 'Unauthorized'));
+        await this.logout();
+        return false;
+      }
     },
 
-    // User Management Functions
-
-    // Get all users
     async getAllUsers() {
       this.loadUser = true;
-
       try {
         const token = this.getToken();
-
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const response = await adminApi.get('/users', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.data.status) {
-          this.users = response.data.data;
-          this.loadUser = false;
-          console.log(this.users);
+          this.users = response.data.data || [];
           return this.users;
-        } else {
-          toast.error('Failed to retrieve users');
-          this.loadUser = false;
-          return [];
         }
+
+        toast.error('Failed to retrieve users');
+        this.users = [];
+        return [];
       } catch (error) {
         this.handleError(error, 'Failed to retrieve users');
-        this.loadUser = false;
+        this.users = [];
         return [];
       } finally {
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction('Retrieved User List');
+        this.loadUser = false;
       }
     },
 
-    // Get a specific user by ID
     async getUserById(id) {
       this.loading = true;
       this.errors = {};
@@ -280,33 +212,24 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const token = this.getToken();
-
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const response = await adminApi.get(`/users/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.data.status) {
           this.selectedUser = response.data.data;
-          this.loading = false;
           return this.selectedUser;
-        } else {
-          toast.error('User not found');
-          this.loading = false;
-          return null;
         }
+
+        toast.error('User not found');
+        return null;
       } catch (error) {
         this.handleError(error, 'Failed to retrieve user details');
-        this.loading = false;
         return null;
       } finally {
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction(`Viewed User ID: ${id}`);
+        this.loading = false;
       }
     },
 
@@ -316,105 +239,71 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const token = this.getToken();
-
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        console.log('AuthStore: Sending update request with data:', userData); // Debug log
+        if (!token) throw new Error('No authentication token found');
 
         const response = await adminApi.put(`/users/${id}`, userData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         });
 
-        // console.log('AuthStore: Received response:', response.data); // Debug log
         toast.success('User updated successfully');
-        if (response.data.status) {
-          // Update the user in state if it's the current user
-          if (this.user && this.user.id === id) {
-            this.user = {
-              ...this.user,
-              ...response.data.data,
-            };
-          }
 
-          this.loading = false;
+        if (response.data.status) {
+          if (this.user && this.user.id === id) {
+            this.user = { ...this.user, ...response.data.data };
+          }
           return response.data.data;
         }
 
-        this.loading = false;
         return null;
       } catch (error) {
         toast.error('Error Update User');
-        console.error('AuthStore: Error in updateUser:', error.response || error); // Debug log
-        this.loading = false;
+        this.handleError(error, 'Error Update User');
         throw error;
+      } finally {
+        this.loading = false;
       }
     },
 
-    // Delete a user
     async deleteUser(id) {
       this.loading = true;
       this.errors = {};
 
       try {
         const token = this.getToken();
-
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const response = await adminApi.delete(`/users/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.data.status) {
-          // Remove the user from the users array
           this.users = this.users.filter((user) => user.id !== id);
-
           toast.success('User deleted successfully');
-          this.loading = false;
           return true;
-        } else {
-          toast.error('Failed to delete user');
-          this.loading = false;
-          return false;
         }
+
+        toast.error('Failed to delete user');
+        return false;
       } catch (error) {
         this.handleError(error, 'Failed to delete user');
-        this.loading = false;
         return false;
       } finally {
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction(`Deleted User ID: ${id}`);
+        this.loading = false;
       }
     },
 
-    // Register new user (Admin function)
     async registerUser(userData) {
       this.loading = true;
       this.errors = {};
 
       try {
         const token = this.getToken();
+        if (!token) throw new Error('No authentication token found');
 
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        // Format permissions for the API
         const formattedData = {
           ...userData,
-          // Only include permissions if they exist
           ...(userData.permissions && {
             permissions: {
-
-
               viewDashboardstat: userData.permissions?.viewDashboardstat || '0',
               viewPlantillaAccess: userData.permissions?.viewPlantillaAccess || '0',
               modifyPlantillaAccess: userData.permissions?.modifyPlantillaAccess || '0',
@@ -432,39 +321,27 @@ export const useAuthStore = defineStore('auth', {
         };
 
         const response = await adminApi.post('/registration', formattedData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.data.status) {
-          // Refresh user list after adding a new user
           await this.getAllUsers();
-
           toast.success('User registered successfully');
-          this.loading = false;
           return true;
-        } else {
-          toast.error('Failed to register user');
-          this.loading = false;
-          return false;
         }
+
+        toast.error('Failed to register user');
+        return false;
       } catch (error) {
         this.handleError(error, 'Failed to register user');
-        this.loading = false;
         return false;
       } finally {
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction('Registered New User');
+        this.loading = false;
       }
     },
 
-    // Helper function to get token
     getToken() {
-      if (this.token) {
-        return this.token;
-      }
-
+      if (this.token) return this.token;
       return document.cookie
         .split('; ')
         .find((row) => row.startsWith('admin_token='))
@@ -476,61 +353,35 @@ export const useAuthStore = defineStore('auth', {
 
       try {
         const token = this.getToken();
-
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
         const response = await adminApi.get('/rater/list', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log('API response:', response.data);
-
         if (response.data.status) {
-          // Store the data directly without transformation
-          // The component will handle the transformation in processedRaters computed
           this.users = response.data.data || [];
-
-          console.log('Raters loaded:', this.users);
-          this.loadUser = false;
-          return this.users; // Remove . value - this is Pinia, not Composition API
-        } else {
-          console.error('Failed response message:', response.data.message);
-          toast.error(response.data.message || 'Failed to retrieve raters');
-          this.loadUser = false;
-          return [];
+          return this.users;
         }
+
+        toast.error(response.data.message || 'Failed to retrieve raters');
+        return [];
       } catch (error) {
-        console.error('Request error:', error);
         this.handleError(error, 'Failed to retrieve raters');
-        this.loadUser = false;
         return [];
       } finally {
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction('Retrieved Raters List');
+        this.loadUser = false;
       }
     },
 
-    // creating accoun for the rater
     async Rater_register(userData) {
       this.loading = true;
       this.errors = {};
+
       try {
         const token = this.getToken();
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
+        if (!token) throw new Error('No authentication token found');
 
-        // const date = new Date(userData.BirthDate);
-        // console.log('BirthDate string:', userData.BirthDate);
-        // console.log('Date parsed:', date);
-        // const year = date.getFullYear();
-        // const month = String(date.getMonth() + 1).padStart(2, '0');
-        // const day = String(date.getDate()).padStart(2, '0');
-        // const birthdatePassword = `${year}${month}${day}`;
         const username = userData.name;
 
         const formattedData = {
@@ -542,41 +393,27 @@ export const useAuthStore = defineStore('auth', {
           password: 'admin',
           controlNo: userData.controlNo,
         };
+
         const response = await adminApi.post('rater/register', formattedData, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.data.status) {
           await this.get_all_raters();
           toast.success('Rater registered successfully');
-          return {
-            success: true,
-            data: response.data.data,
-            message: response.data.message,
-          };
-        } else {
-          toast.error(response.data.message || 'Failed to register rater');
-          return {
-            success: false,
-            message: response.data.message || 'Failed to register rater',
-          };
+          return { success: true, data: response.data.data, message: response.data.message };
         }
+
+        toast.error(response.data.message || 'Failed to register rater');
+        return { success: false, message: response.data.message || 'Failed to register rater' };
       } catch (error) {
         this.handleError(error, error.message || 'Failed to register rater');
-        return {
-          success: false,
-          message: error.message || 'Failed to register rater',
-        };
+        return { success: false, message: error.message || 'Failed to register rater' };
       } finally {
         this.loading = false;
-        // const logsStore = useLogsStore();
-        // await logsStore.logAction('Registered New Rater');
       }
     },
 
-    // Helper function to handle errors
     handleError(error, defaultMessage) {
       if (error.response?.status === 401) {
         toast.error('Your session has expired. Please log in again.');
@@ -584,7 +421,7 @@ export const useAuthStore = defineStore('auth', {
       } else if (error.response?.status === 403) {
         toast.error('You do not have permission to perform this action.');
       } else if (error.response?.status === 422) {
-        this.errors = error.response.data.errors;
+        this.errors = error.response?.data?.errors || {};
         toast.error('Validation error. Please check the form.');
       } else if (error.response?.status === 0 || !error.response) {
         toast.error('Unable to connect to the server. Please check your internet connection.');

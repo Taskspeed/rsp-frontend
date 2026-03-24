@@ -3,9 +3,10 @@
     <div class="q-pa-md">
       <div class="column items-start justify-center q-mb-md">
         <h5 class="text-h5 q-ma-none"><b>User Management</b></h5>
+
         <div class="q-pa-md q-gutter-sm">
           <q-breadcrumbs class="q-ma-none">
-            <template v-slot:separator>
+            <template #separator>
               <q-icon size="1.2em" name="arrow_forward" />
             </template>
             <q-breadcrumbs-el icon="manage_accounts" label="User Management" />
@@ -14,116 +15,115 @@
       </div>
 
       <!-- User List -->
-      <div>
-        <q-table
-          :rows="authStore.users"
-          :columns="columns"
-          row-key="id"
-          :filter="filter"
-          :v-bind="pagination"
-          :loading="authStore.loadUser"
-        >
-          <!-- Top section with search -->
-          <template v-slot:top-left>
-            <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </template>
-          <template v-slot:top-right>
-            <!-- Add User Button -->
+      <q-table
+        :rows="authStore.users"
+        :columns="columns"
+        row-key="id"
+        :filter="filter"
+        v-bind="pagination"
+        :loading="authStore.loadUser"
+      >
+        <!-- Top section with search -->
+        <template #top-left>
+          <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
+            <template #append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </template>
+
+        <template #top-right>
+          <q-btn
+            rounded
+            color="primary"
+            label="Add New User"
+            icon="person_add"
+            @click="openAddDialog()"
+          />
+        </template>
+
+        <!-- Active status -->
+        <template #body-cell-active="props">
+          <q-td :props="props">
+            <q-badge rounded :color="props.row.active ? 'positive' : 'negative'">
+              {{ props.row.active ? 'Active' : 'Inactive' }}
+            </q-badge>
+          </q-td>
+        </template>
+
+        <!-- created_at -->
+        <template #body-cell-created_at="props">
+          <q-td :props="props" style="width: 230px; white-space: normal">
+            <q-badge rounded class="bg-blue" outline>
+              {{
+                new Date(props.value).toLocaleString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                })
+              }}
+            </q-badge>
+          </q-td>
+        </template>
+
+        <!-- updated_at -->
+        <template #body-cell-updated_at="props">
+          <q-td :props="props" style="width: 230px; white-space: normal">
+            <q-badge rounded class="bg-teal" outline>
+              {{
+                new Date(props.value).toLocaleString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                })
+              }}
+            </q-badge>
+          </q-td>
+        </template>
+
+        <!-- Actions column -->
+        <template #body-cell-actions="props">
+          <q-td :props="props">
+            <!-- Null-safe check: authStore.user can be null briefly -->
             <q-btn
-              rounded
-              color="primary"
-              label="Add New User"
-              icon="person_add"
-              @click="openAddDialog()"
+              v-if="authStore.user && props.row.id !== authStore.user.id"
+              flat
+              round
+              dense
+              color="orange"
+              class="bg-orange-2"
+              icon="edit"
+              @click="openEditDialog(props.row.id)"
+            >
+              <q-tooltip>Edit User</q-tooltip>
+            </q-btn>
+
+            <ButtonResetPassword
+              v-if="authStore.user && props.row.id !== authStore.user.id"
+              :user-id="props.row.id"
             />
-          </template>
-          <!-- Active status -->
-          <template v-slot:body-cell-active="props">
-            <q-td :props="props">
-              <q-badge rounded :color="props.row.active ? 'positive' : 'negative'">
-                {{ props.row.active ? "Active" : "Inactive" }}
-              </q-badge>
-            </q-td>
-          </template>
 
-          <!-- Add body cell template for created_at -->
-          <template v-slot:body-cell-created_at="props">
-            <q-td :props="props" style="width: 230px; white-space: normal">
-              <q-badge rounded class="bg-blue" outline>
-                {{
-                  new Date(props.value).toLocaleString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  })
-                }}
-              </q-badge>
-            </q-td>
-          </template>
+            <ButtonDelete
+              v-if="authStore.user && props.row.id !== authStore.user.id"
+              :user-id="props.row.id"
+            />
 
-          <!-- Add body cell template for updated_at -->
-          <template v-slot:body-cell-updated_at="props">
-            <q-td :props="props" style="width: 230px; white-space: normal">
-              <q-badge rounded class="bg-teal" outline>
-                {{
-                  new Date(props.value).toLocaleString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  })
-                }}
-              </q-badge>
-            </q-td>
-          </template>
-
-          <!-- Actions column -->
-          <template v-slot:body-cell-actions="props">
-            <q-td :props="props">
-              <q-btn
-                v-if="props.row.id !== authStore.user.id"
-                flat
-                round
-                dense
-                color="orange"
-                class="bg-orange-2"
-                icon="edit"
-                @click="openEditDialog(props.row.id)"
-              >
-                <q-tooltip>Edit User</q-tooltip>
-              </q-btn>
-
-
-              <!-- Reset password button -->
-              <ButtonResetPassword
-                v-if="props.row.id !== authStore.user.id"
-                :user-id="props.row.id"
-              />
-
-
-            
-              <!-- delete account button -->
-              <ButtonDelete
-                v-if="props.row.id !== authStore.user.id"
-                :user-id="props.row.id"
-              />
-
-              <q-badge rounded v-if="props.row.id == authStore.user.id" color="blue"
-                >You</q-badge
-              >
-            </q-td>
-          </template>
-        </q-table>
-      </div>
+            <q-badge
+              v-if="authStore.user && props.row.id === authStore.user.id"
+              rounded
+              color="blue"
+            >
+              You
+            </q-badge>
+          </q-td>
+        </template>
+      </q-table>
     </div>
 
     <!-- Add/Edit User Dialog -->
@@ -131,7 +131,7 @@
       <q-card style="min-width: 900px">
         <q-card-section :class="isEditing ? 'bg-blue text-white' : 'bg-green text-white'">
           <div class="text-h4 text-bold">
-            {{ isEditing ? "Edit User" : "Add New User" }}
+            {{ isEditing ? 'Edit User' : 'Add New User' }}
           </div>
         </q-card-section>
 
@@ -142,7 +142,6 @@
               <div class="col-12 col-md-6">
                 <div class="text-subtitle1 q-mb-sm">User Information</div>
 
-                <!-- Name -->
                 <q-input
                   v-model="form.name"
                   label="Name *"
@@ -152,7 +151,6 @@
                   class="q-mb-sm"
                 />
 
-                <!-- Username -->
                 <q-input
                   v-model="form.username"
                   label="Username *"
@@ -162,7 +160,6 @@
                   class="q-mb-sm"
                 />
 
-                <!-- Position -->
                 <q-input
                   v-model="form.position"
                   label="Position *"
@@ -172,15 +169,12 @@
                   class="q-mb-sm"
                 />
 
-                <!-- Password -->
                 <q-input
                   v-model="form.password"
                   type="password"
                   label="Password"
                   :hint="
-                    isEditing
-                      ? 'Leave empty to keep current password'
-                      : 'Required for new users'
+                    isEditing ? 'Leave empty to keep current password' : 'Required for new users'
                   "
                   :error="!!authStore.errors?.password"
                   :error-message="authStore.errors?.password?.[0]"
@@ -188,14 +182,7 @@
                   class="q-mb-sm"
                 />
 
-                <!-- Active Status -->
-                <q-toggle
-                  v-model="form.active"
-                  label="Active"
-                  :error="!!authStore.errors?.active"
-                  :error-message="authStore.errors?.active?.[0]"
-                  class="q-mb-sm"
-                />
+                <q-toggle v-model="form.active" label="Active" class="q-mb-sm" />
               </div>
 
               <!-- Right Column - Permissions -->
@@ -203,163 +190,83 @@
                 <div class="text-subtitle1 q-mb-sm">User Permissions</div>
                 <q-card flat bordered class="q-pa-md">
                   <div class="q-gutter-y-md">
-                    <!-- Dashboard Statistics -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.viewDashboardstat"
                       label="View Dashboard Statistics"
-                      :error="!!authStore.errors?.['permissions.viewDashboardstat']"
-                      :error-message="
-                        authStore.errors?.['permissions.viewDashboardstat']?.[0]
-                      "
-                      icon="dashboard"
                     />
-
-                    <!-- Plantilla Access -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.viewPlantillaAccess"
                       label="View Plantilla Access"
-                      :error="!!authStore.errors?.['permissions.viewPlantillaAccess']"
-                      :error-message="
-                        authStore.errors?.['permissions.viewPlantillaAccess']?.[0]
-                      "
-                      icon="visibility"
                     />
-
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.modifyPlantillaAccess"
                       label="Modify Plantilla Access"
-                      :error="!!authStore.errors?.['permissions.modifyPlantillaAccess']"
-                      :error-message="
-                        authStore.errors?.['permissions.modifyPlantillaAccess']?.[0]
-                      "
-                      icon="edit"
                     />
-
-                    <!-- Job Post Access -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.viewJobpostAccess"
                       label="View Job Post Access"
-                      :error="!!authStore.errors?.['permissions.viewJobpostAccess']"
-                      :error-message="
-                        authStore.errors?.['permissions.viewJobpostAccess']?.[0]
-                      "
-                      icon="visibility"
                     />
-
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.modifyJobpostAccess"
                       label="Modify Job Post Access"
-                      :error="!!authStore.errors?.['permissions.modifyJobpostAccess']"
-                      :error-message="
-                        authStore.errors?.['permissions.modifyJobpostAccess']?.[0]
-                      "
-                      icon="edit"
                     />
-
-                    <!-- Activity Logs -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.viewActivityLogs"
                       label="View Activity Logs"
-                      :error="!!authStore.errors?.['permissions.viewActivityLogs']"
-                      :error-message="
-                        authStore.errors?.['permissions.viewActivityLogs']?.[0]
-                      "
-                      icon="history"
                     />
-
-                    <!-- User Management -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.userManagement"
                       label="Allow Access to User Management"
-                      :error="!!authStore.errors?.['permissions.userManagement']"
-                      :error-message="
-                        authStore.errors?.['permissions.userManagement']?.[0]
-                      "
-                      icon="manage_accounts"
                     />
-
-                    <!-- ========================================================================= -->
-                    <!-- RATER MANAGEMENT MODULE PERMISSIONS -->
-                    <!-- ========================================================================= -->
-
-                    <!-- View Rater -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.viewRater"
                       label="View Rater Module Access"
-                      :error="!!authStore.errors?.['permissions.viewRater']"
-                      :error-message="authStore.errors?.['permissions.viewRater']?.[0]"
-                      icon="visibility"
                     />
-
-                    <!-- Modify Rater -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.modifyRater"
                       label="Modify Rater Module Access"
-                      :error="!!authStore.errors?.['permissions.modifyRater']"
-                      :error-message="authStore.errors?.['permissions.modifyRater']?.[0]"
-                      icon="edit"
                     />
-
-                    <!-- View Criteria -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.viewCriteria"
                       label="View Criteria Access"
-                      :error="!!authStore.errors?.['permissions.viewCriteria']"
-                      :error-message="authStore.errors?.['permissions.viewCriteria']?.[0]"
-                      icon="visibility"
                     />
-
-                    <!-- Modify Criteria -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.modifyCriteria"
                       label="Modify Criteria Access"
-                      :error="!!authStore.errors?.['permissions.modifyCriteria']"
-                      :error-message="
-                        authStore.errors?.['permissions.modifyCriteria']?.[0]
-                      "
-                      icon="edit"
                     />
-
-                    <!-- View Report -->
                     <q-toggle
                       true-value="1"
                       false-value="0"
                       v-model="form.permissions.viewReport"
                       label="View Report Module Access"
-                      :error="!!authStore.errors?.['permissions.viewReport']"
-                      :error-message="authStore.errors?.['permissions.viewReport']?.[0]"
-                      icon="visibility"
                     />
-
-                    <!-- ========================================================================= -->
                   </div>
                 </q-card>
               </div>
             </div>
 
-            <!-- Form Buttons - Full Width -->
             <div class="row justify-end">
               <q-btn rounded label="Cancel" color="negative" flat v-close-popup />
               <q-btn
@@ -396,259 +303,183 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-
-    <!-- Delete Confirmation Dialog -->
-    <q-dialog v-model="deleteDialog" persistent>
-      <q-card>
-        <q-card-section class="row items-center">
-          <q-avatar icon="warning" color="negative" text-color="white" />
-          <span class="q-ml-sm">
-            Are you sure you want to delete user:
-            <strong>{{ userToDelete.name }}</strong>
-            ?
-          </span>
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn
-            flat
-            label="Delete"
-            color="negative"
-            @click="deleteUser"
-            :loading="authStore.loading"
-            v-close-popup
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-page>
 </template>
 
 <script>
-import { defineComponent, ref, onMounted } from "vue";
-import { useAuthStore } from "stores/authStore";
-import ButtonResetPassword from "components/ButtonResetPassword.vue";
-import ButtonDelete from "components/ButtonDelete.vue";
+  import { defineComponent, ref, onMounted } from 'vue';
+  import { useAuthStore } from 'stores/authStore';
+  import ButtonResetPassword from 'components/ButtonResetPassword.vue';
+  import ButtonDelete from 'components/ButtonDelete.vue';
 
-export default defineComponent({
-  name: "UserManagement",
+  export default defineComponent({
+    name: 'UserManagement',
+    components: {
+      ButtonResetPassword,
+      ButtonDelete,
+    },
 
-  components: {
-    ButtonResetPassword, // ← this was missing
-    ButtonDelete
-  },
+    setup() {
+      const authStore = useAuthStore();
 
-  setup() {
-    const authStore = useAuthStore();
-    const confirmUpdateDialog = ref(false);
+      const confirmUpdateDialog = ref(false);
 
-    // Table related
-    const filter = ref("");
-    const pagination = ref({
-      sortBy: "id",
-      descending: true,
-      page: 1,
-      rowsPerPage: 10,
-    });
+      // Table related
+      const filter = ref('');
+      const pagination = ref({
+        sortBy: 'id',
+        descending: true,
+        page: 1,
+        rowsPerPage: 10,
+      });
 
-    const columns = [
-      // { name: "id", align: "left", label: "ID", field: "id", sortable: true },
-      { name: "name", align: "left", label: "Name", field: "name", sortable: true },
-      {
-        name: "username",
-        align: "left",
-        label: "Username",
-        field: "username",
-        sortable: true,
-      },
-      {
-        name: "position",
-        align: "left",
-        label: "Position",
-        field: "position",
-        sortable: true,
-      },
-      { name: "active", align: "left", label: "Status", field: "active", sortable: true },
-      {
-        name: "created_at",
-        align: "left",
-        label: "Created At",
-        field: "created_at",
-        sortable: true,
-      },
-      {
-        name: "updated_at",
-        align: "left",
-        label: "Updated At",
-        field: "updated_at",
-        sortable: true,
-      },
-      {
-        name: "actions",
-        align: "center",
-        label: "Actions",
-        field: "actions",
-        sortable: false,
-      },
-    ];
+      const columns = [
+        { name: 'name', align: 'left', label: 'Name', field: 'name', sortable: true },
+        { name: 'username', align: 'left', label: 'Username', field: 'username', sortable: true },
+        { name: 'position', align: 'left', label: 'Position', field: 'position', sortable: true },
+        { name: 'active', align: 'left', label: 'Status', field: 'active', sortable: true },
+        {
+          name: 'created_at',
+          align: 'left',
+          label: 'Created At',
+          field: 'created_at',
+          sortable: true,
+        },
+        {
+          name: 'updated_at',
+          align: 'left',
+          label: 'Updated At',
+          field: 'updated_at',
+          sortable: true,
+        },
+        { name: 'actions', align: 'center', label: 'Actions', field: 'actions', sortable: false },
+      ];
 
-    // Form related
-    const dialog = ref(false);
-    const isEditing = ref(false);
-    const form = ref({
-      name: "",
-      username: "",
-      position: "",
-      password: "",
-      active: true,
-      permissions: {
-        viewDashboardstat: "0",
-        viewPlantillaAccess: "0",
-        modifyPlantillaAccess: "0",
-        viewJobpostAccess: "0",
-        modifyJobpostAccess: "0",
-        viewActivityLogs: "0",
-        userManagement: "0",
-        viewRater: "0",
-        modifyRater: "0",
-        viewCriteria: "0",
-        modifyCriteria: "0",
-        viewReport: "0",
-      },
-    });
-
-    // Delete related
-    const deleteDialog = ref(false);
-    const userToDelete = ref({
-      id: null,
-      name: "",
-    });
-
-    // Methods
-    const resetForm = () => {
-      form.value = {
-        name: "",
-        username: "",
-        position: "",
-        password: "",
+      // Form related
+      const dialog = ref(false);
+      const isEditing = ref(false);
+      const form = ref({
+        name: '',
+        username: '',
+        position: '',
+        password: '',
         active: true,
         permissions: {
-          viewDashboardstat: "0",
-          viewPlantillaAccess: "0",
-          modifyPlantillaAccess: "0",
-          viewJobpostAccess: "0",
-          modifyJobpostAccess: "0",
-          viewActivityLogs: "0",
-          userManagement: "0",
-          viewRater: "0",
-          modifyRater: "0",
-          viewCriteria: "0",
-          modifyCriteria: "0",
-          viewReport: "0",
+          viewDashboardstat: '0',
+          viewPlantillaAccess: '0',
+          modifyPlantillaAccess: '0',
+          viewJobpostAccess: '0',
+          modifyJobpostAccess: '0',
+          viewActivityLogs: '0',
+          userManagement: '0',
+          viewRater: '0',
+          modifyRater: '0',
+          viewCriteria: '0',
+          modifyCriteria: '0',
+          viewReport: '0',
         },
+      });
+
+      const resetForm = () => {
+        form.value = {
+          name: '',
+          username: '',
+          position: '',
+          password: '',
+          active: true,
+          permissions: {
+            viewDashboardstat: '0',
+            viewPlantillaAccess: '0',
+            modifyPlantillaAccess: '0',
+            viewJobpostAccess: '0',
+            modifyJobpostAccess: '0',
+            viewActivityLogs: '0',
+            userManagement: '0',
+            viewRater: '0',
+            modifyRater: '0',
+            viewCriteria: '0',
+            modifyCriteria: '0',
+            viewReport: '0',
+          },
+        };
+        authStore.errors = {};
       };
-      authStore.errors = {};
-    };
 
-    const openAddDialog = () => {
-      resetForm();
-      isEditing.value = false;
-      dialog.value = true;
-    };
+      const openAddDialog = () => {
+        resetForm();
+        isEditing.value = false;
+        dialog.value = true;
+      };
 
-    const openEditDialog = async (userId) => {
-      resetForm();
-      isEditing.value = true;
-      dialog.value = true;
+      const openEditDialog = async (userId) => {
+        resetForm();
+        isEditing.value = true;
+        dialog.value = true;
 
-      // Get user details
-      const user = await authStore.getUserById(userId);
-      if (user) {
+        const user = await authStore.getUserById(userId);
+        if (!user) return;
+
         form.value = {
           id: user.id,
           name: user.name,
           username: user.username,
           position: user.position,
-          password: "", // Empty for edit form
+          password: '',
           active: user.active,
           permissions: {
-            viewDashboardstat: user.rsp_control?.viewDashboardstat || "0",
-            viewPlantillaAccess: user.rsp_control?.viewPlantillaAccess || "0",
-            modifyPlantillaAccess: user.rsp_control?.modifyPlantillaAccess || "0",
-            viewJobpostAccess: user.rsp_control?.viewJobpostAccess || "0",
-            modifyJobpostAccess: user.rsp_control?.modifyJobpostAccess || "0",
-            viewActivityLogs: user.rsp_control?.viewActivityLogs || "0",
-            userManagement: user.rsp_control?.userManagement || "0",
-            viewRater: user.rsp_control?.viewRater || "0",
-            modifyRater: user.rsp_control?.modifyRater || "0",
-            viewCriteria: user.rsp_control?.viewCriteria || "0",
-            modifyCriteria: user.rsp_control?.modifyCriteria || "0",
-            viewReport: user.rsp_control?.viewReport || "0",
+            viewDashboardstat: user.rsp_control?.viewDashboardstat || '0',
+            viewPlantillaAccess: user.rsp_control?.viewPlantillaAccess || '0',
+            modifyPlantillaAccess: user.rsp_control?.modifyPlantillaAccess || '0',
+            viewJobpostAccess: user.rsp_control?.viewJobpostAccess || '0',
+            modifyJobpostAccess: user.rsp_control?.modifyJobpostAccess || '0',
+            viewActivityLogs: user.rsp_control?.viewActivityLogs || '0',
+            userManagement: user.rsp_control?.userManagement || '0',
+            viewRater: user.rsp_control?.viewRater || '0',
+            modifyRater: user.rsp_control?.modifyRater || '0',
+            viewCriteria: user.rsp_control?.viewCriteria || '0',
+            modifyCriteria: user.rsp_control?.modifyCriteria || '0',
+            viewReport: user.rsp_control?.viewReport || '0',
           },
         };
-      }
-    };
-
-    const submitForm = async () => {
-      const userData = {
-        ...form.value,
-        permissions: {
-          ...form.value.permissions,
-        },
       };
 
-      if (isEditing.value) {
-        // Update existing user
-        const result = await authStore.updateUser(form.value.id, userData);
-        if (result) {
-          dialog.value = false;
-        }
-        await authStore.getAllUsers();
-      } else {
-        // Create new user
-        const result = await authStore.registerUser(userData);
-        if (result) {
-          dialog.value = false;
-        }
-        await authStore.getAllUsers();
-      }
-    };
+      const submitForm = async () => {
+        const userData = {
+          ...form.value,
+          permissions: { ...form.value.permissions },
+        };
 
-    const confirmDelete = (userId, userName) => {
-      userToDelete.value = {
-        id: userId,
-        name: userName,
+        if (isEditing.value) {
+          const result = await authStore.updateUser(form.value.id, userData);
+          if (result) dialog.value = false;
+        } else {
+          const result = await authStore.registerUser(userData);
+          if (result) dialog.value = false;
+        }
+
+        await authStore.getAllUsers();
       };
-      deleteDialog.value = true;
-    };
 
-    const deleteUser = async () => {
-      await authStore.deleteUser(userToDelete.value.id);
-    };
+      onMounted(async () => {
+        // debug to confirm method exists at runtime
+        // console.log('authStore.getAllUsers:', authStore.getAllUsers);
 
-    // Load users when component mounts
-    onMounted(async () => {
-      await authStore.getAllUsers();
-    });
+        await authStore.getAllUsers();
+      });
 
-    return {
-      authStore,
-      confirmUpdateDialog,
-      filter,
-      pagination,
-      columns,
-      dialog,
-      isEditing,
-      form,
-      deleteDialog,
-      userToDelete,
-      openAddDialog,
-      openEditDialog,
-      submitForm,
-      confirmDelete,
-      deleteUser,
-    };
-  },
-});
+      return {
+        authStore,
+        confirmUpdateDialog,
+        filter,
+        pagination,
+        columns,
+        dialog,
+        isEditing,
+        form,
+        openAddDialog,
+        openEditDialog,
+        submitForm,
+      };
+    },
+  });
 </script>
