@@ -40,7 +40,6 @@
               :placeholder="'-'"
               class="q-mb-sm"
             />
-
             <q-input
               v-model="jobData.Group"
               label="Group"
@@ -51,7 +50,6 @@
               :placeholder="'-'"
               class="q-mb-sm"
             />
-
             <q-input
               v-model="jobData.Section"
               label="Section"
@@ -75,7 +73,6 @@
               :placeholder="'-'"
               class="q-mb-sm"
             />
-
             <q-input
               v-model="jobData.Division"
               label="Division"
@@ -86,7 +83,6 @@
               :placeholder="'-'"
               class="q-mb-sm"
             />
-
             <q-input
               v-model="jobData.Unit"
               label="Unit"
@@ -118,7 +114,6 @@
               :placeholder="'Not specified'"
             />
           </div>
-
           <div class="col-12 col-md-3">
             <q-input
               v-model="qualifications.Experience"
@@ -130,7 +125,6 @@
               :placeholder="'Not specified'"
             />
           </div>
-
           <div class="col-12 col-md-3">
             <q-input
               v-model="qualifications.Training"
@@ -142,7 +136,6 @@
               :placeholder="'Not specified'"
             />
           </div>
-
           <div class="col-12 col-md-3">
             <q-input
               v-model="qualifications.Eligibility"
@@ -157,15 +150,100 @@
         </div>
       </q-card-section>
 
-      <q-separator></q-separator>
+      <q-separator />
+
+      <!-- Optional Sections Toggle Bar -->
+      <q-card-section v-if="showRatingTable && !loading" class="q-pa-sm bg-grey-1">
+        <div class="row items-center q-gutter-sm">
+          <div class="text-caption text-weight-medium text-grey-7 q-mr-xs">
+            <q-icon name="tune" size="xs" class="q-mr-xs" />
+            Optional Sections:
+          </div>
+
+          <!-- BEI Toggle -->
+          <q-chip
+            :color="optionalSections.bei ? 'primary' : 'grey-4'"
+            :text-color="optionalSections.bei ? 'white' : 'grey-7'"
+            clickable
+            dense
+            class="text-12 optional-chip"
+            @click="toggleOptionalSection('bei')"
+            v-if="mode !== 'view' && hasPermission"
+          >
+            <q-icon
+              :name="optionalSections.bei ? 'check_circle' : 'add_circle_outline'"
+              size="xs"
+              class="q-mr-xs"
+            />
+            BEI
+            <q-tooltip>
+              {{
+                optionalSections.bei ? 'Click to remove BEI section' : 'Click to add BEI section'
+              }}
+            </q-tooltip>
+          </q-chip>
+
+          <q-chip
+            v-else-if="optionalSections.bei"
+            color="primary"
+            text-color="white"
+            dense
+            class="text-12"
+          >
+            <q-icon name="check_circle" size="xs" class="q-mr-xs" />
+            BEI
+          </q-chip>
+
+          <!-- Exam Toggle -->
+          <q-chip
+            :color="optionalSections.exam ? 'deep-purple' : 'grey-4'"
+            :text-color="optionalSections.exam ? 'white' : 'grey-7'"
+            clickable
+            dense
+            class="text-12 optional-chip"
+            @click="toggleOptionalSection('exam')"
+            v-if="mode !== 'view' && hasPermission"
+          >
+            <q-icon
+              :name="optionalSections.exam ? 'check_circle' : 'add_circle_outline'"
+              size="xs"
+              class="q-mr-xs"
+            />
+            Exam
+            <q-tooltip>
+              {{
+                optionalSections.exam ? 'Click to remove Exam section' : 'Click to add Exam section'
+              }}
+            </q-tooltip>
+          </q-chip>
+
+          <q-chip
+            v-else-if="optionalSections.exam"
+            color="deep-purple"
+            text-color="white"
+            dense
+            class="text-12"
+          >
+            <q-icon name="check_circle" size="xs" class="q-mr-xs" />
+            Exam
+          </q-chip>
+
+          <q-space />
+
+          <!-- Hint text -->
+          <div v-if="mode !== 'view' && hasPermission" class="text-caption text-grey-5">
+            <q-icon name="info" size="xs" class="q-mr-xs" />
+            Toggle to include or exclude optional scoring sections
+          </div>
+        </div>
+      </q-card-section>
 
       <!-- Criteria -->
       <q-card-section v-if="showRatingTable && !loading" class="criteria-section">
         <div class="row q-mb-sm">
           <div class="col-12">
-            <!-- Action buttons based on mode and permission -->
+            <!-- Action buttons -->
             <div class="float-right">
-              <!-- VIEW MODE: Show Edit button only if user has modify permission -->
               <template v-if="mode === 'view'">
                 <q-btn
                   v-if="hasPermission"
@@ -179,7 +257,6 @@
                 />
               </template>
 
-              <!-- EDIT/CREATE MODE: Show Save button only if user has modify permission -->
               <template v-if="(mode === 'edit' || mode === 'create') && hasPermission">
                 <q-btn
                   color="primary"
@@ -211,8 +288,10 @@
           </div>
         </div>
 
+        <!-- Criteria Cards Grid -->
         <div class="row q-col-gutter-xs">
-          <template v-for="section in sections" :key="section.key">
+          <!-- STATIC REQUIRED SECTIONS (always shown) -->
+          <template v-for="section in staticSections" :key="section.key">
             <div class="col">
               <q-card flat bordered class="criteria-card">
                 <q-card-section class="criteria-header bg-green-1 q-py-xs">
@@ -221,6 +300,14 @@
                       <div class="text-subtitle2 text-weight-medium text-12">
                         <q-icon :name="section.icon" size="xs" class="q-mr-xs" />
                         {{ section.label }}
+                        <q-badge
+                          color="green-6"
+                          text-color="white"
+                          class="q-ml-xs"
+                          style="font-size: 9px; padding: 1px 5px"
+                        >
+                          Required
+                        </q-badge>
                       </div>
                     </div>
                     <div class="col-auto">
@@ -245,14 +332,12 @@
                   </div>
                 </q-card-section>
                 <q-card-section class="q-pa-xs">
-                  <!-- Breakdown Fields Label -->
                   <div class="q-mb-xs text-weight-medium text-12 text-bold">
                     <span class="text-grey-9">Breakdown Descriptions:</span>
                   </div>
 
-                  <!-- Breakdown Fields with Independent Weights -->
+                  <!-- View mode -->
                   <template v-if="mode === 'view' || !hasPermission">
-                    <!-- View mode: Show read-only breakdown fields -->
                     <div
                       v-if="editableCriteria[section.key].breakdownFields.length === 0"
                       class="text-center q-pa-sm text-grey-6 text-11"
@@ -298,8 +383,8 @@
                     </div>
                   </template>
 
-                  <template v-else-if="(mode === 'edit' || mode === 'create') && hasPermission">
-                    <!-- Edit/Create mode: Show editable breakdown fields -->
+                  <!-- Edit/Create mode -->
+                  <template v-else>
                     <div
                       v-if="editableCriteria[section.key].breakdownFields.length === 0"
                       class="text-center q-pa-sm text-grey-6 text-11"
@@ -358,7 +443,6 @@
                       </div>
                     </div>
 
-                    <!-- Add Breakdown Button -->
                     <div class="row justify-center q-mt-sm">
                       <q-btn
                         color="primary"
@@ -376,6 +460,392 @@
               </q-card>
             </div>
           </template>
+
+          <!-- OPTIONAL: BEI Section -->
+          <template v-if="optionalSections.bei">
+            <div class="col">
+              <q-card flat bordered class="criteria-card optional-card optional-card--bei">
+                <q-card-section class="criteria-header bg-blue-1 q-py-xs">
+                  <div class="row items-center justify-between">
+                    <div class="col">
+                      <div class="text-subtitle2 text-weight-medium text-12">
+                        <q-icon name="record_voice_over" size="xs" class="q-mr-xs" />
+                        BEI
+                        <q-badge
+                          color="blue-6"
+                          text-color="white"
+                          class="q-ml-xs"
+                          style="font-size: 9px; padding: 1px 5px"
+                        >
+                          Optional
+                        </q-badge>
+                      </div>
+                    </div>
+                    <div class="col-auto row items-center q-gutter-xs">
+                      <div class="percentage-wrapper">
+                        <q-input
+                          v-model.number="editableCriteria.bei.weight"
+                          type="number"
+                          min="0"
+                          max="100"
+                          dense
+                          outlined
+                          class="weight-input text-12"
+                          @update:model-value="validatePercentage('bei')"
+                          :readonly="mode === 'view' || !hasPermission"
+                        >
+                          <template v-slot:append>
+                            <span class="percentage-sign">%</span>
+                          </template>
+                        </q-input>
+                      </div>
+                      <!-- Remove BEI button in edit/create mode -->
+                      <q-btn
+                        v-if="(mode === 'edit' || mode === 'create') && hasPermission"
+                        icon="close"
+                        color="negative"
+                        flat
+                        round
+                        dense
+                        size="xs"
+                        @click="toggleOptionalSection('bei')"
+                      >
+                        <q-tooltip>Remove BEI section</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
+                </q-card-section>
+                <q-card-section class="q-pa-xs">
+                  <div class="q-mb-xs text-weight-medium text-12 text-bold">
+                    <span class="text-grey-9">Breakdown Descriptions:</span>
+                  </div>
+
+                  <!-- View mode -->
+                  <template v-if="mode === 'view' || !hasPermission">
+                    <div
+                      v-if="editableCriteria.bei.breakdownFields.length === 0"
+                      class="text-center q-pa-sm text-grey-6 text-11"
+                    >
+                      No breakdown descriptions added
+                    </div>
+                    <div v-else class="q-mt-xs">
+                      <div
+                        v-for="(field, idx) in editableCriteria.bei.breakdownFields"
+                        :key="`bei-view-breakdown-${idx}`"
+                        class="breakdown-row q-mb-xs"
+                      >
+                        <div class="row items-start q-gutter-xs">
+                          <div class="col">
+                            <q-input
+                              :model-value="field.description"
+                              :label="`Description ${idx + 1}`"
+                              dense
+                              outlined
+                              autogrow
+                              class="modern-input text-12"
+                              readonly
+                              bg-color="grey-1"
+                            />
+                          </div>
+                          <div style="width: 80px">
+                            <q-input
+                              :model-value="field.weight"
+                              type="number"
+                              dense
+                              outlined
+                              class="weight-input text-12"
+                              readonly
+                              bg-color="grey-1"
+                            >
+                              <template v-slot:append>
+                                <span class="percentage-sign">%</span>
+                              </template>
+                            </q-input>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Edit/Create mode -->
+                  <template v-else>
+                    <div
+                      v-if="editableCriteria.bei.breakdownFields.length === 0"
+                      class="text-center q-pa-sm text-grey-6 text-11"
+                    >
+                      No breakdown descriptions yet. Click "Add Breakdown" to start.
+                    </div>
+                    <div v-else class="q-mt-xs">
+                      <div
+                        v-for="(field, idx) in editableCriteria.bei.breakdownFields"
+                        :key="`bei-edit-breakdown-${idx}`"
+                        class="breakdown-row q-mb-xs"
+                      >
+                        <div class="row items-start q-gutter-xs">
+                          <div class="col">
+                            <q-input
+                              v-model="editableCriteria.bei.breakdownFields[idx].description"
+                              :label="`Description ${idx + 1}`"
+                              dense
+                              outlined
+                              autogrow
+                              class="modern-input text-12"
+                            />
+                          </div>
+                          <div style="width: 80px">
+                            <q-input
+                              v-model.number="editableCriteria.bei.breakdownFields[idx].weight"
+                              type="number"
+                              min="0"
+                              max="100"
+                              dense
+                              outlined
+                              class="weight-input text-12"
+                              @update:model-value="validateBreakdownWeight('bei', idx)"
+                            >
+                              <template v-slot:append>
+                                <span class="percentage-sign">%</span>
+                              </template>
+                            </q-input>
+                          </div>
+                          <div style="width: 36px">
+                            <q-btn
+                              icon="remove"
+                              color="negative"
+                              flat
+                              round
+                              size="xs"
+                              class="remove-btn"
+                              @click="removeBreakdownField('bei', idx)"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="row justify-center q-mt-sm">
+                      <q-btn
+                        color="primary"
+                        icon="add"
+                        flat
+                        size="sm"
+                        class="q-mb-xs q-mt-xs text-12"
+                        @click="addBreakdownField('bei')"
+                      >
+                        Add Breakdown
+                      </q-btn>
+                    </div>
+                  </template>
+                </q-card-section>
+              </q-card>
+            </div>
+          </template>
+
+          <!-- OPTIONAL: Exam Section -->
+          <template v-if="optionalSections.exam">
+            <div class="col">
+              <q-card flat bordered class="criteria-card optional-card optional-card--exam">
+                <q-card-section class="criteria-header bg-deep-purple-1 q-py-xs">
+                  <div class="row items-center justify-between">
+                    <div class="col">
+                      <div class="text-subtitle2 text-weight-medium text-12">
+                        <q-icon name="assignment" size="xs" class="q-mr-xs" />
+                        Exam
+                        <q-badge
+                          color="deep-purple-6"
+                          text-color="white"
+                          class="q-ml-xs"
+                          style="font-size: 9px; padding: 1px 5px"
+                        >
+                          Optional
+                        </q-badge>
+                      </div>
+                    </div>
+                    <div class="col-auto row items-center q-gutter-xs">
+                      <div class="percentage-wrapper">
+                        <q-input
+                          v-model.number="editableCriteria.exam.weight"
+                          type="number"
+                          min="0"
+                          max="100"
+                          dense
+                          outlined
+                          class="weight-input text-12"
+                          @update:model-value="validatePercentage('exam')"
+                          :readonly="mode === 'view' || !hasPermission"
+                        >
+                          <template v-slot:append>
+                            <span class="percentage-sign">%</span>
+                          </template>
+                        </q-input>
+                      </div>
+                      <!-- Remove Exam button in edit/create mode -->
+                      <q-btn
+                        v-if="(mode === 'edit' || mode === 'create') && hasPermission"
+                        icon="close"
+                        color="negative"
+                        flat
+                        round
+                        dense
+                        size="xs"
+                        @click="toggleOptionalSection('exam')"
+                      >
+                        <q-tooltip>Remove Exam section</q-tooltip>
+                      </q-btn>
+                    </div>
+                  </div>
+                </q-card-section>
+                <q-card-section class="q-pa-xs">
+                  <div class="q-mb-xs text-weight-medium text-12 text-bold">
+                    <span class="text-grey-9">Breakdown Descriptions:</span>
+                  </div>
+
+                  <!-- View mode -->
+                  <template v-if="mode === 'view' || !hasPermission">
+                    <div
+                      v-if="editableCriteria.exam.breakdownFields.length === 0"
+                      class="text-center q-pa-sm text-grey-6 text-11"
+                    >
+                      No breakdown descriptions added
+                    </div>
+                    <div v-else class="q-mt-xs">
+                      <div
+                        v-for="(field, idx) in editableCriteria.exam.breakdownFields"
+                        :key="`exam-view-breakdown-${idx}`"
+                        class="breakdown-row q-mb-xs"
+                      >
+                        <div class="row items-start q-gutter-xs">
+                          <div class="col">
+                            <q-input
+                              :model-value="field.description"
+                              :label="`Description ${idx + 1}`"
+                              dense
+                              outlined
+                              autogrow
+                              class="modern-input text-12"
+                              readonly
+                              bg-color="grey-1"
+                            />
+                          </div>
+                          <div style="width: 80px">
+                            <q-input
+                              :model-value="field.weight"
+                              type="number"
+                              dense
+                              outlined
+                              class="weight-input text-12"
+                              readonly
+                              bg-color="grey-1"
+                            >
+                              <template v-slot:append>
+                                <span class="percentage-sign">%</span>
+                              </template>
+                            </q-input>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Edit/Create mode -->
+                  <template v-else>
+                    <div
+                      v-if="editableCriteria.exam.breakdownFields.length === 0"
+                      class="text-center q-pa-sm text-grey-6 text-11"
+                    >
+                      No breakdown descriptions yet. Click "Add Breakdown" to start.
+                    </div>
+                    <div v-else class="q-mt-xs">
+                      <div
+                        v-for="(field, idx) in editableCriteria.exam.breakdownFields"
+                        :key="`exam-edit-breakdown-${idx}`"
+                        class="breakdown-row q-mb-xs"
+                      >
+                        <div class="row items-start q-gutter-xs">
+                          <div class="col">
+                            <q-input
+                              v-model="editableCriteria.exam.breakdownFields[idx].description"
+                              :label="`Description ${idx + 1}`"
+                              dense
+                              outlined
+                              autogrow
+                              class="modern-input text-12"
+                            />
+                          </div>
+                          <div style="width: 80px">
+                            <q-input
+                              v-model.number="editableCriteria.exam.breakdownFields[idx].weight"
+                              type="number"
+                              min="0"
+                              max="100"
+                              dense
+                              outlined
+                              class="weight-input text-12"
+                              @update:model-value="validateBreakdownWeight('exam', idx)"
+                            >
+                              <template v-slot:append>
+                                <span class="percentage-sign">%</span>
+                              </template>
+                            </q-input>
+                          </div>
+                          <div style="width: 36px">
+                            <q-btn
+                              icon="remove"
+                              color="negative"
+                              flat
+                              round
+                              size="xs"
+                              class="remove-btn"
+                              @click="removeBreakdownField('exam', idx)"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="row justify-center q-mt-sm">
+                      <q-btn
+                        color="deep-purple"
+                        icon="add"
+                        flat
+                        size="sm"
+                        class="q-mb-xs q-mt-xs text-12"
+                        @click="addBreakdownField('exam')"
+                      >
+                        Add Breakdown
+                      </q-btn>
+                    </div>
+                  </template>
+                </q-card-section>
+              </q-card>
+            </div>
+          </template>
+        </div>
+
+        <!-- Removed sections restore bar (only in edit/create mode) -->
+        <div
+          v-if="
+            (mode === 'edit' || mode === 'create') && hasPermission && removedSections.length > 0
+          "
+          class="q-mt-sm q-pa-xs bg-grey-2 rounded-borders restore-bar"
+        >
+          <div class="row items-center q-gutter-xs">
+            <q-icon name="undo" size="xs" color="grey-7" />
+            <span class="text-caption text-grey-7">Removed sections:</span>
+            <q-btn
+              v-for="key in removedSections"
+              :key="'restore-' + key"
+              size="xs"
+              dense
+              unelevated
+              :color="key === 'bei' ? 'blue-2' : 'deep-purple-2'"
+              :text-color="key === 'bei' ? 'blue-9' : 'deep-purple-9'"
+              :icon="key === 'bei' ? 'record_voice_over' : 'assignment'"
+              :label="key === 'bei' ? 'Restore BEI' : 'Restore Exam'"
+              @click="restoreSection(key)"
+              class="text-12"
+            />
+          </div>
         </div>
       </q-card-section>
 
@@ -424,12 +894,13 @@
             </q-item>
           </q-list>
 
-          <!-- Show criteria summary with breakdown -->
+          <!-- Criteria summary with breakdown -->
           <q-separator class="q-my-sm" />
           <div class="text-caption text-weight-medium q-mb-xs">Criteria Breakdown:</div>
           <div class="summary-container">
+            <!-- Static sections -->
             <div
-              v-for="section in sections"
+              v-for="section in staticSections"
               :key="'summary-' + section.key"
               class="text-caption q-mb-sm"
             >
@@ -457,6 +928,88 @@
                 </div>
               </div>
               <div v-else class="q-ml-md text-grey-5 text-italic">(No breakdown descriptions)</div>
+            </div>
+
+            <!-- BEI summary -->
+            <div v-if="optionalSections.bei" class="text-caption q-mb-sm">
+              <div class="text-weight-bold text-blue-8">
+                BEI: {{ editableCriteria.bei.weight }}%
+                <q-badge
+                  color="blue-2"
+                  text-color="blue-9"
+                  label="Optional"
+                  style="font-size: 9px"
+                  class="q-ml-xs"
+                />
+              </div>
+              <div
+                v-if="editableCriteria.bei.breakdownFields.length > 0"
+                class="q-ml-md text-grey-7"
+                style="max-height: 120px; overflow-y: auto"
+              >
+                <div
+                  v-for="(field, idx) in editableCriteria.bei.breakdownFields"
+                  :key="'summary-bei-' + idx"
+                  class="q-mb-xs"
+                >
+                  <div class="row items-start q-gutter-xs no-wrap">
+                    <div class="col-auto" style="min-width: 35px">
+                      <q-badge color="blue" :label="`${field.weight}%`" />
+                    </div>
+                    <div class="col text-grey-8" style="font-size: 11px; line-height: 1.3">
+                      {{ field.description || `Description ${idx + 1}` }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="q-ml-md text-grey-5 text-italic">(No breakdown descriptions)</div>
+            </div>
+
+            <!-- Exam summary -->
+            <div v-if="optionalSections.exam" class="text-caption q-mb-sm">
+              <div class="text-weight-bold text-deep-purple-8">
+                Exam: {{ editableCriteria.exam.weight }}%
+                <q-badge
+                  color="deep-purple-2"
+                  text-color="deep-purple-9"
+                  label="Optional"
+                  style="font-size: 9px"
+                  class="q-ml-xs"
+                />
+              </div>
+              <div
+                v-if="editableCriteria.exam.breakdownFields.length > 0"
+                class="q-ml-md text-grey-7"
+                style="max-height: 120px; overflow-y: auto"
+              >
+                <div
+                  v-for="(field, idx) in editableCriteria.exam.breakdownFields"
+                  :key="'summary-exam-' + idx"
+                  class="q-mb-xs"
+                >
+                  <div class="row items-start q-gutter-xs no-wrap">
+                    <div class="col-auto" style="min-width: 35px">
+                      <q-badge color="deep-purple" :label="`${field.weight}%`" />
+                    </div>
+                    <div class="col text-grey-8" style="font-size: 11px; line-height: 1.3">
+                      {{ field.description || `Description ${idx + 1}` }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="q-ml-md text-grey-5 text-italic">(No breakdown descriptions)</div>
+            </div>
+
+            <!-- Sections not included -->
+            <div
+              v-if="!optionalSections.bei || !optionalSections.exam"
+              class="text-caption text-grey-5 text-italic q-mt-xs"
+            >
+              <q-icon name="info" size="xs" class="q-mr-xs" />
+              Not included:
+              <span v-if="!optionalSections.bei">BEI</span>
+              <span v-if="!optionalSections.bei && !optionalSections.exam">,</span>
+              <span v-if="!optionalSections.exam">Exam</span>
             </div>
           </div>
         </q-card-section>
@@ -489,17 +1042,14 @@
    */
   function logAudit(action, description, status = 'SUCCESS', details = {}) {
     const auditLog = {
-      timestamp: '2025-11-20 06:46:26',
-      user: 'dsfsgs',
+      timestamp: new Date().toISOString(),
       action,
       description,
       module: 'Criteria_Management',
       status,
       details: JSON.stringify(details),
     };
-
     console.log('[AUDIT LOG]', auditLog);
-    // TODO: Send to server via API: await auditApi.log(auditLog);
   }
 
   // Props
@@ -513,10 +1063,7 @@
   // Emits
   const emit = defineEmits(['update:modelValue', 'saved', 'switch-to-edit']);
 
-  // Quasar
   const $q = useQuasar();
-
-  // Store
   const criteriaStore = useCriteriaStore();
   const jobPostStore = useJobPostStore();
 
@@ -534,84 +1081,113 @@
   const isDataFetched = ref(false);
   const suggestedCriteriaLoaded = ref(false);
 
-  const baseCriteria = {
-    education: {
-      weight: 20,
-      title: '',
-      breakdownFields: [],
-    },
-    experience: {
-      weight: 20,
-      title: '',
-      breakdownFields: [],
-    },
-    training: {
-      weight: 15,
-      title: '',
-      breakdownFields: [],
-    },
-    performance: {
-      weight: 15,
-      title: '',
-      breakdownFields: [],
-    },
-    bei: {
-      weight: 30,
-      title: '',
-      breakdownFields: [],
-    },
-  };
+  // Track which optional sections are currently active
+  const optionalSections = ref({
+    bei: true, // BEI is ON by default
+    exam: false, // Exam is OFF by default
+  });
 
-  const editableCriteria = ref(JSON.parse(JSON.stringify(baseCriteria)));
+  // Track removed sections so user can restore them
+  const removedSections = ref([]);
 
-  const sections = [
+  // Static required sections (always shown)
+  const staticSections = [
     { key: 'education', label: 'Education', icon: 'school' },
     { key: 'experience', label: 'Experience', icon: 'work_history' },
     { key: 'training', label: 'Training', icon: 'card_membership' },
     { key: 'performance', label: 'Performance', icon: 'leaderboard' },
-    { key: 'bei', label: 'BEI', icon: 'record_voice_over' },
   ];
 
+  const baseCriteria = {
+    education: { weight: 20, title: '', breakdownFields: [] },
+    experience: { weight: 20, title: '', breakdownFields: [] },
+    training: { weight: 15, title: '', breakdownFields: [] },
+    performance: { weight: 15, title: '', breakdownFields: [] },
+    bei: { weight: 15, title: '', breakdownFields: [] },
+    exam: { weight: 15, title: '', breakdownFields: [] },
+  };
+
+  const editableCriteria = ref(JSON.parse(JSON.stringify(baseCriteria)));
+
   // ============================================================================
-  // COMPUTED PROPERTIES
+  // COMPUTED
   // ============================================================================
 
-  const canModify = computed(() => {
-    return props.hasPermission === true;
-  });
+  const canModify = computed(() => props.hasPermission === true);
 
   const totalWeight = computed(() => {
     if (!editableCriteria.value) return 0;
-    return (
+    let total =
       (editableCriteria.value.education.weight || 0) +
       (editableCriteria.value.experience.weight || 0) +
       (editableCriteria.value.training.weight || 0) +
-      (editableCriteria.value.performance.weight || 0) +
-      (editableCriteria.value.bei.weight || 0)
-    );
+      (editableCriteria.value.performance.weight || 0);
+
+    if (optionalSections.value.bei) {
+      total += editableCriteria.value.bei.weight || 0;
+    }
+    if (optionalSections.value.exam) {
+      total += editableCriteria.value.exam.weight || 0;
+    }
+    return total;
   });
 
   // ============================================================================
-  // VALIDATION METHODS
+  // OPTIONAL SECTION MANAGEMENT
+  // ============================================================================
+
+  function toggleOptionalSection(key) {
+    if (optionalSections.value[key]) {
+      // Removing the section
+      optionalSections.value[key] = false;
+      if (!removedSections.value.includes(key)) {
+        removedSections.value.push(key);
+      }
+      logAudit('SECTION_REMOVED', `Removed optional section: ${key}`, 'SUCCESS', { key });
+      $q.notify({
+        type: 'info',
+        message: `${key.toUpperCase()} section removed. You can restore it below.`,
+        position: 'top',
+        timeout: 2500,
+        actions: [
+          {
+            label: 'Restore',
+            color: 'white',
+            handler: () => restoreSection(key),
+          },
+        ],
+      });
+    } else {
+      restoreSection(key);
+    }
+  }
+
+  function restoreSection(key) {
+    optionalSections.value[key] = true;
+    removedSections.value = removedSections.value.filter((k) => k !== key);
+    logAudit('SECTION_RESTORED', `Restored optional section: ${key}`, 'SUCCESS', { key });
+    $q.notify({
+      type: 'positive',
+      message: `${key.toUpperCase()} section restored.`,
+      position: 'top',
+      timeout: 2000,
+    });
+  }
+
+  // ============================================================================
+  // VALIDATION
   // ============================================================================
 
   function validateBreakdownWeight(sectionKey, fieldIndex) {
     const field = editableCriteria.value[sectionKey].breakdownFields[fieldIndex];
-
-    if (field.weight < 0) {
-      field.weight = 0;
-    } else if (field.weight > 100) {
-      field.weight = 100;
-    }
+    if (field.weight < 0) field.weight = 0;
+    else if (field.weight > 100) field.weight = 100;
   }
 
   function validatePercentage(field) {
     const value = editableCriteria.value[field].weight;
-    if (value < 0) {
-      editableCriteria.value[field].weight = 0;
-    } else if (value > 100) {
-      editableCriteria.value[field].weight = 100;
-    }
+    if (value < 0) editableCriteria.value[field].weight = 0;
+    else if (value > 100) editableCriteria.value[field].weight = 100;
   }
 
   // ============================================================================
@@ -655,9 +1231,6 @@
   // METHODS
   // ============================================================================
 
-  /**
-   * Fetch job data by job ID
-   */
   async function fetchJobData() {
     if (!props.jobId || isDataFetched.value) return;
 
@@ -666,11 +1239,8 @@
     showRatingTable.value = false;
 
     try {
-      logAudit('FETCH_START', 'Starting to fetch job data by ID', 'INFO', {
-        jobId: props.jobId,
-      });
+      logAudit('FETCH_START', 'Starting to fetch job data by ID', 'INFO', { jobId: props.jobId });
 
-      // Fetch job details by ID
       const jobResponse = await jobPostStore.fetchJobDetails(props.jobId);
 
       jobData.value = {
@@ -685,7 +1255,6 @@
         SalaryGrade: jobResponse.SalaryGrade || jobResponse.salary_grade,
       };
 
-      // Set qualifications
       if (jobResponse.criteria) {
         qualifications.value = {
           Education: jobResponse.criteria.Education,
@@ -700,17 +1269,30 @@
       logAudit('DATA_FETCHED', 'Successfully fetched job data', 'SUCCESS', {
         jobId: props.jobId,
         position: jobData.value?.Position,
-        office: jobData.value?.Office,
-        salaryGrade: jobData.value?.SalaryGrade,
       });
 
-      // If in view or edit mode, fetch existing criteria
       if (props.mode === 'view' || props.mode === 'edit') {
         try {
           const existingResponse = await criteriaStore.viewCriteria(jobData.value.id);
           existingCriteria.value = existingResponse;
           if (existingResponse) {
-            editableCriteria.value = convertApiCriteriaToModalFormat(existingResponse);
+            const converted = convertApiCriteriaToModalFormat(existingResponse);
+            editableCriteria.value = converted;
+
+            // Detect which optional sections exist in the saved data
+            const hasBei =
+              existingResponse.behavioral?.length > 0 ||
+              existingResponse.Behavioral?.length > 0 ||
+              existingResponse.bei?.length > 0;
+            const hasExam = existingResponse.exam?.length > 0 || existingResponse.Exam?.length > 0;
+
+            optionalSections.value.bei = !!hasBei;
+            optionalSections.value.exam = !!hasExam;
+            removedSections.value = [];
+
+            if (!hasBei) removedSections.value.push('bei');
+            if (!hasExam) removedSections.value.push('exam');
+
             logAudit('EXISTING_CRITERIA_LOADED', 'Loaded existing criteria', 'SUCCESS', {
               jobId: props.jobId,
             });
@@ -720,8 +1302,10 @@
           await loadSuggestedCriteria();
         }
       } else if (props.mode === 'create') {
-        // In create mode, try to load suggested criteria based on salary grade
         await loadSuggestedCriteria();
+        // Default: BEI on, Exam off
+        optionalSections.value = { bei: true, exam: false };
+        removedSections.value = ['exam'];
       }
 
       showRatingTable.value = true;
@@ -731,10 +1315,7 @@
         jobId: props.jobId,
         error: error.message,
       });
-      $q.notify({
-        type: 'negative',
-        message: 'Failed to load job information',
-      });
+      $q.notify({ type: 'negative', message: 'Failed to load job information' });
       showRatingTable.value = false;
       isDataFetched.value = false;
     } finally {
@@ -742,34 +1323,20 @@
     }
   }
 
-  /**
-   * Load suggested criteria based on salary grade
-   */
   async function loadSuggestedCriteria() {
     if (!jobData.value?.SalaryGrade || suggestedCriteriaLoaded.value) {
-      // If no salary grade or already loaded, use default criteria
       editableCriteria.value = JSON.parse(JSON.stringify(baseCriteria));
       return;
     }
 
     try {
-      logAudit('FETCH_SUGGESTED_START', 'Fetching suggested criteria by salary grade', 'INFO', {
-        salaryGrade: jobData.value.SalaryGrade,
-      });
-
       const suggestedCriteria = await criteriaStore.fetchSuggestedCriteria(
         jobData.value.SalaryGrade,
       );
 
       if (suggestedCriteria) {
-        // Convert and use suggested criteria
         editableCriteria.value = convertApiCriteriaToModalFormat(suggestedCriteria);
         suggestedCriteriaLoaded.value = true;
-
-        logAudit('SUGGESTED_CRITERIA_LOADED', 'Loaded suggested criteria', 'SUCCESS', {
-          salaryGrade: jobData.value.SalaryGrade,
-        });
-
         $q.notify({
           type: 'info',
           message: `Loaded suggested criteria template for Salary Grade ${jobData.value.SalaryGrade}`,
@@ -777,19 +1344,11 @@
           timeout: 3000,
         });
       } else {
-        // No suggested criteria found, use defaults
         editableCriteria.value = JSON.parse(JSON.stringify(baseCriteria));
-        logAudit('NO_SUGGESTED_CRITERIA', 'No suggested criteria found, using defaults', 'INFO', {
-          salaryGrade: jobData.value.SalaryGrade,
-        });
       }
     } catch (error) {
       console.log('Error loading suggested criteria, using defaults:', error);
       editableCriteria.value = JSON.parse(JSON.stringify(baseCriteria));
-      logAudit('SUGGESTED_CRITERIA_ERROR', 'Error loading suggested criteria', 'WARNING', {
-        salaryGrade: jobData.value.SalaryGrade,
-        error: error.message,
-      });
     }
   }
 
@@ -805,9 +1364,6 @@
     }
   }
 
-  /**
-   * Convert API criteria format to modal format
-   */
   function convertApiCriteriaToModalFormat(apiCriteria) {
     const result = JSON.parse(JSON.stringify(baseCriteria));
     const criteriaKeys = ['education', 'experience', 'training', 'performance'];
@@ -817,11 +1373,8 @@
         apiCriteria[key] || apiCriteria[key.charAt(0).toUpperCase() + key.slice(1)];
 
       if (criteriaSection && Array.isArray(criteriaSection) && criteriaSection.length > 0) {
-        // Get the main weight from the first item
         const firstItem = criteriaSection[0];
         result[key].weight = parseInt(firstItem.weight || 0);
-
-        // Map all items to breakdownFields with their individual percentages
         result[key].breakdownFields = criteriaSection.map((item) => ({
           id: item.id,
           criteria_library_id: item.criteria_library_id,
@@ -831,16 +1384,26 @@
       }
     });
 
-    // Handle BEI/Behavioral section
+    // BEI
     let beiSection =
       apiCriteria.behavioral || apiCriteria.Behavioral || apiCriteria.bei || apiCriteria.BEI;
-
     if (beiSection && Array.isArray(beiSection) && beiSection.length > 0) {
       const firstItem = beiSection[0];
       result.bei.weight = parseInt(firstItem.weight || 0);
-
-      // Map all items to breakdownFields with their individual percentages
       result.bei.breakdownFields = beiSection.map((item) => ({
+        id: item.id,
+        criteria_library_id: item.criteria_library_id,
+        description: item.description || '',
+        weight: parseInt(item.percentage || item.weight || 0),
+      }));
+    }
+
+    // Exam
+    let examSection = apiCriteria.exam || apiCriteria.Exam;
+    if (examSection && Array.isArray(examSection) && examSection.length > 0) {
+      const firstItem = examSection[0];
+      result.exam.weight = parseInt(firstItem.weight || 0);
+      result.exam.breakdownFields = examSection.map((item) => ({
         id: item.id,
         criteria_library_id: item.criteria_library_id,
         description: item.description || '',
@@ -851,9 +1414,6 @@
     return result;
   }
 
-  /**
-   * Convert modal format to API format for saving
-   */
   function convertModalFormatToApiPayload(modalCriteria, jobId) {
     const payload = {
       job_batches_rsp_id: jobId,
@@ -862,21 +1422,18 @@
       training: [],
       performance: [],
       behavioral: [],
+      exam: [],
     };
 
-    // Helper to convert each section
     const convertSection = (sectionKey, apiKey) => {
       const section = modalCriteria[sectionKey];
-
       if (section.breakdownFields && section.breakdownFields.length > 0) {
-        // Map each breakdown field to an API item
         payload[apiKey] = section.breakdownFields.map((field) => ({
           weight: String(section.weight),
           description: field.description,
           percentage: String(field.weight),
         }));
       } else {
-        // If no breakdown fields, create a single item
         payload[apiKey] = [
           {
             weight: String(section.weight),
@@ -887,22 +1444,23 @@
       }
     };
 
-    // Convert all sections
     convertSection('education', 'education');
     convertSection('experience', 'experience');
     convertSection('training', 'training');
     convertSection('performance', 'performance');
-    convertSection('bei', 'behavioral');
+
+    if (optionalSections.value.bei) {
+      convertSection('bei', 'behavioral');
+    }
+    if (optionalSections.value.exam) {
+      convertSection('exam', 'exam');
+    }
 
     return payload;
   }
 
   function addBreakdownField(section) {
-    editableCriteria.value[section].breakdownFields.push({
-      description: '',
-      weight: 0,
-    });
-
+    editableCriteria.value[section].breakdownFields.push({ description: '', weight: 0 });
     logAudit('BREAKDOWN_ADDED', `Added new breakdown field to ${section}`, 'SUCCESS', {
       jobId: props.jobId,
       section,
@@ -912,7 +1470,6 @@
   function removeBreakdownField(section, idx) {
     const removedWeight = editableCriteria.value[section].breakdownFields[idx].weight;
     editableCriteria.value[section].breakdownFields.splice(idx, 1);
-
     logAudit('BREAKDOWN_REMOVED', `Removed breakdown field ${idx + 1} from ${section}`, 'SUCCESS', {
       jobId: props.jobId,
       section,
@@ -926,21 +1483,12 @@
 
   function switchToEditMode() {
     if (!canModify.value) {
-      console.warn('User does not have permission to edit criteria');
-      logAudit('PERMISSION_DENIED', 'Attempted to switch to edit without permission', 'WARNING', {
-        jobId: props.jobId,
-      });
-      $q.notify({
-        type: 'warning',
-        message: 'You do not have permission to edit criteria',
-      });
+      $q.notify({ type: 'warning', message: 'You do not have permission to edit criteria' });
       return;
     }
-
     logAudit('SWITCH_TO_EDIT', 'Switching from view to edit mode', 'SUCCESS', {
       jobId: props.jobId,
     });
-
     closeModal();
     nextTick(() => {
       emit('switch-to-edit', props.jobId);
@@ -949,57 +1497,23 @@
 
   function confirmSave() {
     if (!canModify.value) {
-      console.warn('User does not have permission to save criteria');
-      logAudit('PERMISSION_DENIED', 'Attempted to save without permission', 'WARNING', {
-        jobId: props.jobId,
-      });
-      $q.notify({
-        type: 'warning',
-        message: 'You do not have permission to save criteria',
-      });
+      $q.notify({ type: 'warning', message: 'You do not have permission to save criteria' });
       return;
     }
-
     if (totalWeight.value !== 100) {
-      logAudit('VALIDATION_ERROR', 'Total weight not equal to 100%', 'WARNING', {
-        jobId: props.jobId,
-        totalWeight: totalWeight.value,
-      });
-      $q.notify({
-        type: 'warning',
-        message: 'The total weight must equal 100% before saving.',
-      });
+      $q.notify({ type: 'warning', message: 'The total weight must equal 100% before saving.' });
       return;
     }
-
     confirmDialog.value = true;
   }
 
-  /**
-   * Save the criteria
-   */
   async function saveRatings() {
     if (!canModify.value) {
-      console.warn('User does not have permission to save criteria');
-      logAudit('PERMISSION_DENIED', 'Attempted to save without permission', 'WARNING', {
-        jobId: props.jobId,
-      });
-      $q.notify({
-        type: 'warning',
-        message: 'You do not have permission to save criteria',
-      });
+      $q.notify({ type: 'warning', message: 'You do not have permission to save criteria' });
       return;
     }
-
     if (totalWeight.value !== 100) {
-      logAudit('VALIDATION_ERROR', 'Total weight not equal to 100%', 'WARNING', {
-        jobId: props.jobId,
-        totalWeight: totalWeight.value,
-      });
-      $q.notify({
-        type: 'warning',
-        message: 'The total weight must equal 100% before saving.',
-      });
+      $q.notify({ type: 'warning', message: 'The total weight must equal 100% before saving.' });
       return;
     }
 
@@ -1007,23 +1521,18 @@
       logAudit('SAVE_START', 'Starting to save criteria', 'INFO', {
         jobId: props.jobId,
         mode: props.mode,
-        usedSuggestedCriteria: suggestedCriteriaLoaded.value,
+        includedBei: optionalSections.value.bei,
+        includedExam: optionalSections.value.exam,
       });
 
-      // Convert modal format to API format
       const payload = convertModalFormatToApiPayload(editableCriteria.value, jobData.value.id);
-
       console.log('Modal: Payload before sending:', JSON.stringify(payload, null, 2));
 
-      // Save using the store
       const response = await criteriaStore.saveCriteria(payload);
-
-      console.log('Modal: Response from store:', response);
 
       logAudit('SAVE_SUCCESS', 'Successfully saved criteria', 'SUCCESS', {
         jobId: props.jobId,
         criteriaId: response?.id,
-        usedSuggestedCriteria: suggestedCriteriaLoaded.value,
       });
 
       $q.notify({
@@ -1031,17 +1540,14 @@
         message: 'Rating criteria saved successfully!',
         position: 'top',
       });
-
       emit('saved', response);
       closeModal();
     } catch (error) {
       console.error('Modal: Error saving criteria:', error);
-      console.error('Modal: Error stack:', error.stack);
       logAudit('SAVE_ERROR', 'Failed to save criteria', 'FAILED', {
         jobId: props.jobId,
         error: error.message,
       });
-
       $q.notify({
         type: 'negative',
         message: error.message || 'Failed to save rating criteria',
@@ -1064,12 +1570,10 @@
     font-size: 12px !important;
     line-height: 1.4;
   }
-
   .text-10 {
     font-size: 10px !important;
     line-height: 1.2;
   }
-
   .text-11 {
     font-size: 11px !important;
     line-height: 1.3;
@@ -1093,15 +1597,17 @@
     border-radius: 4px;
   }
 
+  .optional-card--bei {
+    border-top: 2px solid #1976d2 !important;
+  }
+
+  .optional-card--exam {
+    border-top: 2px solid #673ab7 !important;
+  }
+
   .modern-select,
   .modern-input {
     border-radius: 3px;
-  }
-
-  .modern-select .q-field__control,
-  .modern-input .q-field__control {
-    height: 28px;
-    min-height: 28px;
   }
 
   .percentage-wrapper {
@@ -1118,7 +1624,6 @@
     min-height: 22px;
     padding: 0 2px 0 8px;
   }
-
   .weight-input .q-field__native {
     padding-right: 0;
     text-align: right;
@@ -1148,8 +1653,20 @@
   }
 
   .summary-container {
-    max-height: 250px;
+    max-height: 300px;
     overflow-y: auto;
+  }
+
+  .optional-chip {
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .optional-chip:hover {
+    opacity: 0.85;
+  }
+
+  .restore-bar {
+    border: 1px dashed rgba(0, 0, 0, 0.12);
   }
 
   @keyframes fadeIn {
@@ -1179,15 +1696,12 @@
   .q-gutter-xs > .col {
     padding: 2px;
   }
-
   .q-mb-xs {
     margin-bottom: 4px;
   }
-
   .q-mt-xs {
     margin-top: 4px;
   }
-
   .q-mt-sm {
     margin-top: 8px;
   }
@@ -1195,7 +1709,6 @@
   .modern-input :deep(.q-field__control) {
     min-height: 28px;
   }
-
   .modern-input :deep(.q-field__native) {
     min-height: 20px;
   }

@@ -14,7 +14,7 @@
           :loading="logStore.loading"
         >
           <template v-slot:body-cell-Description="props">
-  <q-td :props="props" class="text-wrap" style="max-width: 300px;">
+            <q-td :props="props" class="text-wrap" style="max-width: 300px">
               {{ props.value }}
             </q-td>
           </template>
@@ -36,8 +36,8 @@
             </q-td>
           </template>
           <!-- Add body cell template for useragent -->
-<template v-slot:body-cell-userAgent="props">
-  <q-td :props="props" class="text-wrap" style="max-width: 250px;">
+          <template v-slot:body-cell-userAgent="props">
+            <q-td :props="props" class="text-wrap" style="max-width: 250px">
               {{ props.value }}
             </q-td>
           </template>
@@ -68,13 +68,12 @@
   onMounted(async () => {
     await logStore.fetchLogs();
     logs.value = logStore.logs;
-  
   });
 </script>
 <style>
-.text-wrap {
-  white-space: normal !important;
-  word-wrap: break-word !important;
-  word-break: break-all; /* optional */
-}
+  .text-wrap {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-all; /* optional */
+  }
 </style>

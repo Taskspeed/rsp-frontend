@@ -23,7 +23,6 @@
         v-bind="pagination"
         :loading="authStore.loadUser"
       >
-        <!-- Top section with search -->
         <template #top-left>
           <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
             <template #append>
@@ -87,10 +86,9 @@
           </q-td>
         </template>
 
-        <!-- Actions column -->
+        <!-- Actions -->
         <template #body-cell-actions="props">
           <q-td :props="props">
-            <!-- Null-safe check: authStore.user can be null briefly -->
             <q-btn
               v-if="authStore.user && props.row.id !== authStore.user.id"
               flat
@@ -126,48 +124,81 @@
       </q-table>
     </div>
 
-    <!-- Add/Edit User Dialog -->
-    <q-dialog v-model="dialog" persistent>
-      <q-card style="min-width: 900px">
-        <q-card-section :class="isEditing ? 'bg-blue text-white' : 'bg-green text-white'">
-          <div class="text-h4 text-bold">
-            {{ isEditing ? 'Edit User' : 'Add New User' }}
+    <!-- ================================================================ -->
+    <!-- Add / Edit User Dialog                                           -->
+    <!-- ================================================================ -->
+    <q-dialog v-model="dialog" persistent maximized-mobile>
+      <q-card class="user-dialog-card">
+        <!-- Header -->
+        <q-card-section class="dialog-header" :class="isEditing ? 'header-edit' : 'header-add'">
+          <div class="row items-center no-wrap">
+            <q-icon
+              :name="isEditing ? 'manage_accounts' : 'person_add'"
+              size="28px"
+              class="q-mr-sm"
+            />
+            <div>
+              <div class="text-h6 text-bold">{{ isEditing ? 'Edit User' : 'Add New User' }}</div>
+              <div class="text-caption opacity-80">
+                {{
+                  isEditing
+                    ? 'Update user details and permissions'
+                    : 'Fill in details to create a new user account'
+                }}
+              </div>
+            </div>
           </div>
+          <q-btn flat round dense icon="close" class="close-btn" v-close-popup />
         </q-card-section>
 
-        <q-card-section>
+        <q-separator />
+
+        <!-- Body -->
+        <q-card-section class="dialog-body q-pa-none">
           <q-form @submit="isEditing ? (confirmUpdateDialog = true) : submitForm()">
-            <div class="row q-col-gutter-sm">
-              <!-- Left Column - User Information -->
-              <div class="col-12 col-md-6">
-                <div class="text-subtitle1 q-mb-sm">User Information</div>
+            <div class="row no-wrap full-height">
+              <!-- ── Left Panel: User Information ── -->
+              <div class="left-panel q-pa-lg">
+                <div class="section-label q-mb-md">
+                  <q-icon name="person" size="16px" class="q-mr-xs" />
+                  User Information
+                </div>
 
                 <q-input
                   v-model="form.name"
-                  label="Name *"
+                  label="Full Name"
                   :error="!!authStore.errors?.name"
                   :error-message="authStore.errors?.name?.[0]"
                   outlined
-                  class="q-mb-sm"
-                />
+                  dense
+                  class="q-mb-md"
+                >
+                  <template #prepend><q-icon name="badge" size="18px" /></template>
+                </q-input>
 
                 <q-input
                   v-model="form.username"
-                  label="Username *"
+                  label="Username"
                   :error="!!authStore.errors?.username"
                   :error-message="authStore.errors?.username?.[0]"
                   outlined
-                  class="q-mb-sm"
-                />
+                  dense
+                  class="q-mb-md"
+                >
+                  <template #prepend><q-icon name="alternate_email" size="18px" /></template>
+                </q-input>
 
                 <q-input
                   v-model="form.position"
-                  label="Position *"
+                  label="Position"
                   :error="!!authStore.errors?.position"
                   :error-message="authStore.errors?.position?.[0]"
                   outlined
-                  class="q-mb-sm"
-                />
+                  dense
+                  class="q-mb-md"
+                >
+                  <template #prepend><q-icon name="work" size="18px" /></template>
+                </q-input>
 
                 <q-input
                   v-model="form.password"
@@ -179,103 +210,258 @@
                   :error="!!authStore.errors?.password"
                   :error-message="authStore.errors?.password?.[0]"
                   outlined
-                  class="q-mb-sm"
-                />
+                  dense
+                  class="q-mb-md"
+                >
+                  <template #prepend><q-icon name="lock" size="18px" /></template>
+                </q-input>
 
-                <q-toggle v-model="form.active" label="Active" class="q-mb-sm" />
+                <div class="status-toggle-row">
+                  <span class="text-body2 text-grey-7">Account Status</span>
+                  <q-toggle
+                    v-model="form.active"
+                    :color="form.active ? 'positive' : 'negative'"
+                    keep-color
+                  >
+                    <span
+                      :class="form.active ? 'text-positive' : 'text-negative'"
+                      class="text-weight-medium"
+                    >
+                      {{ form.active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </q-toggle>
+                </div>
               </div>
 
-              <!-- Right Column - Permissions -->
-              <div class="col-12 col-md-6">
-                <div class="text-subtitle1 q-mb-sm">User Permissions</div>
-                <q-card flat bordered class="q-pa-md">
-                  <div class="q-gutter-y-md">
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.viewDashboardstat"
-                      label="View Dashboard Statistics"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.viewPlantillaAccess"
-                      label="View Plantilla Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.modifyPlantillaAccess"
-                      label="Modify Plantilla Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.viewJobpostAccess"
-                      label="View Job Post Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.modifyJobpostAccess"
-                      label="Modify Job Post Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.viewActivityLogs"
-                      label="View Activity Logs"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.userManagement"
-                      label="Allow Access to User Management"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.viewRater"
-                      label="View Rater Module Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.modifyRater"
-                      label="Modify Rater Module Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.viewCriteria"
-                      label="View Criteria Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.modifyCriteria"
-                      label="Modify Criteria Access"
-                    />
-                    <q-toggle
-                      true-value="1"
-                      false-value="0"
-                      v-model="form.permissions.viewReport"
-                      label="View Report Module Access"
-                    />
+              <q-separator vertical />
+
+              <!-- ── Right Panel: Permissions ── -->
+              <div class="right-panel q-pa-lg">
+                <div class="section-label q-mb-md">
+                  <q-icon name="shield" size="16px" class="q-mr-xs" />
+                  Module Permissions
+                </div>
+
+                <div class="permissions-scroll">
+                  <!-- Dashboard -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="dashboard" size="14px" class="q-mr-xs" />
+                      Dashboard
+                    </div>
+                    <div class="perm-row">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewDashboardstat"
+                        label="View Statistics"
+                        dense
+                        color="primary"
+                      />
+                    </div>
                   </div>
-                </q-card>
+
+                  <!-- Plantilla -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="domain" size="14px" class="q-mr-xs" />
+                      Plantilla
+                    </div>
+                    <div class="perm-row two-col">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewPlantillaAccess"
+                        label="View"
+                        dense
+                        color="primary"
+                      />
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.modifyPlantillaAccess"
+                        label="Modify"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Job Post -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="post_add" size="14px" class="q-mr-xs" />
+                      Job Posts
+                    </div>
+                    <div class="perm-row two-col">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewJobpostAccess"
+                        label="View"
+                        dense
+                        color="primary"
+                      />
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.modifyJobpostAccess"
+                        label="Modify"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Schedule -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="event" size="14px" class="q-mr-xs" />
+                      Schedule
+                    </div>
+                    <div class="perm-row two-col">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewSchedule"
+                        label="View"
+                        dense
+                        color="primary"
+                      />
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.modifySchedule"
+                        label="Modify"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Exam Score -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="grading" size="14px" class="q-mr-xs" />
+                      Exam Score
+                    </div>
+                    <div class="perm-row two-col">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewExam"
+                        label="View"
+                        dense
+                        color="primary"
+                      />
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.modifyExam"
+                        label="Modify"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Rater Management -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="assignment_ind" size="14px" class="q-mr-xs" />
+                      Rater Management
+                    </div>
+                    <div class="perm-row two-col">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewRater"
+                        label="View Raters"
+                        dense
+                        color="primary"
+                      />
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.modifyRater"
+                        label="Modify Raters"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                    <div class="perm-row two-col">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewCriteria"
+                        label="View Criteria"
+                        dense
+                        color="primary"
+                      />
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.modifyCriteria"
+                        label="Modify Criteria"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                    <div class="perm-row">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewReport"
+                        label="View Reports"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Administration -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="admin_panel_settings" size="14px" class="q-mr-xs" />
+                      Administration
+                    </div>
+                    <div class="perm-row">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.userManagement"
+                        label="User Management"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                    <div class="perm-row">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewActivityLogs"
+                        label="Activity Logs"
+                        dense
+                        color="primary"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="row justify-end">
-              <q-btn rounded label="Cancel" color="negative" flat v-close-popup />
+            <!-- Footer Actions -->
+            <q-separator />
+            <div class="dialog-footer row justify-end items-center q-pa-md q-gutter-sm">
+              <q-btn rounded flat label="Cancel" color="grey-7" v-close-popup />
               <q-btn
                 rounded
-                :label="isEditing ? 'Update' : 'Create'"
+                unelevated
+                :label="isEditing ? 'Save Changes' : 'Create User'"
                 type="submit"
                 :color="isEditing ? 'blue' : 'primary'"
                 :loading="authStore.loading"
-                class="q-ml-sm"
+                :icon="isEditing ? 'save' : 'person_add'"
               />
             </div>
           </q-form>
@@ -285,13 +471,13 @@
 
     <!-- Update Confirmation Dialog -->
     <q-dialog v-model="confirmUpdateDialog" persistent>
-      <q-card>
+      <q-card style="min-width: 340px">
         <q-card-section class="row items-center">
-          <q-avatar icon="info" color="primary" text-color="white" />
+          <q-avatar icon="info" color="blue" text-color="white" />
           <span class="q-ml-sm">Are you sure you want to update this user?</span>
         </q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
+          <q-btn flat label="Cancel" color="grey-7" v-close-popup />
           <q-btn
             flat
             label="Yes, Update"
@@ -314,17 +500,12 @@
 
   export default defineComponent({
     name: 'UserManagement',
-    components: {
-      ButtonResetPassword,
-      ButtonDelete,
-    },
+    components: { ButtonResetPassword, ButtonDelete },
 
     setup() {
       const authStore = useAuthStore();
-
       const confirmUpdateDialog = ref(false);
 
-      // Table related
       const filter = ref('');
       const pagination = ref({
         sortBy: 'id',
@@ -355,7 +536,26 @@
         { name: 'actions', align: 'center', label: 'Actions', field: 'actions', sortable: false },
       ];
 
-      // Form related
+      // Single source of truth for default permissions
+      const defaultPermissions = () => ({
+        viewDashboardstat: '0',
+        viewPlantillaAccess: '0',
+        modifyPlantillaAccess: '0',
+        viewJobpostAccess: '0',
+        modifyJobpostAccess: '0',
+        viewSchedule: '0',
+        modifySchedule: '0',
+        viewExam: '0',
+        modifyExam: '0',
+        viewRater: '0',
+        modifyRater: '0',
+        viewCriteria: '0',
+        modifyCriteria: '0',
+        viewReport: '0',
+        userManagement: '0',
+        viewActivityLogs: '0',
+      });
+
       const dialog = ref(false);
       const isEditing = ref(false);
       const form = ref({
@@ -364,20 +564,7 @@
         position: '',
         password: '',
         active: true,
-        permissions: {
-          viewDashboardstat: '0',
-          viewPlantillaAccess: '0',
-          modifyPlantillaAccess: '0',
-          viewJobpostAccess: '0',
-          modifyJobpostAccess: '0',
-          viewActivityLogs: '0',
-          userManagement: '0',
-          viewRater: '0',
-          modifyRater: '0',
-          viewCriteria: '0',
-          modifyCriteria: '0',
-          viewReport: '0',
-        },
+        permissions: defaultPermissions(),
       });
 
       const resetForm = () => {
@@ -387,20 +574,7 @@
           position: '',
           password: '',
           active: true,
-          permissions: {
-            viewDashboardstat: '0',
-            viewPlantillaAccess: '0',
-            modifyPlantillaAccess: '0',
-            viewJobpostAccess: '0',
-            modifyJobpostAccess: '0',
-            viewActivityLogs: '0',
-            userManagement: '0',
-            viewRater: '0',
-            modifyRater: '0',
-            viewCriteria: '0',
-            modifyCriteria: '0',
-            viewReport: '0',
-          },
+          permissions: defaultPermissions(),
         };
         authStore.errors = {};
       };
@@ -419,6 +593,7 @@
         const user = await authStore.getUserById(userId);
         if (!user) return;
 
+        const p = user.rsp_control ?? {};
         form.value = {
           id: user.id,
           name: user.name,
@@ -427,28 +602,28 @@
           password: '',
           active: user.active,
           permissions: {
-            viewDashboardstat: user.rsp_control?.viewDashboardstat || '0',
-            viewPlantillaAccess: user.rsp_control?.viewPlantillaAccess || '0',
-            modifyPlantillaAccess: user.rsp_control?.modifyPlantillaAccess || '0',
-            viewJobpostAccess: user.rsp_control?.viewJobpostAccess || '0',
-            modifyJobpostAccess: user.rsp_control?.modifyJobpostAccess || '0',
-            viewActivityLogs: user.rsp_control?.viewActivityLogs || '0',
-            userManagement: user.rsp_control?.userManagement || '0',
-            viewRater: user.rsp_control?.viewRater || '0',
-            modifyRater: user.rsp_control?.modifyRater || '0',
-            viewCriteria: user.rsp_control?.viewCriteria || '0',
-            modifyCriteria: user.rsp_control?.modifyCriteria || '0',
-            viewReport: user.rsp_control?.viewReport || '0',
+            viewDashboardstat: p.viewDashboardstat || '0',
+            viewPlantillaAccess: p.viewPlantillaAccess || '0',
+            modifyPlantillaAccess: p.modifyPlantillaAccess || '0',
+            viewJobpostAccess: p.viewJobpostAccess || '0',
+            modifyJobpostAccess: p.modifyJobpostAccess || '0',
+            viewSchedule: p.viewSchedule || '0',
+            modifySchedule: p.modifySchedule || '0',
+            viewExam: p.viewExam || '0',
+            modifyExam: p.modifyExam || '0',
+            viewRater: p.viewRater || '0',
+            modifyRater: p.modifyRater || '0',
+            viewCriteria: p.viewCriteria || '0',
+            modifyCriteria: p.modifyCriteria || '0',
+            viewReport: p.viewReport || '0',
+            userManagement: p.userManagement || '0',
+            viewActivityLogs: p.viewActivityLogs || '0',
           },
         };
       };
 
       const submitForm = async () => {
-        const userData = {
-          ...form.value,
-          permissions: { ...form.value.permissions },
-        };
-
+        const userData = { ...form.value, permissions: { ...form.value.permissions } };
         if (isEditing.value) {
           const result = await authStore.updateUser(form.value.id, userData);
           if (result) dialog.value = false;
@@ -456,14 +631,10 @@
           const result = await authStore.registerUser(userData);
           if (result) dialog.value = false;
         }
-
         await authStore.getAllUsers();
       };
 
       onMounted(async () => {
-        // debug to confirm method exists at runtime
-        // console.log('authStore.getAllUsers:', authStore.getAllUsers);
-
         await authStore.getAllUsers();
       });
 
@@ -483,3 +654,138 @@
     },
   });
 </script>
+
+<style scoped>
+  /* ── Dialog Card ── */
+  .user-dialog-card {
+    width: 90vw;
+    max-width: 860px;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+  }
+
+  /* ── Header ── */
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .header-add {
+    background: #00b034;
+  }
+  .header-edit {
+    background: #1976d2;
+  }
+  .close-btn {
+    color: rgba(255, 255, 255, 0.8);
+  }
+  .close-btn:hover {
+    color: white;
+  }
+
+  /* ── Body ── */
+  .dialog-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .dialog-body .q-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .dialog-body .row.no-wrap {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Left Panel ── */
+  .left-panel {
+    width: 340px;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .permissions-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  /* ── Section Labels ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #9e9e9e;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ── Status Toggle Row ── */
+  .status-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 4px;
+  }
+
+  /* ── Permission Groups ── */
+  .perm-group {
+    border: 1px solid #eeeeee;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    background: #fafafa;
+  }
+
+  .perm-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #616161;
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eeeeee;
+  }
+
+  .perm-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 2px 0;
+  }
+
+  .perm-row.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  /* ── Footer ── */
+  .dialog-footer {
+    flex-shrink: 0;
+    background: #fafafa;
+  }
+</style>

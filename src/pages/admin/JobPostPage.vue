@@ -6,62 +6,88 @@
 
     <!-- Job List View -->
     <div v-if="!showingDetails" class="q-pa-sm">
-      <div class="row justify-between items-center q-mb-md">
-        <q-input
-          outlined
-          dense
-          readonly
-          v-model="dateRangeText"
-          placeholder="Select Date Range"
-          class="col-auto q-mr-md"
-          style="max-width: 280px"
-        >
-          <template v-slot:prepend>
-            <q-icon name="event" color="primary" class="cursor-pointer" />
-          </template>
-          <template v-slot:append>
-            <q-icon name="arrow_drop_down" color="primary" class="cursor-pointer">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date
-                  v-model="dateRange"
-                  range
-                  landscape
-                  today-btn
-                  mask="YYYY-MM-DD"
-                  color="primary"
-                  @update:model-value="onDateRangeChange"
-                >
-                  <div class="row items-center justify-end q-gutter-x-sm">
-                    <q-btn
-                      label="Clear"
-                      class="bg-negative text-white"
-                      rounded
-                      flat
-                      dense
-                      @click="clearDateRange"
-                      v-if="dateRange.from || dateRange.to"
-                    />
-                    <q-btn
-                      label="Okay"
-                      class="bg-primary text-white"
-                      rounded
-                      flat
-                      dense
-                      v-close-popup
-                    />
-                  </div>
-                </q-date>
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
+      <div class="row items-center justify-between q-mb-md">
+        <!-- LEFT SIDE: Filters -->
+        <div class="row items-center q-gutter-sm">
+          <!-- Date range picker -->
+          <q-input
+            outlined
+            dense
+            readonly
+            v-model="dateRangeText"
+            placeholder="Select Date Range"
+            style="max-width: 280px"
+          >
+            <template v-slot:prepend>
+              <q-icon name="event" color="primary" class="cursor-pointer" />
+            </template>
 
+            <template v-slot:append>
+              <q-icon name="arrow_drop_down" color="primary" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-date
+                    v-model="dateRange"
+                    range
+                    landscape
+                    today-btn
+                    mask="YYYY-MM-DD"
+                    color="primary"
+                    @update:model-value="onDateRangeChange"
+                  >
+                    <div class="row items-center justify-end q-gutter-x-sm">
+                      <q-btn
+                        label="Clear"
+                        class="bg-negative text-white"
+                        rounded
+                        flat
+                        dense
+                        @click="clearDateRange"
+                        v-if="dateRange.from || dateRange.to"
+                      />
+                      <q-btn
+                        label="Okay"
+                        class="bg-primary text-white"
+                        rounded
+                        flat
+                        dense
+                        v-close-popup
+                      />
+                    </div>
+                  </q-date>
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+
+          <!-- Posting date dropdown -->
+          <q-select
+            v-model="selectedPostingDate"
+            :options="postingDateOptions"
+            outlined
+            dense
+            use-input
+            input-debounce="150"
+            clearable
+            emit-value
+            map-options
+            option-label="label"
+            option-value="value"
+            label="Posting Date"
+            style="max-width: 260px"
+            @filter="filterPostingDateOptions"
+          >
+            <template v-slot:prepend>
+              <q-icon name="filter_alt" color="primary" />
+            </template>
+          </q-select>
+        </div>
+
+        <!-- RIGHT SIDE: Search -->
         <q-input
           v-model="globalSearch"
           outlined
           dense
           placeholder="Search jobs..."
-          class="col-auto"
           style="max-width: 220px"
           clearable
         >
@@ -87,6 +113,7 @@
             </div>
           </q-td>
         </template>
+
         <template v-slot:body-cell-position="props">
           <q-td :props="props" class="position-column">
             <div class="text-body2 text-weight-medium text-black">
@@ -94,6 +121,7 @@
             </div>
           </q-td>
         </template>
+
         <template v-slot:body-cell-post_date="props">
           <q-td :props="props" class="date-column">
             <q-badge rounded color="green" class="text-caption q-px-sm">
@@ -101,6 +129,7 @@
             </q-badge>
           </q-td>
         </template>
+
         <template v-slot:body-cell-applicants="props">
           <q-td :props="props" class="count-column">
             <div class="text-center text-body2">
@@ -108,16 +137,19 @@
             </div>
           </q-td>
         </template>
+
         <template v-slot:body-cell-pending="props">
           <q-td :props="props" class="count-column">
             <div class="text-center text-body2">{{ props.row.pending_count || 0 }}</div>
           </q-td>
         </template>
+
         <template v-slot:body-cell-qualified="props">
           <q-td :props="props" class="count-column">
             <div class="text-center text-body2">{{ props.row.qualified_count || 0 }}</div>
           </q-td>
         </template>
+
         <template v-slot:body-cell-unqualified="props">
           <q-td :props="props" class="count-column">
             <div class="text-center text-body2">
@@ -125,6 +157,7 @@
             </div>
           </q-td>
         </template>
+
         <template v-slot:body-cell-status="props">
           <q-td :props="props" class="count-column">
             <q-badge
@@ -136,8 +169,21 @@
             </q-badge>
           </q-td>
         </template>
+
         <template v-slot:body-cell-action="props">
           <q-td :props="props" class="action-column q-gutter-x-xs">
+            <q-btn
+              v-if="canModifyJobPost"
+              round
+              flat
+              color="teal"
+              class="bg-teal-1"
+              icon="assignment_ind"
+              @click="goToManualApplication(props.row)"
+            >
+              <q-tooltip>Manual Application</q-tooltip>
+            </q-btn>
+
             <q-btn
               round
               flat
@@ -149,7 +195,6 @@
               <q-tooltip>View Job Details</q-tooltip>
             </q-btn>
 
-            <!-- Edit button - only if modify permission -->
             <q-btn
               v-if="canModifyJobPost"
               round
@@ -162,7 +207,6 @@
               <q-tooltip>Edit Job Post</q-tooltip>
             </q-btn>
 
-            <!-- Republish button - only if modify permission -->
             <q-btn
               v-if="canModifyJobPost && props.row.status == 'Unoccupied'"
               round
@@ -175,7 +219,6 @@
               <q-tooltip>Republish Job Post</q-tooltip>
             </q-btn>
 
-            <!-- Delete button - only if modify permission and no applicants -->
             <q-btn
               v-if="canModifyJobPost && props.row.total_applicants == 0"
               round
@@ -190,6 +233,7 @@
             </q-btn>
           </q-td>
         </template>
+
         <template v-slot:no-data>
           <div class="full-width row flex-center q-pa-md text-grey">Jobpost is Empty</div>
         </template>
@@ -259,6 +303,7 @@
                 />
               </div>
             </div>
+
             <div class="row q-col-gutter-md q-mt-sm">
               <div class="col-6">
                 <q-input v-model="editJobDetails.Section" label="Section" outlined dense disable />
@@ -286,8 +331,7 @@
                   dense
                   mask="date"
                   :rules="[
-                    (date) =>
-                      date >= editJobDetails.post_date || 'End date cannot be before start date',
+                    (d) => d >= editJobDetails.post_date || 'End date cannot be before start date',
                   ]"
                 >
                   <template v-slot:append>
@@ -295,7 +339,7 @@
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                         <q-date
                           v-model="editJobDetails.end_date"
-                          :options="(date) => date >= editJobDetails.post_date"
+                          :options="(d) => d >= editJobDetails.post_date"
                         >
                           <div class="row items-center justify-end">
                             <q-btn v-close-popup label="Close" color="primary" flat />
@@ -314,25 +358,10 @@
             <q-table
               :rows="criteriaData ? [criteriaData] : []"
               :columns="[
-                {
-                  name: 'education',
-                  label: 'Education',
-                  field: 'Education',
-                  align: 'left',
-                },
-                {
-                  name: 'experience',
-                  label: 'Experience',
-                  field: 'Experience',
-                  align: 'left',
-                },
+                { name: 'education', label: 'Education', field: 'Education', align: 'left' },
+                { name: 'experience', label: 'Experience', field: 'Experience', align: 'left' },
                 { name: 'training', label: 'Training', field: 'Training', align: 'left' },
-                {
-                  name: 'eligibility',
-                  label: 'Eligibility',
-                  field: 'Eligibility',
-                  align: 'left',
-                },
+                { name: 'eligibility', label: 'Eligibility', field: 'Eligibility', align: 'left' },
               ]"
               row-key="id"
               :loading="loadingCriteria"
@@ -430,6 +459,7 @@
                 <q-icon name="upload_file" size="2em" color="grey-7" />
               </template>
             </q-file>
+
             <div class="text-caption text-grey-6 text-center" v-if="!editJobDetails.newFile">
               No new file selected. Current document will be retained.
             </div>
@@ -542,6 +572,7 @@
                 />
               </div>
             </div>
+
             <div class="row q-col-gutter-md q-mt-sm">
               <div class="col-6">
                 <q-input v-model="editJobDetails.Section" label="Section" outlined dense disable />
@@ -569,8 +600,7 @@
                   dense
                   mask="date"
                   :rules="[
-                    (date) =>
-                      date >= editJobDetails.post_date || 'End date cannot be before start date',
+                    (d) => d >= editJobDetails.post_date || 'End date cannot be before start date',
                   ]"
                 >
                   <template v-slot:append>
@@ -578,7 +608,7 @@
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                         <q-date
                           v-model="editJobDetails.end_date"
-                          :options="(date) => date >= editJobDetails.post_date"
+                          :options="(d) => d >= editJobDetails.post_date"
                         >
                           <div class="row items-center justify-end">
                             <q-btn v-close-popup label="Close" color="primary" flat />
@@ -597,25 +627,10 @@
             <q-table
               :rows="criteriaData ? [criteriaData] : []"
               :columns="[
-                {
-                  name: 'education',
-                  label: 'Education',
-                  field: 'Education',
-                  align: 'left',
-                },
-                {
-                  name: 'experience',
-                  label: 'Experience',
-                  field: 'Experience',
-                  align: 'left',
-                },
+                { name: 'education', label: 'Education', field: 'Education', align: 'left' },
+                { name: 'experience', label: 'Experience', field: 'Experience', align: 'left' },
                 { name: 'training', label: 'Training', field: 'Training', align: 'left' },
-                {
-                  name: 'eligibility',
-                  label: 'Eligibility',
-                  field: 'Eligibility',
-                  align: 'left',
-                },
+                { name: 'eligibility', label: 'Eligibility', field: 'Eligibility', align: 'left' },
               ]"
               row-key="id"
               :loading="loadingCriteria"
@@ -713,6 +728,7 @@
                 <q-icon name="upload_file" size="2em" color="grey-7" />
               </template>
             </q-file>
+
             <div class="text-caption text-grey-6 text-center" v-if="!editJobDetails.newFile">
               No new file selected. Current document will be retained.
             </div>
@@ -962,18 +978,10 @@
     )}`;
   });
 
-  // Modified setDateRange to show the entire current year by default
+  // Default: no filter
   const setDateRange = () => {
-    // ✅ default is "clear" = no filter
     dateRange.value = { from: '', to: '' };
   };
-
-  // Add this method after the onDateRangeChange function
-  //
-
-  // const onDateRangeChange = (newRange) => {
-  //   dateRange.value = newRange;
-  // };
 
   const columns = [
     {
@@ -1052,28 +1060,72 @@
 
   const jobs = ref([]);
 
-  // UPDATED: Computed property to filter jobs by date range, search, AND exclude republished jobs
+  const goToManualApplication = (job) => {
+    router.push({
+      name: 'Manual Application',
+      params: { id: job.id },
+    });
+  };
+
+  // --- Posting date dropdown filter (Posting Date only) ---
+  const selectedPostingDate = ref(null);
+  const allPostingDateOptions = ref([]);
+  const postingDateOptions = ref([]);
+
+  const rebuildPostingDateOptions = () => {
+    const map = new Map();
+
+    for (const job of jobs.value || []) {
+      if (!job?.post_date) continue;
+
+      const post = String(job.post_date).replace(/\//g, '-');
+
+      if (!map.has(post)) {
+        map.set(post, {
+          label: formatDate(post, 'MMM D, YYYY'),
+          value: post, // normalized YYYY-MM-DD
+        });
+      }
+    }
+
+    const list = Array.from(map.values()).sort((a, b) => b.value.localeCompare(a.value));
+
+    allPostingDateOptions.value = list;
+    postingDateOptions.value = list;
+  };
+
+  const filterPostingDateOptions = (val, update) => {
+    update(() => {
+      const needle = (val || '').toLowerCase().trim();
+      if (!needle) {
+        postingDateOptions.value = allPostingDateOptions.value;
+        return;
+      }
+      postingDateOptions.value = allPostingDateOptions.value.filter((o) =>
+        o.label.toLowerCase().includes(needle),
+      );
+    });
+  };
+
+  // Filter jobs by: (1) exclude republished, (2) posting date dropdown, (3) global search
   const filteredJobs = computed(() => {
     let filtered = jobs.value;
 
-    // MAIN CHANGE: Filter out jobs with 'Republished' status
+    // Filter out jobs with 'Republished' status
     filtered = filtered.filter((job) => {
       return job.status && job.status.toLowerCase() !== 'republished';
     });
 
-    // Apply date range filtering
-    // if (dateRange.value.from && dateRange.value.to) {
-    //   filtered = filtered.filter((job) => {
-    //     const jobDate = new Date(job.post_date);
-    //     const from = new Date(dateRange.value.from);
-    //     const to = new Date(dateRange.value.to);
-    //     // Set time to end of day for "to" date to include the entire day
-    //     to.setHours(23, 59, 59, 999);
-    //     return jobDate >= from && jobDate <= to;
-    //   });
-    // }
+    // Filter by selected posting date
+    if (selectedPostingDate.value) {
+      const selectedPost = selectedPostingDate.value;
+      filtered = filtered.filter((job) => {
+        const post = String(job.post_date || '').replace(/\//g, '-');
+        return post === selectedPost;
+      });
+    }
 
-    // Apply global search filter if needed
+    // Global search
     if (globalSearch.value) {
       const searchTerm = globalSearch.value.toLowerCase();
       filtered = filtered.filter((job) => {
@@ -1117,11 +1169,9 @@
     try {
       showEditModal.value = true;
 
-      // Fetch detailed job post data using the single fetchJobDetails method
       await jobPostStore.fetchJobDetails(job.id);
       const jobData = jobPostStore.jobPosts;
 
-      // Populate edit form with fetched job data
       editJobDetails.value = {
         id: jobData.id,
         Office: jobData.Office || '',
@@ -1147,7 +1197,6 @@
         old_job_id: jobData.id,
       };
 
-      // Set criteria data from the response
       if (jobData.criteria) {
         criteriaData.value = {
           id: jobData.criteria.id,
@@ -1173,20 +1222,16 @@
     try {
       showRepublishModal.value = true;
 
-      // Fetch detailed job post data using the single fetchJobDetails method
       await jobPostStore.fetchJobDetails(job.id);
       const jobData = jobPostStore.jobPosts;
 
-      // Set current date as default post_date for republish
       const currentDate = new Date();
       const formattedCurrentDate = formatDate(currentDate, 'YYYY-MM-DD');
 
-      // Set end date to 30 days from current date as default
       const defaultEndDate = new Date();
       defaultEndDate.setDate(defaultEndDate.getDate() + 30);
       const formattedEndDate = formatDate(defaultEndDate, 'YYYY-MM-DD');
 
-      // Populate edit form with fetched job data (include all fields)
       editJobDetails.value = {
         id: jobData.id,
         Office: jobData.Office || '',
@@ -1198,8 +1243,8 @@
         Position: jobData.Position || '',
         tblStructureDetails_ID: jobData.tblStructureDetails_ID || null,
         level: jobData.level || '',
-        post_date: formattedCurrentDate, // Set to current date for republishing
-        end_date: formattedEndDate, // Set to 30 days from now
+        post_date: formattedCurrentDate,
+        end_date: formattedEndDate,
         PageNo: parseInt(jobData.PageNo) || 0,
         PositionID: jobData.PositionID,
         ItemNo: jobData.ItemNo || '',
@@ -1212,7 +1257,6 @@
         old_job_id: jobData.id,
       };
 
-      // Set criteria data from the response
       if (jobData.criteria) {
         criteriaData.value = {
           id: jobData.criteria.id,
@@ -1235,14 +1279,12 @@
     }
   };
 
-  // Helper function to extract filename from file path
   const getFileName = (filePath) => {
     if (!filePath) return 'Unknown File';
     const parts = filePath.split('/');
     return parts[parts.length - 1];
   };
 
-  // Handle file rejection (size, type, etc.)
   const onFileRejected = (rejectedEntries) => {
     const file = rejectedEntries[0];
     if (file.failedPropValidation === 'max-file-size') {
@@ -1260,7 +1302,6 @@
     }
   };
 
-  // Download current document
   const downloadCurrentDocument = () => {
     if (!editJobDetails.value.fileUpload) {
       $q.notify({
@@ -1271,11 +1312,9 @@
       return;
     }
 
-    // Create a download link for the current document
     const baseUrl = process.env.VUE_APP_API_URL || '';
     const downloadUrl = `${baseUrl}/storage/${editJobDetails.value.fileUpload}`;
 
-    // Create temporary link and trigger download
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.download = getFileName(editJobDetails.value.fileUpload);
@@ -1332,7 +1371,6 @@
 
   const updateJobPost = async () => {
     try {
-      // Validate required fields
       if (!editJobDetails.value.end_date) {
         $q.notify({
           type: 'negative',
@@ -1351,7 +1389,6 @@
         return;
       }
 
-      // Prepare job batch update data
       const jobBatch = {
         PositionID: editJobDetails.value.PositionID || null,
         post_date: editJobDetails.value.post_date.replace(/\//g, '-'),
@@ -1361,12 +1398,10 @@
         tblStructureDetails_ID: editJobDetails.value.tblStructureDetails_ID,
       };
 
-      // Add file if a new one was selected
       if (editJobDetails.value.newFile) {
         jobBatch.fileUpload = editJobDetails.value.newFile;
       }
 
-      // Prepare criteria update data
       const criteria = {
         Education: criteriaData.value.Education,
         Experience: criteriaData.value.Experience,
@@ -1374,26 +1409,23 @@
         Eligibility: criteriaData.value.Eligibility,
       };
 
-      // Call the store's update method
       await jobPostStore.updateJobPost({
         id: editJobDetails.value.id,
-        jobBatch: jobBatch,
-        criteria: criteria,
+        jobBatch,
+        criteria,
         criteriaId: criteriaData.value.id,
       });
 
-      // Refresh the job list
       await jobPostStore.job_post();
       jobs.value = jobPostStore.jobPosts;
+      rebuildPostingDateOptions();
 
-      // Show success notification
       $q.notify({
         type: 'positive',
         message: 'Job post updated successfully',
         position: 'top',
       });
 
-      // Close the modal
       closeEditModal();
     } catch (error) {
       console.error('Error updating job post:', error);
@@ -1405,10 +1437,8 @@
     }
   };
 
-  // NEW: Republish job post action using insertJobPost
   const republishJobPostAction = async () => {
     try {
-      // Validate required fields
       if (!editJobDetails.value.end_date) {
         $q.notify({
           type: 'negative',
@@ -1427,7 +1457,6 @@
         return;
       }
 
-      // Prepare job batch data for new post (include all fields except id)
       const jobBatch = {
         Office: editJobDetails.value.Office,
         Office2: editJobDetails.value.Office2,
@@ -1456,14 +1485,12 @@
         Eligibility: criteriaData.value.Eligibility || '',
       };
 
-      // Add file if a new one was selected, otherwise keep the existing one
       if (editJobDetails.value.newFile) {
         jobBatch.fileUpload = editJobDetails.value.newFile;
       } else if (editJobDetails.value.fileUpload) {
         console.log('Using existing file:', editJobDetails.value.fileUpload);
       }
 
-      // Prepare criteria data for new post
       const criteria = {
         PositionID: editJobDetails.value.PositionID || '',
         ItemNo: editJobDetails.value.ItemNo || '',
@@ -1473,27 +1500,18 @@
         Eligibility: criteriaData.value.Eligibility || '',
       };
 
-      console.log('Republishing job post with data:', { jobBatch, criteria });
+      await jobPostStore.republishJobPost({ jobBatch, criteria });
 
-      const result = await jobPostStore.republishJobPost({
-        jobBatch: jobBatch,
-        criteria: criteria,
-      });
-
-      console.log('Republish result:', result);
-
-      // Refresh the job list
       await jobPostStore.job_post();
       jobs.value = jobPostStore.jobPosts;
+      rebuildPostingDateOptions();
 
-      // Show success notification
       $q.notify({
         type: 'positive',
         message: 'Job post republished successfully',
         position: 'top',
       });
 
-      // Close the modal
       closeRepublishModal();
     } catch (error) {
       console.error('Error republishing job post:', error);
@@ -1505,34 +1523,29 @@
     }
   };
 
-  // Updated delete functions to use the store
   const confirmDeleteJob = (job) => {
     jobToDelete.value = job;
     showDeleteConfirmation.value = true;
   };
 
-  // Updated deleteJob function to refresh the table after deletion
   const deleteJob = async () => {
     if (!jobToDelete.value) return;
 
     try {
       deletingJobId.value = jobToDelete.value.PositionID;
 
-      // Call the store's deleteJobPost method
       await jobPostStore.deleteJobPost({ id: jobToDelete.value.id });
 
-      // Refresh the job list from the store to ensure consistency
       await jobPostStore.job_post();
       jobs.value = jobPostStore.jobPosts;
+      rebuildPostingDateOptions();
 
-      // Show success notification
       $q.notify({
         type: 'positive',
         message: 'Job post deleted successfully',
         position: 'top',
       });
 
-      // Close the dialog and reset state
       showDeleteConfirmation.value = false;
       jobToDelete.value = null;
     } catch (error) {
@@ -1574,7 +1587,6 @@
     personalInfo: {},
   });
 
-  // Create a computed property that merges the selected applicant with the pending status
   const applicantWithPendingStatus = computed(() => {
     return {
       ...selectedApplicant.value,
@@ -1621,46 +1633,6 @@
   const submitEvaluation = () => {
     const applicantIndex = applicants.value.findIndex((a) => a.id === selectedApplicant.value.id);
     if (applicantIndex !== -1) {
-      if (selectedApplicant.value.isSubmitted) {
-        const previousStatus = applicants.value[applicantIndex].status;
-
-        if (previousStatus !== pendingStatus.value) {
-          const jobIndex = jobs.value.findIndex((j) => j.id === selectedJob.value.id);
-          if (jobIndex !== -1) {
-            const job = jobs.value[jobIndex];
-
-            if (previousStatus === 'Qualified') {
-              job.qualified--;
-            } else if (previousStatus === 'Unqualified') {
-              job.unqualified--;
-            } else if (previousStatus === 'Pending') {
-              job.pending--;
-            }
-
-            if (pendingStatus.value === 'Qualified') {
-              job.qualified++;
-            } else if (pendingStatus.value === 'Unqualified') {
-              job.unqualified++;
-            } else if (pendingStatus.value === 'Pending') {
-              job.pending++;
-            }
-          }
-        }
-      } else {
-        const jobIndex = jobs.value.findIndex((j) => j.id === selectedJob.value.id);
-        if (jobIndex !== -1) {
-          const job = jobs.value[jobIndex];
-
-          if (pendingStatus.value === 'Qualified') {
-            job.qualified++;
-            job.pending--;
-          } else if (pendingStatus.value === 'Unqualified') {
-            job.unqualified++;
-            job.pending--;
-          }
-        }
-      }
-
       applicants.value[applicantIndex] = {
         ...applicants.value[applicantIndex],
         status: pendingStatus.value,
@@ -1719,55 +1691,16 @@
     }
   };
 
-  // onMounted(async () => {
-  //   try {
-  //     // Fetch job posts from the store
-  //     await jobPostStore.job_post();
-  //     jobs.value = jobPostStore.jobPosts;
-
-  //     // Set the date range to the current year
-  //     setDateRange();
-  //   } catch (error) {
-  //     console.error('Error loading job posts:', error);
-  //     $q.notify({
-  //       type: 'negative',
-  //       message: 'Failed to load job posts',
-  //       position: 'top',
-  //     });
-  //   }
-  // });
-  // const fetchJobsWithDateRange = async () => {
-  //   if (dateRange.value.from && dateRange.value.to) {
-  //     try {
-  //       await jobPostStore.job_post(dateRange.value.from, dateRange.value.to);
-  //       jobs.value = jobPostStore.jobPosts;
-  //     } catch (error) {
-  //       console.error("Error fetching jobs with date range:", error);
-  //       $q.notify({
-  //         type: "negative",
-  //         message: "Failed to fetch jobs",
-  //         position: "top",
-  //       });
-  //     }
-  //   }
-  // };
-
-  // Update fetchJobsWithDateRange to handle empty dates
+  // Fetching with date range
   const fetchJobsWithDateRange = async () => {
     try {
-      // If no dates selected, fetch all data (you may need a different endpoint)
       if (!dateRange.value.from || !dateRange.value.to) {
-        // Option 1: Use a different endpoint for all data
-        await jobPostStore.job_post_all(); // You'd need to create this method
-
-        // Option 2: Use very wide date range (e.g., 10 years)
-        // const tenYearsAgo = formatDate(new Date().setFullYear(new Date().getFullYear() - 10), 'YYYY-MM-DD');
-        // const tenYearsLater = formatDate(new Date().setFullYear(new Date().getFullYear() + 10), 'YYYY-MM-DD');
-        // await jobPostStore.job_post(tenYearsAgo, tenYearsLater);
+        await jobPostStore.job_post_all(); // must exist in your store
       } else {
         await jobPostStore.job_post(dateRange.value.from, dateRange.value.to);
       }
       jobs.value = jobPostStore.jobPosts;
+      rebuildPostingDateOptions();
     } catch (error) {
       console.error('Error fetching jobs with date range:', error);
       $q.notify({
@@ -1778,26 +1711,24 @@
     }
   };
 
-  // // Add clearDateRange method
   const clearDateRange = () => {
     dateRange.value = { from: '', to: '' };
     fetchJobsWithDateRange();
   };
 
-  // Update the onDateRangeChange method
   const onDateRangeChange = async (newRange) => {
     dateRange.value = newRange;
-    // Fetch new data when date range changes
     await fetchJobsWithDateRange();
   };
+
   onMounted(async () => {
     try {
-      // Set the date range to the current year first
       setDateRange();
 
-      // Fetch job posts with date range parameters
       await jobPostStore.job_post(dateRange.value.from, dateRange.value.to);
       jobs.value = jobPostStore.jobPosts;
+
+      rebuildPostingDateOptions();
     } catch (error) {
       console.error('Error loading job posts:', error);
       $q.notify({
@@ -1911,7 +1842,7 @@
     background-color: rgba(25, 118, 210, 0.1);
   }
 
-  /* Spacing improvements - increased for better readability */
+  /* Spacing improvements */
   .q-mb-sm {
     margin-bottom: 10px;
   }
@@ -1946,7 +1877,7 @@
     line-height: 1.4rem;
   }
 
-  /* Padding adjustments - more breathing room */
+  /* Padding adjustments */
   .q-pa-md {
     padding: 12px;
   }

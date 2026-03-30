@@ -377,21 +377,22 @@ export const useAuthStore = defineStore('auth', {
     async Rater_register(userData) {
       this.loading = true;
       this.errors = {};
-
       try {
         const token = this.getToken();
         if (!token) throw new Error('No authentication token found');
 
         const username = userData.name;
-
         const formattedData = {
           name: username,
           username: username,
           job_batches_rsp_id: userData.job_batches_rsp_id || [],
           position: userData.position || userData.Designation,
-          office: userData.Office || userData.Office,
+          office: userData.Office,
           password: 'admin',
           controlNo: userData.controlNo,
+          // FIX: added missing required fields
+          representative: userData.representative || '',
+          role: userData.role || '',
         };
 
         const response = await adminApi.post('rater/register', formattedData, {
@@ -400,7 +401,6 @@ export const useAuthStore = defineStore('auth', {
 
         if (response.data.status) {
           await this.get_all_raters();
-          toast.success('Rater registered successfully');
           return { success: true, data: response.data.data, message: response.data.message };
         }
 

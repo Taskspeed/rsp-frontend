@@ -9,10 +9,10 @@
     <!-- Job Details Card -->
     <q-card class="q-mb-lg shadow-3" flat bordered style="max-width: 1000px; margin: auto">
       <q-card-section v-if="!isLoading" class="q-pa-lg">
-        <!-- Search and Filter Section -->
+        <!-- Header Row: Back + History + View M.O. -->
         <div class="row items-center justify-between q-mb-lg">
           <q-btn icon="arrow_back" round flat color="primary" @click="goBack" size="md" dense />
-          <div class="row items center">
+          <div class="row items-center q-gutter-sm">
             <q-select
               v-if="historyOptions.length > 0"
               :model-value="displayHistoryId"
@@ -25,20 +25,20 @@
               label="History"
               option-label="label"
               option-value="value"
-              style="width: 250px; padding-right: 15px"
+              style="width: 250px"
               @update:model-value="onHistoryChange"
               emit-value
               map-options
             />
             <div
               v-else
-              class="text-subtitle1 q-pa-md"
+              class="text-subtitle1 q-pa-sm text-grey-5"
               style="
                 width: 250px;
-                padding-right: 15px;
-                color: #999;
                 border: 1px solid #ccc;
-                border-radius: 4px;
+                border-radius: 20px;
+                text-align: center;
+                font-size: 0.85rem;
               "
             >
               No previous versions
@@ -58,16 +58,18 @@
           </div>
         </div>
 
-        <div class="text-h6 text-primary q-mb-xs">
-          {{ selectedJob?.Position || 'Job Title' }}
+        <!-- Position Title + Status -->
+        <div class="row items-center q-mb-xs q-gutter-sm">
+          <div class="text-h6 text-primary text-bold">
+            {{ selectedJob?.Position || 'Job Title' }}
+          </div>
           <q-chip dense :color="statusColor" text-color="white" class="q-pa-sm">
-            <span>
-              Status:
-              {{ (selectedJob?.status || 'Unknown').toLowerCase() }}
-            </span>
+            Status: {{ (selectedJob?.status || 'Unknown').toLowerCase() }}
           </q-chip>
         </div>
-        <div class="chips-row">
+
+        <!-- Chips Row -->
+        <div class="chips-row q-mb-md">
           <q-chip class="chip-padding level-chip" dense>
             <q-icon name="work" class="q-mr-xs" />
             <span class="chip-label">
@@ -98,41 +100,50 @@
           </q-chip>
         </div>
 
+        <!-- Office Info + Dates -->
         <div class="row q-col-gutter-md q-mb-md">
           <div class="col-12 col-sm-6">
-            <div class="text-subtitle1 text-grey-8">
-              <q-icon name="business" size="1em" class="q-mr-xs" />
-              <b>Office:</b>
-              {{ selectedJob?.Office || '-' }}
+            <div class="info-item">
+              <q-icon name="business" size="1em" class="q-mr-xs text-primary" />
+              <span class="text-grey-7">
+                <b>Office:</b>
+                {{ selectedJob?.Office || '-' }}
+              </span>
             </div>
-            <div class="text-subtitle1 text-grey-8">
-              <q-icon name="apartment" size="1em" class="q-mr-xs" />
-              <b>Division:</b>
-              {{ selectedJob?.Division || '-' }}
+            <div class="info-item">
+              <q-icon name="apartment" size="1em" class="q-mr-xs text-primary" />
+              <span class="text-grey-7">
+                <b>Division:</b>
+                {{ selectedJob?.Division || '-' }}
+              </span>
             </div>
-            <div class="text-subtitle1 text-grey-8">
-              <q-icon name="call_split" size="1em" class="q-mr-xs" />
-              <b>Section:</b>
-              {{ selectedJob?.Section || '-' }}
+            <div class="info-item">
+              <q-icon name="call_split" size="1em" class="q-mr-xs text-primary" />
+              <span class="text-grey-7">
+                <b>Section:</b>
+                {{ selectedJob?.Section || '-' }}
+              </span>
             </div>
-            <div class="text-subtitle1 text-grey-8">
-              <q-icon name="group_work" size="1em" class="q-mr-xs" />
-              <b>Unit:</b>
-              {{ selectedJob?.Unit || '-' }}
+            <div class="info-item">
+              <q-icon name="group_work" size="1em" class="q-mr-xs text-primary" />
+              <span class="text-grey-7">
+                <b>Unit:</b>
+                {{ selectedJob?.Unit || '-' }}
+              </span>
             </div>
           </div>
           <div class="col-12 col-sm-6">
-            <div class="text-subtitle1 text-grey-8 q-mb-xs">
-              <q-icon name="event" size="1em" class="q-mr-xs" />
-              <b>Posting Date:</b>
-              <span class="q-ml-xs">
+            <div class="info-item">
+              <q-icon name="event" size="1em" class="q-mr-xs text-primary" />
+              <span class="text-grey-7">
+                <b>Posting Date:</b>
                 {{ formatDate(selectedJob?.post_date, 'MMM D, YYYY') || '-' }}
               </span>
             </div>
-            <div class="text-subtitle1 text-grey-8">
-              <q-icon name="event_busy" size="1em" class="q-mr-xs" />
-              <b>End Date:</b>
-              <span class="q-ml-xs">
+            <div class="info-item">
+              <q-icon name="event_busy" size="1em" class="q-mr-xs text-primary" />
+              <span class="text-grey-7">
+                <b>End Date:</b>
                 {{ formatDate(selectedJob?.end_date, 'MMM D, YYYY') || '-' }}
               </span>
             </div>
@@ -141,39 +152,48 @@
 
         <q-separator spaced />
 
+        <!-- Qualification Standards -->
         <div class="text-h6 text-weight-bold text-primary q-mb-sm">
           Qualification Standards / Requirements
         </div>
-        <div>
-          <div class="row q-col-gutter-md q-mb-sm">
-            <div class="col-12 col-md-6">
-              <q-card flat bordered class="q-pa-sm q-mb-xs">
-                <div class="text-caption text-grey-7">Education</div>
-                <div class="text-body1">{{ selectedCriteria?.Education || 'None' }}</div>
-              </q-card>
-              <q-card flat bordered class="q-pa-sm">
-                <div class="text-caption text-grey-7">Training</div>
-                <div class="text-body1">{{ selectedCriteria?.Training || 'None' }}</div>
-              </q-card>
-            </div>
-            <div class="col-12 col-md-6">
-              <q-card flat bordered class="q-pa-sm q-mb-xs">
-                <div class="text-caption text-grey-7">Experience</div>
-                <div class="text-body1">{{ selectedCriteria?.Experience || 'None' }}</div>
-              </q-card>
-              <q-card flat bordered class="q-pa-sm">
-                <div class="text-caption text-grey-7">Eligibility</div>
-                <div class="text-body1">
-                  {{ selectedCriteria?.Eligibility || 'None' }}
-                </div>
-              </q-card>
-            </div>
+        <div class="row q-col-gutter-md q-mb-sm">
+          <div class="col-12 col-md-6">
+            <q-card flat bordered class="q-pa-sm q-mb-xs criteria-card">
+              <div class="text-caption text-grey-7 text-bold q-mb-xs">
+                <q-icon name="school" class="q-mr-xs" />
+                Education
+              </div>
+              <div class="text-body2">{{ selectedCriteria?.Education || 'None' }}</div>
+            </q-card>
+            <q-card flat bordered class="q-pa-sm criteria-card">
+              <div class="text-caption text-grey-7 text-bold q-mb-xs">
+                <q-icon name="model_training" class="q-mr-xs" />
+                Training
+              </div>
+              <div class="text-body2">{{ selectedCriteria?.Training || 'None' }}</div>
+            </q-card>
+          </div>
+          <div class="col-12 col-md-6">
+            <q-card flat bordered class="q-pa-sm q-mb-xs criteria-card">
+              <div class="text-caption text-grey-7 text-bold q-mb-xs">
+                <q-icon name="work_history" class="q-mr-xs" />
+                Experience
+              </div>
+              <div class="text-body2">{{ selectedCriteria?.Experience || 'None' }}</div>
+            </q-card>
+            <q-card flat bordered class="q-pa-sm criteria-card">
+              <div class="text-caption text-grey-7 text-bold q-mb-xs">
+                <q-icon name="verified" class="q-mr-xs" />
+                Eligibility
+              </div>
+              <div class="text-body2">{{ selectedCriteria?.Eligibility || 'None' }}</div>
+            </q-card>
           </div>
         </div>
       </q-card-section>
     </q-card>
 
-    <!-- Tabs Card for Applicants and Rating Results -->
+    <!-- Tabs Card -->
     <q-card flat bordered class="shadow-2" style="max-width: 1000px; margin: auto">
       <q-card-section v-if="!isLoading" class="q-pa-md">
         <q-tabs
@@ -191,20 +211,19 @@
         <q-separator />
 
         <q-tab-panels v-model="activeTab" animated>
-          <!-- Applicants Tab Panel -->
+          <!-- ===== Applicants Tab ===== -->
           <q-tab-panel name="applicants">
-            <div class="row items-center justify-between q-mb-sm">
-              <div class="text-h6 text-primary text-bold">Applicants</div>
-
-              <!-- Search Input -->
-              <div class="col-12 col-sm-6 col-md-4">
+            <!-- Toolbar -->
+            <div class="row items-center justify-between q-mb-sm q-gutter-sm">
+              <div>
+                <div class="text-h6 text-primary text-bold">Applicants</div>
                 <q-input
                   v-model="applicantSearch"
                   outlined
                   dense
                   placeholder="Search Applicant..."
                   clearable
-                  class="full-width"
+                  style="width: 220px"
                 >
                   <template #prepend>
                     <q-icon name="search" color="primary" />
@@ -212,68 +231,45 @@
                 </q-input>
               </div>
 
-              <div class="row items-center">
+              <div class="row items-center q-gutter-sm">
                 <q-btn
                   v-if="
                     canModifyJobPost &&
                     (selectedJob?.status == 'not started' || selectedJob?.status == 'pending')
                   "
-                  label="Import Applicants"
+                  label="Import"
                   color="orange-9"
                   rounded
-                  style="font-size: 8pt; margin-right: 15px"
+                  dense
+                  no-caps
+                  style="font-size: 8pt"
                   @click="showImportModal = true"
                   icon="person_add"
                 />
 
-                <div class="assessment-status">
-                  <q-btn
-                    v-if="canModifyJobPost && selectedJob?.status == 'assessed'"
-                    label="Notify Unqualified Applicants"
-                    color="green-9"
-                    icon="email"
-                    rounded
-                    class="q-mr-sm"
-                    style="font-size: 8pt"
-                    @click="sendEvalConfirmDialog = true"
-                    :disable="isLoading"
-                  />
-                  <q-badge class="q-pa-xs">
-                    <q-icon name="assessment" class="q-mr-xs" />
-                    Assessed: {{ assessedCount }}/{{ totalApplicants }} applicants
-                  </q-badge>
-                </div>
+                <q-btn
+                  v-if="canModifyJobPost && selectedJob?.status == 'assessed'"
+                  label="Unqualified"
+                  color="green-9"
+                  icon="email"
+                  rounded
+                  dense
+                  no-caps
+                  style="font-size: 8pt"
+                  @click="openNotifyUnqualifiedDialog"
+                  :disable="isLoading"
+                />
+                <q-badge class="q-pa-sm" color="blue">Internal: {{ internalCount }}</q-badge>
+                <q-badge class="q-pa-sm" color="orange">External: {{ externalCount }}</q-badge>
+
+                <q-badge class="q-pa-sm" color="primary">
+                  <q-icon name="assessment" class="q-mr-xs" />
+                  Assessed: {{ assessedCount }}/{{ totalApplicants }}
+                </q-badge>
               </div>
             </div>
 
-            <!-- <q-table
-              :rows="formattedApplicants"
-              :columns="applicantColumns"
-              row-key="id"
-              flat
-              bordered
-              class="applicants-table"
-              dense
-              v-if="applicantColumns.length"
-              separator="cell"
-              color="primary"
-              :rows="filteredApplicants"
-
-
-            > -->
-            <!-- <q-table
-              :rows="filteredApplicants"
-              :columns="applicantColumns"
-              row-key="id"
-              flat
-              bordered
-              class="applicants-table"
-              dense
-              v-if="applicantColumns.length"
-              separator="cell"
-              color="primary"
-            > -->
-
+            <!-- Applicants Table -->
             <q-table
               :rows="filteredApplicants"
               :columns="applicantColumns"
@@ -293,9 +289,7 @@
                 </q-td>
               </template>
               <template #body-cell-appliedDate="props">
-                <q-td :props="props">
-                  {{ props.row.appliedDate || '-' }}
-                </q-td>
+                <q-td :props="props">{{ props.row.appliedDate || '-' }}</q-td>
               </template>
               <template #body-cell-source="props">
                 <q-td :props="props">
@@ -344,55 +338,44 @@
             </div>
           </q-tab-panel>
 
-          <!-- Rating Results Tab Panel -->
+          <!-- ===== Rating Results Tab ===== -->
           <q-tab-panel name="ratings">
-            <div class="row items-center justify-between q-mb-sm">
-              <div class="text-h6 text-primary text-bold">Rating Results</div>
+            <div class="row items-center justify-between q-mb-sm q-gutter-sm">
+              <div>
+                <div class="text-h6 text-primary text-bold">Rating Results</div>
+                <q-input
+                  v-model="applicantSearchRate"
+                  outlined
+                  dense
+                  placeholder="Search Applicant..."
+                  style="width: 220px"
+                  clearable
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="search" color="primary" />
+                  </template>
+                </q-input>
+              </div>
 
-              <!-- search -->
-              <q-input
-                v-model="applicantSearchRate"
-                outlined
-                dense
-                placeholder="Search Applicant..."
-                class="q-mr-md"
-                style="width: 280px; margin-left: -200px"
-                clearable
-              >
-                <template v-slot:prepend>
-                  <q-icon name="search" color="primary" />
-                </template>
-              </q-input>
-              <div class="assessment-status">
+              <div class="row items-center q-gutter-sm">
                 <q-btn
                   v-if="showUnoccupiedButton && canModifyJobPost"
                   label="Unoccupied"
                   color="red-9"
                   rounded
-                  class="q-mr-sm"
+                  dense
+                  no-caps
                   style="font-size: 8pt"
                   @click="unoccupiedConfirmDialog = true"
                 />
+
                 <q-badge class="q-pa-xs" color="primary" text-color="white">
-                  <q-icon name="assessment" class="q-mr-xs" />
+                  <q-icon name="assessment" class="q-mr-sm" />
                   Rated: {{ ratingData.total_completed }}/{{ ratingData.total_assigned }}
-                  completed ratings
                 </q-badge>
               </div>
             </div>
 
-            <!-- <q-table
-              v-if="formattedApplicantRatings.length > 0"
-              :rows="formattedApplicantRatings"
-              :columns="ratingColumns"
-              row-key="nPersonalInfo_id"
-              flat
-              bordered
-              class="rating-table"
-              dense
-              separator="cell"
-              color="primary"
-            > -->
             <q-table
               v-if="filteredApplicantsRate.length > 0"
               :rows="filteredApplicantsRate"
@@ -409,29 +392,19 @@
                 <q-td :props="props">{{ props.row.firstname }} {{ props.row.lastname }}</q-td>
               </template>
               <template #body-cell-education="props">
-                <q-td :props="props">
-                  {{ props.row.education }}
-                </q-td>
+                <q-td :props="props">{{ props.row.education }}</q-td>
               </template>
               <template #body-cell-experience="props">
-                <q-td :props="props">
-                  {{ props.row.experience }}
-                </q-td>
+                <q-td :props="props">{{ props.row.experience }}</q-td>
               </template>
               <template #body-cell-training="props">
-                <q-td :props="props">
-                  {{ props.row.training }}
-                </q-td>
+                <q-td :props="props">{{ props.row.training }}</q-td>
               </template>
               <template #body-cell-performance="props">
-                <q-td :props="props">
-                  {{ props.row.performance }}
-                </q-td>
+                <q-td :props="props">{{ props.row.performance }}</q-td>
               </template>
               <template #body-cell-bei="props">
-                <q-td :props="props">
-                  {{ props.row.bei }}
-                </q-td>
+                <q-td :props="props">{{ props.row.bei }}</q-td>
               </template>
               <template #body-cell-total_qs="props">
                 <q-td :props="props">
@@ -478,63 +451,137 @@
       </q-card-section>
     </q-card>
 
-    <!-- Send Final Evaluation Confirmation Dialog -->
+    <!-- ===== Notify Unqualified Applicants Dialog ===== -->
     <q-dialog v-model="sendEvalConfirmDialog" persistent>
-      <q-card style="min-width: 400px">
-        <q-card-section>
-          <div class="text-h6 text-primary">
-            <q-icon name="email" class="q-mr-sm" color="primary" />
-            Confirm Final Evaluation Submission
-          </div>
+      <q-card style="min-width: 500px; max-width: 650px; width: 100%">
+        <!-- Header -->
+        <q-card-section class="bg-green-9 text-white row items-center q-py-sm">
+          <q-icon name="email" size="1.4em" class="q-mr-sm" />
+          <div class="text-h6 text-bold">Notify Unqualified Applicants</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup color="white" :disable="isLoading" />
         </q-card-section>
 
-        <q-card-section class="q-pt-none">
-          <p class="text-body1">
-            Are you sure you want to send the final evaluation to all applicants?
-          </p>
-          <div class="bg-grey-2 q-pa-md rounded-borders q-mt-md">
-            <div class="text-caption text-grey-7 q-mb-xs">
-              <strong>Position:</strong>
+        <q-card-section class="q-pt-md q-pb-xs">
+          <!-- Summary Banner -->
+          <q-banner class="bg-grey-2 rounded-borders q-pa-sm q-mb-md" dense>
+            <template v-slot:avatar>
+              <q-icon name="work" color="primary" />
+            </template>
+            <div class="text-caption text-grey-8 text-bold q-mb-xs">
               {{ selectedJob?.Position || 'N/A' }}
             </div>
-            <div class="text-caption text-grey-7 q-mb-xs">
-              <strong>Total Applicants:</strong>
-              {{ totalApplicants }}
+            <div class="text-caption text-grey-7 row q-gutter-md">
+              <span>
+                <b>Total:</b>
+                {{ totalApplicants }}
+              </span>
+              <span>
+                <b>Assessed:</b>
+                {{ assessedCount }}/{{ totalApplicants }}
+              </span>
+              <span>
+                <b>Unqualified:</b>
+                <span class="text-red-8 text-bold">{{ unqualifiedApplicants.length }}</span>
+              </span>
             </div>
-            <div class="text-caption text-grey-7 q-mb-xs">
-              <strong>Assessed:</strong>
-              {{ assessedCount }}/{{ totalApplicants }}
-            </div>
-          </div>
+          </q-banner>
 
+          <!-- Warning if not all assessed -->
           <q-banner
             v-if="assessedCount < totalApplicants"
-            class="bg-orange-1 text-orange-9 q-mt-md"
+            class="bg-orange-1 text-orange-9 q-mb-md"
             rounded
+            dense
           >
             <template v-slot:avatar>
               <q-icon name="warning" color="orange" />
             </template>
             Warning: Not all applicants have been assessed yet.
           </q-banner>
+
+          <!-- Unqualified List Header -->
+          <div class="row items-center justify-between q-mb-xs">
+            <div class="text-subtitle2 text-grey-8 text-bold">
+              <q-icon name="person_off" class="q-mr-xs text-red-7" />
+              Unqualified Applicants to be Notified
+            </div>
+            <q-badge color="red" rounded class="q-px-sm">
+              {{ unqualifiedApplicants.length }}
+            </q-badge>
+          </div>
+
+          <!-- Empty State -->
+          <div
+            v-if="unqualifiedApplicants.length === 0"
+            class="text-center q-pa-lg bg-grey-1 rounded-borders"
+          >
+            <q-icon name="check_circle" color="green-6" size="2em" />
+            <div class="text-caption text-grey-6 q-mt-xs">No unqualified applicants found.</div>
+          </div>
+
+          <!-- Scrollable List -->
+          <q-scroll-area
+            v-else
+            style="height: 230px; border: 1px solid #e0e0e0; border-radius: 8px"
+          >
+            <q-list separator dense>
+              <q-item
+                v-for="(applicant, index) in unqualifiedApplicants"
+                :key="applicant.id"
+                class="q-py-sm"
+              >
+                <q-item-section avatar>
+                  <q-avatar size="30px" color="red-1" text-color="red-8" font-size="0.8em">
+                    {{ index + 1 }}
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-body2 text-bold">
+                    {{ applicant.firstname }} {{ applicant.lastname }}
+                    <span v-if="applicant.name_extension">{{ applicant.name_extension }}</span>
+                  </q-item-label>
+                  <q-item-label caption class="row items-center q-gutter-xs">
+                    <q-badge
+                      :color="applicant.source === 'Internal' ? 'blue' : 'orange'"
+                      rounded
+                      class="text-caption"
+                    >
+                      {{ applicant.source }}
+                    </q-badge>
+                    <span class="text-grey-6">Applied: {{ applicant.appliedDate || '-' }}</span>
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-badge color="red" rounded class="text-caption q-px-sm">Unqualified</q-badge>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-scroll-area>
+
+          <div class="text-caption text-grey-5 q-mt-sm">
+            <q-icon name="info" class="q-mr-xs" />
+            An email notification will be sent to each unqualified applicant listed above.
+          </div>
         </q-card-section>
 
-        <q-card-actions align="right" class="text-primary">
-          <q-btn flat label="Cancel" color="grey" v-close-popup :disable="isLoading" />
+        <q-card-actions align="right" class="q-px-md q-pb-md">
+          <q-btn flat label="Cancel" color="grey" v-close-popup :disable="isLoading" rounded />
           <q-btn
             unelevated
-            label="Yes, Send Final Evaluation"
-            color="green"
+            :label="`Send Notifications (${unqualifiedApplicants.length})`"
+            color="green-9"
             icon-right="send"
             @click="confirmSendFinalEvaluation"
             :loading="isLoading"
-            :disable="isLoading"
+            :disable="isLoading || unqualifiedApplicants.length === 0"
+            rounded
+            no-caps
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!-- Rest of your dialogs and modals remain the same -->
     <!-- PDF Dialog -->
     <q-dialog v-model="pdfModalVisible" maximized>
       <q-card style="width: 85vw; max-width: 1000px; height: 90vh">
@@ -565,7 +612,7 @@
       </q-card>
     </q-dialog>
 
-    <!-- Unoccupied Status Confirmation Dialog -->
+    <!-- Unoccupied Confirmation Dialog -->
     <q-dialog v-model="unoccupiedConfirmDialog" persistent>
       <q-card style="min-width: 350px">
         <q-card-section>
@@ -574,7 +621,6 @@
             Confirm Status Update
           </div>
         </q-card-section>
-
         <q-card-section class="q-pt-none">
           <p class="text-body1">
             Are you sure you want to update this job status to
@@ -590,7 +636,6 @@
             {{ selectedJob?.Position || 'N/A' }}
           </div>
         </q-card-section>
-
         <q-card-actions align="right" class="text-primary">
           <q-btn flat label="Cancel" color="grey" v-close-popup :disable="isLoading" />
           <q-btn
@@ -615,7 +660,7 @@
       @close="showImportModal = false"
     />
 
-    <!-- Modals -->
+    <!-- Qualification Modal -->
     <QualificationModal
       v-if="qualificationModalVisible"
       :show="qualificationModalVisible"
@@ -630,6 +675,7 @@
       @close="onCloseQualificationModal"
     />
 
+    <!-- Score Modal -->
     <ScoreModal
       v-if="scoreModal.visible"
       :show="scoreModal.visible"
@@ -662,19 +708,14 @@
 
   const applicantSearch = ref('');
   const applicantSearchRate = ref('');
-
-  // ✅ UNIFIED LOADING STATE
   const isLoading = ref(false);
   const sendEvalConfirmDialog = ref(false);
 
-  // Permission check
   const canModifyJobPost = computed(() => {
     return authStore.user?.permissions?.modifyJobpostAccess == '1';
   });
 
-  // Get job ID from route params
   const jobId = computed(() => route.params.id);
-
   const displayHistoryId = ref(null);
   const isNavigating = ref(false);
   const lastLoadedId = ref(null);
@@ -705,77 +746,57 @@
   });
 
   const { formatDate } = date;
-
-  // Tab state
   const activeTab = ref('applicants');
 
-  // Modal state
   const qualificationModalVisible = ref(false);
   const scoreModal = ref({ visible: false, applicant: null });
   const selectedApplicantData = ref({});
   const showImportModal = ref(false);
 
-  // PDF Modal state
   const pdfModalVisible = ref(false);
   const pdfFileUrl = ref('');
   const isLoadingPdf = ref(false);
   const pdfErrorMessage = ref('');
-
   const unoccupiedConfirmDialog = ref(false);
 
-  // applicant filter by searching
-  // const filteredApplicants = computed(() => {
-  //   if (!applicantSearch.value) {
-  //     return formattedApplicants.value;
-  //   }
+  // ===== Applicant Source Counts =====
+  const internalCount = computed(
+    () => formattedApplicants.value.filter((a) => a.source === 'Internal').length,
+  );
+  const externalCount = computed(
+    () => formattedApplicants.value.filter((a) => a.source === 'External').length,
+  );
 
-  //   const search = applicantSearch.value.toLowerCase();
+  // ===== Unqualified list for modal =====
+  const unqualifiedApplicants = computed(() =>
+    formattedApplicants.value.filter(
+      (a) => a.status === 'Unqualified' || a.status === 'unqualified',
+    ),
+  );
 
-  //   return formattedApplicants.value.filter(applicant => {
-  //     const fullName = `${applicant.firstname} ${applicant.lastname} ${applicant.name_extension}`.toLowerCase();
+  const openNotifyUnqualifiedDialog = () => {
+    sendEvalConfirmDialog.value = true;
+  };
 
-  //     return (
-  //       fullName.includes(search) ||
-  //       applicant.source?.toLowerCase().includes(search) ||
-  //       applicant.status?.toLowerCase() === search // ✅ EXACT MATCH
-  //     );
-  //   });
-  // });
-
-  // applicant search
+  // ===== Filtered Applicants =====
   const filteredApplicants = computed(() => {
-    if (!applicantSearch.value) {
-      return formattedApplicants.value;
-    }
-
+    if (!applicantSearch.value) return formattedApplicants.value;
     const search = applicantSearch.value.toLowerCase();
-
     return formattedApplicants.value.filter((applicant) => {
       const fullName =
         `${applicant.firstname} ${applicant.lastname} ${applicant.name_extension}`.toLowerCase();
-
       const status = applicant.status?.toLowerCase() || '';
       const source = applicant.source?.toLowerCase() || '';
-
-      return (
-        fullName.includes(search) || // ✅ partial
-        source.includes(search) || // ✅ partial
-        status.startsWith(search) // ✅ smart status match
-      );
+      return fullName.includes(search) || source.includes(search) || status.startsWith(search);
     });
   });
 
-  // applicant  rating search
+  // ===== Filtered Ratings =====
   const filteredApplicantsRate = computed(() => {
-    if (!applicantSearchRate.value) {
-      return formattedApplicantRatings.value;
-    }
-
+    if (!applicantSearchRate.value) return formattedApplicantRatings.value;
     const search = applicantSearchRate.value.toLowerCase();
-
     return formattedApplicantRatings.value.filter((applicant) => {
       const fullName = `${applicant.firstname} ${applicant.lastname}`.toLowerCase();
-
       return (
         fullName.includes(search) ||
         String(applicant.education).includes(search) ||
@@ -791,53 +812,31 @@
   });
 
   const historyOptions = computed(() => {
-    if (
-      !selectedJob.value ||
-      !selectedJob.value.history ||
-      selectedJob.value.history.length === 0
-    ) {
-      return [];
-    }
-
-    const sortedHistory = [...selectedJob.value.history].sort((a, b) => {
-      const dateA = new Date(a.post_date);
-      const dateB = new Date(b.post_date);
-      return dateB - dateA;
-    });
-
-    return sortedHistory.map((historyItem) => ({
-      label: ` ${formatDate(historyItem.post_date, 'MMM D, YYYY')} - ${formatDate(
-        historyItem.end_date,
-        'MMM D, YYYY',
-      )}`,
-      value: historyItem.id,
-      historyData: historyItem,
-    }));
+    if (!selectedJob.value?.history?.length) return [];
+    return [...selectedJob.value.history]
+      .sort((a, b) => new Date(b.post_date) - new Date(a.post_date))
+      .map((h) => ({
+        label: `${formatDate(h.post_date, 'MMM D, YYYY')} - ${formatDate(h.end_date, 'MMM D, YYYY')}`,
+        value: h.id,
+        historyData: h,
+      }));
   });
 
   const onHistoryChange = (historyId) => {
-    console.log('History selected:', historyId);
     if (!historyId) return;
     viewJobDetails(historyId);
   };
 
-  // ✅ UNIFIED: Load all data at once
   const loadAllData = async (id) => {
     isLoading.value = true;
     try {
-      // Fetch all data in parallel
       const [jobDetails] = await Promise.allSettled([
         jobPostStore.fetchJobDetails(id),
         jobPostStore.fetch_applicant(id),
         jobPostStore.fetch_applicant_rating(id),
       ]);
-
-      if (jobDetails.status === 'rejected') {
-        throw new Error('Failed to fetch job details');
-      }
-
+      if (jobDetails.status === 'rejected') throw new Error('Failed to fetch job details');
       const details = jobDetails.value;
-
       selectedJob.value = {
         id: details.id || null,
         old_job_id: details.old_job_id || null,
@@ -858,7 +857,6 @@
         history: details.history || [],
         ...details,
       };
-
       if (details.criteria && typeof details.criteria === 'object') {
         selectedCriteria.value = {
           id: details.criteria.id || null,
@@ -868,10 +866,8 @@
           Eligibility: details.criteria.Eligibility || 'Not specified',
         };
       }
-
       displayHistoryId.value = details.id;
       lastLoadedId.value = details.id;
-
       return details;
     } catch (error) {
       console.error('Error loading data:', error);
@@ -882,18 +878,11 @@
   };
 
   const viewJobDetails = async (historyId) => {
-    if (!historyId || historyId === selectedJob.value.id) {
-      return;
-    }
-
+    if (!historyId || historyId === selectedJob.value.id) return;
     isNavigating.value = true;
-
     try {
       await loadAllData(historyId);
-      await router.push({
-        name: 'JobPost View',
-        params: { id: historyId },
-      });
+      await router.push({ name: 'JobPost View', params: { id: historyId } });
     } catch (error) {
       console.error('Error fetching job details:', error);
       toast.error('Failed to load job details. Please try again.');
@@ -908,7 +897,6 @@
 
   const refreshApplicantData = async () => {
     if (!selectedJob.value.id) return;
-
     isLoading.value = true;
     try {
       await Promise.allSettled([
@@ -924,20 +912,17 @@
   };
 
   const updateJobStatusToUnoccupied = async () => {
-    if (!selectedJob.value || !selectedJob.value.id) {
+    if (!selectedJob.value?.id) {
       toast.error('Job ID not found. Cannot update status.');
       unoccupiedConfirmDialog.value = false;
       return;
     }
-
     isLoading.value = true;
     try {
-      const payload = {
+      await jobPostStore.updateJobStatus(selectedJob.value.id, {
         id: selectedJob.value.id,
         status: 'Unoccupied',
-      };
-
-      await jobPostStore.updateJobStatus(selectedJob.value.id, payload);
+      });
       toast.success('Job status updated to Unoccupied successfully!');
       unoccupiedConfirmDialog.value = false;
       await refreshJobDetails();
@@ -951,67 +936,24 @@
   };
 
   const onApplicantsImported = async (importedApplicants) => {
-    console.log('Applicants imported:', importedApplicants);
     toast.success(`Successfully imported ${importedApplicants.length} applicant(s)`);
     await refreshApplicantData();
   };
 
-  // const submitEvaluation = async (evaluationData) => {
-  //   // update and submit applicant
-  //   try {
-  //     console.log("Received evaluation data:", evaluationData);
-
-  //     if (!evaluationData.id) {
-  //       toast.error("Missing applicant ID for evaluation submission");
-  //       console.error("Invalid evaluation data:", evaluationData);
-  //       return;
-  //     }
-
-  //     if (!evaluationData.status || evaluationData.status === "Pending") {
-  //       toast.warning("Please select a qualification status before submitting.");
-  //       return;
-  //     }
-
-  //     isLoading.value = true;
-  //     await jobPostStore.evaluation(evaluationData);
-  //     selectedApplicantData.value.status = evaluationData.status;
-  //     qualificationModalVisible.value = false;
-
-  //     await Promise.all([refreshJobDetails(), refreshApplicantData()]);
-  //     toast.success("Evaluation submitted successfully!");
-  //   } catch (error) {
-  //     console.error("Evaluation submission error:", error);
-  //     toast.error("Failed to submit evaluation");
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // };
   const submitEvaluation = async (evaluationData) => {
     try {
-      console.log('Received evaluation data:', evaluationData);
-
       if (!evaluationData.id) {
         toast.error('Missing applicant ID for evaluation submission');
-        console.error('Invalid evaluation data:', evaluationData);
         return;
       }
-
       if (!evaluationData.status || evaluationData.status === 'Pending') {
         toast.warning('Please select a qualification status before submitting.');
         return;
       }
-
-      // ✅ DON'T set isLoading.value = true here - it blocks the entire page
-      // The modal will close immediately, giving instant feedback
-
-      // ✅ Submit the evaluation
       await jobPostStore.evaluation(evaluationData);
-
-      // ✅ Update the applicant in the store directly
       const applicantInStore = jobPostStore.applicant.find(
         (app) => app.id === evaluationData.id || app.submission_id === evaluationData.id,
       );
-
       if (applicantInStore) {
         applicantInStore.status = evaluationData.status;
         applicantInStore.education_remark = evaluationData.education_remark;
@@ -1019,48 +961,33 @@
         applicantInStore.training_remark = evaluationData.training_remark;
         applicantInStore.eligibility_remark = evaluationData.eligibility_remark;
       }
-
-      // ✅ Update selectedApplicantData to reflect the change
       selectedApplicantData.value.status = evaluationData.status;
-
-      // ✅ Close the modal - the child already closes it, but ensure it's closed
       qualificationModalVisible.value = false;
-
-      // ✅ Show success message
       toast.success('Evaluation submitted successfully!');
     } catch (error) {
       console.error('Evaluation submission error:', error);
       toast.error('Failed to submit evaluation');
-
-      // ✅ Only show loading if there's an error and we need to retry
-      // Otherwise, keep the UI responsive
     }
   };
 
   const ratingData = computed(() => {
-    if (!jobPostStore.applicant_rating) {
-      return { total_completed: 0, total_assigned: 0 };
-    }
-
+    if (!jobPostStore.applicant_rating) return { total_completed: 0, total_assigned: 0 };
     return {
       total_completed: jobPostStore.applicant_rating.total_completed || 0,
       total_assigned: jobPostStore.applicant_rating.total_assigned || 0,
     };
   });
 
-  const totalApplicants = computed(() => {
-    return formattedApplicants.value.length;
-  });
+  const totalApplicants = computed(() => formattedApplicants.value.length);
 
-  const assessedCount = computed(() => {
-    return formattedApplicants.value.filter(
-      (applicant) => applicant.status === 'Qualified' || applicant.status === 'Unqualified',
-    ).length;
-  });
+  const assessedCount = computed(
+    () =>
+      formattedApplicants.value.filter(
+        (a) => a.status === 'Qualified' || a.status === 'Unqualified',
+      ).length,
+  );
 
-  const goBack = () => {
-    router.push('/job-post');
-  };
+  const goBack = () => router.push('/job-post');
 
   const onApplicantHired = async () => {
     try {
@@ -1074,59 +1001,44 @@
   };
 
   const confirmSendFinalEvaluation = async () => {
-    if (!selectedJob.value || !selectedJob.value.id) {
+    if (!selectedJob.value?.id) {
       toast.error('Job ID not found. Cannot send final evaluation.');
       sendEvalConfirmDialog.value = false;
       return;
     }
-
-    // Add validation check
     if (assessedCount.value === 0) {
       toast.warning('No applicants have been assessed yet.');
       sendEvalConfirmDialog.value = false;
       return;
     }
-
     isLoading.value = true;
-
     try {
       const payload = {
-        job_batches_rsp_id: selectedJob.value.id, // ✅ Changed from 'id' to 'job_batches_rsp_id'
+        job_batches_rsp_id: selectedJob.value.id,
         position: selectedJob.value.Position,
         total_applicants: totalApplicants.value,
         assessed_count: assessedCount.value,
       };
-
-      console.log('Sending final evaluation with payload:', payload);
-
       const response = await jobPostStore.sendFinalEval(payload);
-
-      if (response && response.data && response.data.success) {
+      if (response?.data?.success) {
         toast.success('Final evaluation emails sent successfully!');
         sendEvalConfirmDialog.value = false;
-
-        // Optionally refresh data
         await refreshApplicantData();
       } else {
-        const errorMessage = response?.data?.message || 'Failed to send final evaluation emails';
-        toast.error(errorMessage);
+        toast.error(response?.data?.message || 'Failed to send final evaluation emails');
       }
     } catch (error) {
       console.error('Error sending final evaluation:', error);
-
-      // ✅ Better error handling
-      if (error.response && error.response.data && error.response.data.message) {
-        toast.error(error.response.data.message);
-      } else {
-        toast.error('An error occurred while sending final evaluation emails.');
-      }
+      toast.error(
+        error.response?.data?.message || 'An error occurred while sending final evaluation emails.',
+      );
     } finally {
       isLoading.value = false;
     }
   };
 
   const viewFundedDocument = async () => {
-    if (!selectedJob.value || !selectedJob.value.PositionID || !selectedJob.value.ItemNo) {
+    if (!selectedJob.value?.PositionID || !selectedJob.value?.ItemNo) {
       toast.error('PositionID or ItemNo not found for the selected job. Cannot fetch document.');
       return;
     }
@@ -1148,11 +1060,8 @@
         toast.error(pdfErrorMessage.value);
       }
     } catch (error) {
-      if (error.response && error.response.data && error.response.data.message) {
-        pdfErrorMessage.value = error.response.data.message;
-      } else {
-        pdfErrorMessage.value = 'An unexpected error occurred while fetching the PDF.';
-      }
+      pdfErrorMessage.value =
+        error.response?.data?.message || 'An unexpected error occurred while fetching the PDF.';
       toast.error(pdfErrorMessage.value);
     } finally {
       isLoadingPdf.value = false;
@@ -1160,58 +1069,24 @@
   };
 
   const applicantColumns = ref([
-    {
-      name: 'submission_id',
-      label: 'No',
-      field: 'submission_id',
-      align: 'center',
-      sortable: true,
-    },
+    { name: 'submission_id', label: 'No', field: 'submission_id', align: 'center', sortable: true },
     { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
-    {
-      name: 'appliedDate',
-      label: 'Applied Date',
-      field: 'appliedDate',
-      align: 'center',
-    },
-    {
-      name: 'source',
-      label: 'Source',
-      field: 'source',
-      align: 'center',
-      sortable: true,
-    },
-    {
-      name: 'status',
-      label: 'Status',
-      field: 'status',
-      align: 'center',
-    },
-    {
-      name: 'action',
-      label: 'Action',
-      field: 'action',
-      align: 'center',
-      sortable: false,
-    },
+    { name: 'appliedDate', label: 'Applied Date', field: 'appliedDate', align: 'center' },
+    { name: 'source', label: 'Source', field: 'source', align: 'center', sortable: true },
+    { name: 'status', label: 'Status', field: 'status', align: 'center' },
+    { name: 'action', label: 'Action', field: 'action', align: 'center', sortable: false },
   ]);
 
   const ratingColumns = ref([
-    {
-      name: 'personal_id',
-      label: 'Personal ID',
-      field: 'personal_id',
-      align: 'center',
-      sortable: true,
-    },
+    // {
+    //   name: 'personal_id',
+    //   label: 'Personal ID',
+    //   field: 'personal_id',
+    //   align: 'center',
+    //   sortable: true,
+    // },
     { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
-    {
-      name: 'education',
-      label: 'Education',
-      field: 'education',
-      align: 'center',
-      sortable: true,
-    },
+    { name: 'education', label: 'Education', field: 'education', align: 'center', sortable: true },
     {
       name: 'experience',
       label: 'Experience',
@@ -1219,13 +1094,7 @@
       align: 'center',
       sortable: true,
     },
-    {
-      name: 'training',
-      label: 'Training',
-      field: 'training',
-      align: 'center',
-      sortable: true,
-    },
+    { name: 'training', label: 'Training', field: 'training', align: 'center', sortable: true },
     {
       name: 'performance',
       label: 'Performance',
@@ -1234,13 +1103,7 @@
       sortable: true,
     },
     { name: 'bei', label: 'BEI', field: 'bei', align: 'center', sortable: true },
-    {
-      name: 'total_qs',
-      label: 'Total QS',
-      field: 'total_qs',
-      align: 'center',
-      sortable: true,
-    },
+    { name: 'total_qs', label: 'Total QS', field: 'total_qs', align: 'center', sortable: true },
     {
       name: 'grand_total',
       label: 'Grand Total',
@@ -1254,14 +1117,12 @@
 
   const formattedApplicants = computed(() => {
     if (!jobPostStore.applicant) return [];
-
     return jobPostStore.applicant.map((a) => {
       const fullName = `${a.firstname || ''} ${a.lastname || ''} ${a.name_extension || ''}`.trim();
-
       return {
         id: a.id,
-        submission_id: a.submission_id || a.id, // ✅ Add submission_id
-        name: fullName, // ✅ ADD THIS
+        submission_id: a.submission_id || a.id,
+        name: fullName,
         firstname: a.firstname || '',
         lastname: a.lastname || '',
         name_extension: a.name_extension || '',
@@ -1284,7 +1145,6 @@
 
   const statusColor = computed(() => {
     const status = (selectedJob.value?.status || '').toLowerCase();
-
     switch (status) {
       case 'not started':
         return 'grey';
@@ -1309,18 +1169,13 @@
   });
 
   const showUnoccupiedButton = computed(() => {
-    const status = selectedJob.value?.status;
-    if (!status) return false;
-
-    const normalizedStatus = status.toLowerCase().trim();
-    return normalizedStatus === 'rated' || normalizedStatus === 'rating completed';
+    const status = selectedJob.value?.status?.toLowerCase().trim();
+    return status === 'rated' || status === 'rating completed';
   });
 
   const formattedApplicantRatings = computed(() => {
     if (!jobPostStore.applicant_rating) return [];
-
     let ratingsArray = [];
-
     if (
       jobPostStore.applicant_rating.applicants &&
       typeof jobPostStore.applicant_rating.applicants === 'object'
@@ -1331,22 +1186,15 @@
     } else if (typeof jobPostStore.applicant_rating === 'object') {
       ratingsArray = Object.values(jobPostStore.applicant_rating);
     }
-
-    const formatted = ratingsArray
+    return ratingsArray
       .map((rating) => {
         const nPersonal = rating.nPersonalInfo_id ?? '';
         const controlNo = rating.ControlNo ?? rating.controlno ?? '';
-
         return {
           submission_id: rating.submission_id,
           nPersonalInfo_id: rating.nPersonalInfo_id,
-
-          // ✅ keep ControlNo available for modal fallback
           ControlNo: controlNo,
-
-          // ✅ column display value
           personal_id: nPersonal ? nPersonal : controlNo ? controlNo : '-',
-
           firstname: rating.firstname || '',
           lastname: rating.lastname || '',
           education: rating.education || '0.00',
@@ -1365,16 +1213,13 @@
         };
       })
       .sort((a, b) => parseInt(a.rank) - parseInt(b.rank));
-
-    return formatted;
   });
 
-  // ✅ Updated to pass submission_id
   function viewApplicantDetails(row) {
     selectedApplicantData.value = {
       ControlNo: row.raw?.ControlNo || row.ControlNo,
       id: row.raw?.id || row.id,
-      submission_id: row.raw?.submission_id || row.submission_id || row.id, // ✅ Add submission_id
+      submission_id: row.raw?.submission_id || row.submission_id || row.id,
       job_batches_rsp_id: row.raw?.job_batches_rsp_id,
       status: row.status || 'Pending',
       name: `${row.firstname} ${row.lastname}${row.name_extension ? ' ' + row.name_extension : ''}`,
@@ -1390,7 +1235,7 @@
       training_remark: row.training_remark,
       eligibility_remark: row.eligibility_remark,
       education: row.education || row.raw?.education || [],
-      education_images: row.educatiuon_images || row.raw?.education_images || null,
+      education_images: row.education_images || row.raw?.education_images || null,
       experience_images: row.experience_images || row.raw?.experience_images || null,
       training_images: row.training_images || row.raw?.training_images || null,
       eligibility_images: row.eligibility_images || row.raw?.eligibility_images || null,
@@ -1406,28 +1251,15 @@
   }
 
   function viewApplicantScore(applicantRow) {
-    let historyData = [];
-
-    if (applicantRow.originalData && applicantRow.originalData.history) {
-      historyData = applicantRow.originalData.history;
-    } else if (applicantRow.history) {
-      historyData = applicantRow.history;
-    } else if (applicantRow.raw && applicantRow.raw.history) {
-      historyData = applicantRow.raw.history;
-    }
-
+    const historyData =
+      applicantRow.originalData?.history || applicantRow.history || applicantRow.raw?.history || [];
     scoreModal.value = {
       visible: true,
       applicant: {
         submission_id: applicantRow.submission_id,
-
-        // ✅ this may be empty sometimes
         nPersonalInfo_id: applicantRow.nPersonalInfo_id,
-
-        // ✅ fallback
         ControlNo:
           applicantRow.ControlNo || applicantRow.raw?.ControlNo || applicantRow.raw?.controlno,
-
         firstname: applicantRow.firstname,
         lastname: applicantRow.lastname,
         name_extension: applicantRow.name_extension || '',
@@ -1452,88 +1284,48 @@
   const handleQualificationModalUpdate = (value) => {
     qualificationModalVisible.value = value;
   };
-
   const handleScoreModalUpdate = (value) => {
     scoreModal.value.visible = value;
   };
-
   function closeScoreModal() {
     scoreModal.value = { visible: false, applicant: null };
   }
-
   const onToggleQualification = (status) => {
     selectedApplicantData.value.status = status;
   };
-
   const onCloseQualificationModal = () => {
     qualificationModalVisible.value = false;
     selectedApplicantData.value = {};
   };
-
   const onViewPDS = () => {
     console.log('View PDS requested for:', selectedApplicantData.value.name);
   };
 
   onMounted(async () => {
-    console.log('Component mounting, jobId:', jobId.value);
-
     if (!jobId.value) {
-      console.error('No job ID provided in route params');
       toast.error('No job ID provided');
       router.push('/job-post');
       return;
     }
-
     try {
       isNavigating.value = false;
-
-      // ✅ Load everything at once
       await loadAllData(jobId.value);
-
-      // await jobPostStore.job_post();
-
-      console.log('Initial data loading completed');
     } catch (error) {
       console.error('Error during initial data loading:', error);
-
       let errorMessage = 'Failed to load job details';
-      if (error.response) {
-        if (error.response.status === 404) {
-          errorMessage = 'Job not found';
-        } else if (error.response.status === 403) {
-          errorMessage = 'Access denied';
-        } else {
-          errorMessage = error.response.data?.message || errorMessage;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      if (error.response?.status === 404) errorMessage = 'Job not found';
+      else if (error.response?.status === 403) errorMessage = 'Access denied';
+      else errorMessage = error.response?.data?.message || error.message || errorMessage;
       toast.error(errorMessage);
-
-      if (error.response?.status === 404) {
-        setTimeout(() => {
-          router.push('/job-post');
-        }, 2000);
-      }
+      if (error.response?.status === 404) setTimeout(() => router.push('/job-post'), 2000);
     }
   });
 
   watch(
     () => route.params.id,
     async (newId, oldId) => {
-      if (isNavigating.value) {
-        console.log('Skipping watcher - programmatic navigation in progress');
-        return;
-      }
-
-      if (newId === lastLoadedId.value || !newId) {
-        console.log('Skipping watcher - same ID or invalid');
-        return;
-      }
-
-      console.log('Route changed (browser navigation):', oldId, '→', newId);
-
+      if (isNavigating.value || newId === lastLoadedId.value || !newId) return;
+      console.log('Route changed:', oldId, '→', newId);
       try {
         await loadAllData(newId);
       } catch (error) {
@@ -1545,17 +1337,17 @@
 </script>
 
 <style scoped>
+  /* ===== Chips ===== */
   .chips-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
   }
-
   .chip-padding {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 14px;
+    padding-right: 14px;
   }
-
   .level-chip {
     background: #a8d5a4;
     color: #161616;
@@ -1572,9 +1364,8 @@
     background: #f3eafd;
     color: #6626a6;
   }
-
   .chip-label {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 400;
     font-family: 'Montserrat', 'Roboto', Arial, sans-serif;
   }
@@ -1582,37 +1373,46 @@
     font-weight: 700;
   }
 
-  .q-chip__icon,
-  .q-icon {
-    font-size: 1.15em;
-    margin-right: 4px;
-  }
-
-  .assessment-status .q-badge {
+  /* ===== Info Items ===== */
+  .info-item {
+    display: flex;
+    align-items: center;
     font-size: 0.9rem;
-    padding: 8px 12px;
-    border-radius: 4px;
+    padding: 3px 0;
   }
 
+  /* ===== Criteria Cards ===== */
+  .criteria-card {
+    border-left: 3px solid #4caf50;
+    border-radius: 6px;
+    background: #fafafa;
+  }
+
+  /* ===== Tabs ===== */
   .q-tabs {
     background-color: #fff;
     border-radius: 8px 8px 0 0;
   }
-
   .q-tab {
     font-weight: 500;
     padding: 12px;
   }
-
   .q-tab-panels {
     background-color: white;
   }
-
   .q-tab-panel {
     padding: 16px;
   }
 
+  /* ===== Tables ===== */
   .q-table tr:hover {
     background-color: #f5f5f5;
+  }
+
+  /* ===== Badge ===== */
+  .assessment-status .q-badge {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    border-radius: 4px;
   }
 </style>

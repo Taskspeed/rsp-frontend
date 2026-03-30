@@ -9,6 +9,9 @@
     <div class="header-container"></div>
 
     <q-list dense>
+      <!-- ================================================================ -->
+      <!-- TOP-LEVEL MENU ITEMS                                             -->
+      <!-- ================================================================ -->
       <q-item
         dense
         class="q-mx-xs q-my-xs"
@@ -26,10 +29,81 @@
         <q-item-section>{{ item.label }}</q-item-section>
       </q-item>
 
-      <!-- Rater Management Expansion Item -->
+      <!-- ================================================================ -->
+      <!-- EXAM SCORE — standalone, guarded by viewExam / modifyExam        -->
+      <!-- ================================================================ -->
+      <!-- <q-item
+        v-if="hasExamAccess"
+        dense
+        class="q-mx-xs q-my-xs"
+        style="border-radius: 17px; padding: 8px 11px"
+        clickable
+        v-ripple
+        to="/exam-score"
+        active-class="active-menu"
+      >
+        <q-item-section avatar>
+          <q-icon name="grading" size="sm" />
+        </q-item-section>
+        <q-item-section>Exam Score</q-item-section>
+      </q-item> -->
+
+      <q-item
+        dense
+        class="q-mx-xs q-my-xs"
+        style="border-radius: 17px; padding: 8px 11px"
+        clickable
+        v-ripple
+        to="/exam-score"
+        active-class="active-menu"
+      >
+        <q-item-section avatar>
+          <q-icon name="grading" size="sm" />
+        </q-item-section>
+        <q-item-section>Exam Score</q-item-section>
+      </q-item>
+
+      <!-- ================================================================ -->
+      <!-- SCHEDULE — standalone, guarded by viewSchedule / modifySchedule  -->
+      <!-- ================================================================ -->
+      <!-- <q-item
+        v-if="hasScheduleAccess"
+        dense
+        class="q-mx-xs q-my-xs"
+        style="border-radius: 17px; padding: 8px 11px"
+        clickable
+        v-ripple
+        to="/schedule"
+        active-class="active-menu"
+      >
+        <q-item-section avatar>
+          <q-icon name="event" size="sm" />
+        </q-item-section>
+        <q-item-section>Schedule</q-item-section>
+      </q-item> -->
+
+      <q-item
+        dense
+        class="q-mx-xs q-my-xs"
+        style="border-radius: 17px; padding: 8px 11px"
+        clickable
+        v-ripple
+        to="/schedule"
+        active-class="active-menu"
+      >
+        <q-item-section avatar>
+          <q-icon name="event" size="sm" />
+        </q-item-section>
+        <q-item-section>Schedule</q-item-section>
+      </q-item>
+
+      <!-- ================================================================ -->
+      <!-- RATER MANAGEMENT — expandable, if permitted                      -->
+      <!-- Sub-items: Raters, Criteria, Reports                             -->
+      <!-- ================================================================ -->
       <q-expansion-item
         v-if="hasRaterManagementAccess"
-        v-model="expanded"
+        v-model="raterExpanded"
         dense
         style="border-radius: 20px; padding: 0; margin: 0"
         class="q-mx-xs q-my-xs"
@@ -55,8 +129,45 @@
           </q-item>
         </q-card>
       </q-expansion-item>
+
+      <!-- ================================================================ -->
+      <!-- USER MANAGEMENT — guarded by userManagement permission           -->
+      <!-- ================================================================ -->
+      <q-item
+        v-if="hasUserManagementAccess"
+        dense
+        class="q-mx-xs q-my-xs"
+        style="border-radius: 17px; padding: 8px 11px"
+        clickable
+        v-ripple
+        to="/user-access"
+        active-class="active-menu"
+      >
+        <q-item-section avatar>
+          <q-icon name="manage_accounts" size="sm" />
+        </q-item-section>
+        <q-item-section>User Management</q-item-section>
+      </q-item>
+
+      <!-- ================================================================ -->
+      <!-- ACTIVITY LOG — guarded by viewActivityLogs                       -->
+      <!-- ================================================================ -->
+      <q-item
+        v-if="hasActivityLogsAccess"
+        dense
+        class="q-mx-xs q-my-xs"
+        style="border-radius: 17px; padding: 8px 11px"
+        clickable
+        v-ripple
+        to="/activity-log"
+        active-class="active-menu"
+      >
+        <q-item-section avatar>
+          <q-icon name="history" size="sm" />
+        </q-item-section>
+        <q-item-section>Activity Log</q-item-section>
+      </q-item>
     </q-list>
-    <!-- footer -->
   </q-drawer>
 </template>
 
@@ -67,127 +178,134 @@
 
   const authStore = useAuthStore();
   const route = useRoute();
+
   const drawer = ref(true);
-  const expanded = ref(false);
+  const raterExpanded = ref(false);
 
-  // Check if user has any plantilla access (view or modify)
-  const hasPlantillaAccess = computed(() => {
-    return (
+  // ============================================================================
+  // PLANTILLA & JOB POST PERMISSIONS
+  // ============================================================================
+
+  const hasPlantillaAccess = computed(
+    () =>
       authStore.user?.permissions?.viewPlantillaAccess == '1' ||
-      authStore.user?.permissions?.modifyPlantillaAccess == '1'
-    );
-  });
+      authStore.user?.permissions?.modifyPlantillaAccess == '1',
+  );
 
-  // Check if user has any job post access (view or modify)
-  const hasJobPostAccess = computed(() => {
-    return (
+  const hasJobPostAccess = computed(
+    () =>
       authStore.user?.permissions?.viewJobpostAccess == '1' ||
-      authStore.user?.permissions?.modifyJobpostAccess == '1'
-    );
-  });
+      authStore.user?.permissions?.modifyJobpostAccess == '1',
+  );
 
   // ============================================================================
-  // RATER MANAGEMENT MODULE PERMISSIONS
+  // EXAM SCORE PERMISSIONS
   // ============================================================================
 
-  /**
-   * Check if user has access to Raters module (view or modify)
-   */
-  const hasRatersAccess = computed(() => {
-    return (
+  // const hasExamAccess = computed(
+  //   () =>
+  //     authStore.user?.permissions?.viewExam === '1' ||
+  //     authStore.user?.permissions?.modifyExam === '1',
+  // );
+
+  // ============================================================================
+  // SCHEDULE PERMISSIONS
+  // ============================================================================
+
+  // const hasScheduleAccess = computed(
+  //   () =>
+  //     authStore.user?.permissions?.viewSchedule === '1' ||
+  //     authStore.user?.permissions?.modifySchedule === '1',
+  // );
+
+  // ============================================================================
+  // RATER MANAGEMENT PERMISSIONS
+  // ============================================================================
+
+  const hasRatersAccess = computed(
+    () =>
       authStore.user?.permissions?.viewRater === '1' ||
-      authStore.user?.permissions?.modifyRater === '1'
-    );
-  });
+      authStore.user?.permissions?.modifyRater === '1',
+  );
 
-  /**
-   * Check if user has access to Criteria module (view or modify)
-   */
-  const hasCriteriaAccess = computed(() => {
-    return (
+  const hasCriteriaAccess = computed(
+    () =>
       authStore.user?.permissions?.viewCriteria === '1' ||
-      authStore.user?.permissions?.modifyCriteria === '1'
-    );
-  });
+      authStore.user?.permissions?.modifyCriteria === '1',
+  );
 
-  /**
-   * Check if user has access to Reports module (view only)
-   */
-  const hasReportsAccess = computed(() => {
-    return authStore.user?.permissions?.viewReport === '1';
-  });
+  const hasReportsAccess = computed(() => authStore.user?.permissions?.viewReport === '1');
 
-  const hasActivityLogsAccess = computed(() => {
-    return authStore.user?.permissions?.viewActivityLogs === '1';
-  });
-
-  /**
-   * Check if user has ANY rater management access
-   * Shows the Rater Management expansion menu if user has access to at least one module
-   */
-  const hasRaterManagementAccess = computed(() => {
-    return hasRatersAccess.value || hasCriteriaAccess.value || hasReportsAccess.value;
-  });
+  /** Show Rater Management expansion if user has access to at least one sub-module */
+  const hasRaterManagementAccess = computed(
+    () => hasRatersAccess.value || hasCriteriaAccess.value || hasReportsAccess.value,
+  );
 
   // ============================================================================
-  // END RATER MANAGEMENT MODULE PERMISSIONS
+  // USER MANAGEMENT PERMISSION
   // ============================================================================
 
-  const hasUserManagementAccess = computed(() => {
-    return authStore.user?.permissions?.userManagement == '1';
-  });
+  const hasUserManagementAccess = computed(
+    () => authStore.user?.permissions?.userManagement === '1',
+  );
 
-  const filteredMenuItems = computed(() => {
-    return [
-      { label: 'Dashboard', route: '/dashboard', icon: 'dashboard' },
-      ...(hasPlantillaAccess.value
-        ? [{ label: 'Plantilla', route: '/plantilla', icon: 'domain' }]
-        : []),
-      ...(hasJobPostAccess.value
-        ? [{ label: 'Job Posts', route: '/job-post', icon: 'post_add' }]
-        : []),
-      { label: 'Applicant', route: '/applicant', icon: 'group' },
-      { label: 'Schedule', route: '/schedule', icon: 'event' },
-      ...(hasUserManagementAccess.value
-        ? [{ label: 'User Management', route: '/user-access', icon: 'manage_accounts' }]
-        : []),
-      ...(hasActivityLogsAccess.value
-        ? [{ label: 'Activity Log', route: '/activity-log', icon: 'history' }]
-        : []),
-    ];
-  });
+  // ============================================================================
+  // ACTIVITY LOG PERMISSION
+  // ============================================================================
 
-  /**
-   * Filtered rater management menu items based on user permissions
-   * Only shows modules the user has access to
-   */
-  const filteredRatersManage = computed(() => {
-    const allItems = [
+  const hasActivityLogsAccess = computed(
+    () => authStore.user?.permissions?.viewActivityLogs === '1',
+  );
+
+  // ============================================================================
+  // TOP-LEVEL MENU ITEMS
+  // Order: Dashboard → Plantilla → Job Posts → Applicant
+  // Exam Score and Rater Management rendered separately
+  // User Management always visible | Activity Log permission-guarded
+  // ============================================================================
+
+  const filteredMenuItems = computed(() => [
+    { label: 'Dashboard', route: '/dashboard', icon: 'dashboard' },
+    ...(hasPlantillaAccess.value
+      ? [{ label: 'Plantilla', route: '/plantilla', icon: 'domain' }]
+      : []),
+    ...(hasJobPostAccess.value
+      ? [{ label: 'Job Posts', route: '/job-post', icon: 'post_add' }]
+      : []),
+    { label: 'Applicant', route: '/applicant', icon: 'group' },
+  ]);
+
+  // ============================================================================
+  // RATER MANAGEMENT SUB-ITEMS
+  // ============================================================================
+
+  const filteredRatersManage = computed(() =>
+    [
       { label: 'Raters', route: '/raters', icon: 'groups', permission: hasRatersAccess },
       { label: 'Criteria', route: '/criteria', icon: 'rule', permission: hasCriteriaAccess },
       { label: 'Reports', route: '/reports', icon: 'assessment', permission: hasReportsAccess },
-    ];
+    ].filter((item) => item.permission.value),
+  );
 
-    // Filter items based on their individual permissions
-    return allItems.filter((item) => item.permission.value);
-  });
+  // ============================================================================
+  // AUTO-EXPAND ACTIVE SECTION ON MOUNT
+  // ============================================================================
+
+  const raterRoutes = ['/raters', '/criteria', '/reports'];
 
   onMounted(() => {
-    // Set the active menu item based on the current route
     const currentRoute = route.path;
-    // Check if the current route matches any of the rater management routes
-    filteredRatersManage.value.forEach((item) => {
-      if (currentRoute === item.route) {
-        expanded.value = true;
-      }
-    });
+
+    if (raterRoutes.includes(currentRoute)) {
+      raterExpanded.value = true;
+    }
   });
 </script>
 
 <style scoped>
+  /* Sidebar expansion sub-list indentation line */
   .content-container {
     border-left: 2px solid rgb(133, 133, 133);
-    /* Change color as needed */
     padding-left: 5px;
     margin-left: 25px;
   }
@@ -198,15 +316,12 @@
     justify-content: center;
     align-items: center;
     padding: 5px 0;
-    /* Reduce padding */
     margin-bottom: 2px;
-    /* Reduce space below logo */
     margin-top: 40px;
   }
 
   .logo {
     width: 140px;
-    /* Slightly smaller logo */
     height: auto;
   }
 
@@ -214,19 +329,16 @@
   .header-container {
     text-align: center;
     margin-bottom: 2px !important;
-    /* Further reduce space */
     padding-bottom: 0 !important;
   }
 
   .company-title {
     font-size: 16px;
-    /* Reduce font size slightly */
     font-weight: bold;
     margin-bottom: 0 !important;
-    /* Remove extra space below title */
   }
 
-  /* Active menu styling */
+  /* Active menu item highlight */
   .active-menu {
     background-color: #00b034 !important;
     color: white !important;

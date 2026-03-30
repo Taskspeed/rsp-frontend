@@ -5,13 +5,14 @@
       <div class="q-pa-md q-gutter-sm">
         <q-breadcrumbs class="q-ma-none">
           <template v-slot:separator>
-            <q-icon size="1. 2em" name="arrow_forward" />
+            <q-icon size="1.2em" name="arrow_forward" />
           </template>
           <q-breadcrumbs-el label="Rater Management" icon="assignment_ind" />
           <q-breadcrumbs-el label="Raters" icon="groups" />
         </q-breadcrumbs>
       </div>
     </div>
+
     <!-- Card -->
     <q-card>
       <q-card-section class="row justify-between items-center">
@@ -48,6 +49,7 @@
           />
         </div>
       </q-card-section>
+
       <q-separator />
 
       <q-card-section>
@@ -123,11 +125,10 @@
                 >
                   <q-tooltip>Edit</q-tooltip>
                 </q-btn>
-                      <!-- Reset password button -->
-              <ButtonResetPassword
-                v-if="props.row.id !== authStore.user.id"
-                :user-id="props.row.id"
-              />
+                <ButtonResetPassword
+                  v-if="props.row.id !== authStore.user.id"
+                  :user-id="props.row.id"
+                />
               </template>
             </q-td>
           </template>
@@ -157,13 +158,20 @@
         </q-card-section>
 
         <q-card-section>
-          <q-banner v-if="showError" class="bg-red-2 text-red-10 q-mb-md">
-            Please fill in all required fields.
+          <q-banner v-if="showError" class="bg-red-2 text-red-10 q-mb-md" rounded>
+            <template v-slot:avatar>
+              <q-icon name="error" color="negative" />
+            </template>
+            Please fill in all required fields: Positions, Office,
+            {{ !isEditMode ? 'Rater, ' : '' }}Representation, and Role are all required.
           </q-banner>
 
           <!-- Select Positions -->
           <div class="q-mb-md">
-            <div class="text-subtitle2 text-weight-medium">Select Job Positions to Rate</div>
+            <div class="text-subtitle2 text-weight-medium">
+              Select Job Positions to Rate
+              <span class="text-negative">*</span>
+            </div>
             <q-select
               v-model="selectedPositions"
               multiple
@@ -187,8 +195,7 @@
                     <q-checkbox
                       :model-value="isPositionSelected(scope.opt.id)"
                       @update:model-value="(val) => togglePosition(scope.opt.id, val)"
-                      @click.
-                      stop
+                      @click.stop
                     />
                   </q-item-section>
                 </q-item>
@@ -196,9 +203,14 @@
             </q-select>
           </div>
 
-          <!-- Add Mode: Select Office FIRST, then Select Rater -->
+          <!-- ==================== ADD MODE ==================== -->
           <template v-if="!isEditMode">
+            <!-- Select Office -->
             <div class="q-mb-md">
+              <div class="text-subtitle2 text-weight-medium">
+                Office
+                <span class="text-negative">*</span>
+              </div>
               <q-select
                 v-model="selectedOffice"
                 :options="offices"
@@ -217,8 +229,12 @@
               </q-select>
             </div>
 
+            <!-- Select Rater -->
             <div class="q-mb-md">
-              <div class="text-subtitle2 text-weight-medium">Select Rater</div>
+              <div class="text-subtitle2 text-weight-medium">
+                Select Rater
+                <span class="text-negative">*</span>
+              </div>
               <q-select
                 v-model="selectedRater"
                 :options="filteredRatersByOffice"
@@ -248,7 +264,50 @@
               </q-select>
             </div>
 
-            <!-- Add/Edit: Toggle active/inactive -->
+            <!-- Representation (Add Mode) -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-weight-medium">
+                Representation
+                <span class="text-negative">*</span>
+              </div>
+              <q-input
+                v-model="representative"
+                label="Enter representation"
+                outlined
+                dense
+                :error="showError && !representative"
+                error-message="Representation is required"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="badge" />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Role (Add Mode) -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-weight-medium">
+                Role
+                <span class="text-negative">*</span>
+              </div>
+              <q-select
+                v-model="selectedRole"
+                :options="roleOptions"
+                label="Select role"
+                outlined
+                dense
+                emit-value
+                map-options
+                :error="showError && !selectedRole"
+                error-message="Role is required"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="manage_accounts" />
+                </template>
+              </q-select>
+            </div>
+
+            <!-- Active Toggle (Add Mode) -->
             <div class="q-mb-md">
               <q-toggle
                 v-model="activeStatus"
@@ -264,11 +323,14 @@
             </div>
           </template>
 
-          <!-- Edit Mode: Display Rater + Office (name-only) -->
+          <!-- ==================== EDIT MODE ==================== -->
           <template v-else>
-            <!-- Select Office in Edit Mode (name-only) -->
+            <!-- Select Office (Edit Mode) -->
             <div class="q-mb-md">
-              <div class="text-subtitle2 text-weight-medium">Select Office</div>
+              <div class="text-subtitle2 text-weight-medium">
+                Select Office
+                <span class="text-negative">*</span>
+              </div>
               <q-select
                 v-model="selectedOffice"
                 :options="offices"
@@ -283,13 +345,12 @@
                 <template v-slot:prepend>
                   <q-icon name="business" />
                 </template>
-                <template v-slot:append></template>
               </q-select>
             </div>
 
             <q-separator class="q-mt-md q-mb-md" />
 
-            <!-- Display Rater in Edit Mode (readonly) -->
+            <!-- Rater Name (Edit Mode — readonly) -->
             <div class="q-mb-md">
               <div class="text-subtitle2 text-weight-medium">Rater</div>
               <q-select
@@ -316,7 +377,50 @@
               </div>
             </div>
 
-            <!-- Add/Edit: Toggle active/inactive -->
+            <!-- Representation (Edit Mode) -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-weight-medium">
+                Representation
+                <span class="text-negative">*</span>
+              </div>
+              <q-input
+                v-model="representative"
+                label="Enter representation"
+                outlined
+                dense
+                :error="showError && !representative"
+                error-message="Representation is required"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="badge" />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Role (Edit Mode) -->
+            <div class="q-mb-md">
+              <div class="text-subtitle2 text-weight-medium">
+                Role
+                <span class="text-negative">*</span>
+              </div>
+              <q-select
+                v-model="selectedRole"
+                :options="roleOptions"
+                label="Select role"
+                outlined
+                dense
+                emit-value
+                map-options
+                :error="showError && !selectedRole"
+                error-message="Role is required"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="manage_accounts" />
+                </template>
+              </q-select>
+            </div>
+
+            <!-- Active Toggle (Edit Mode) -->
             <div class="q-mb-md">
               <q-toggle
                 v-model="activeStatus"
@@ -353,9 +457,7 @@
         <q-card-section>
           <div class="text-h6">Confirm Delete</div>
         </q-card-section>
-
         <q-card-section>Are you sure you want to delete this rater?</q-card-section>
-
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="primary" v-close-popup />
           <q-btn flat label="Delete" color="negative" @click="deleteRater" />
@@ -388,6 +490,27 @@
               <div class="text-subtitle1 q-mb-sm">
                 <strong>Office:</strong>
                 {{ currentViewRater.office }}
+              </div>
+              <div class="text-subtitle1 q-mb-sm">
+                <strong>Representation:</strong>
+                {{ currentViewRater.representative || '—' }}
+              </div>
+              <div class="text-subtitle1 q-mb-sm">
+                <strong>Role:</strong>
+                <q-badge
+                  v-if="currentViewRater.role"
+                  :color="currentViewRater.role === 'Chairperson' ? 'purple' : 'teal'"
+                  text-color="white"
+                  class="q-pa-xs q-ml-xs"
+                >
+                  <q-icon
+                    :name="currentViewRater.role === 'Chairperson' ? 'star' : 'group'"
+                    size="xs"
+                    class="q-mr-xs"
+                  />
+                  {{ currentViewRater.role }}
+                </q-badge>
+                <span v-else class="text-grey">—</span>
               </div>
             </div>
             <div class="col-auto">
@@ -528,29 +651,26 @@
   import { useAuthStore } from 'stores/authStore';
   import { useJobPostStore } from 'stores/jobPostStore';
   import { usePlantillaStore } from 'stores/plantillaStore';
-  import ButtonResetPassword from "components/ButtonResetPassword.vue";
+  import ButtonResetPassword from 'components/ButtonResetPassword.vue';
   import { toast } from 'boot/toast';
   import { adminApi } from 'boot/axios_admin';
-
 
   const jobPostStore = useJobPostStore();
   const authStore = useAuthStore();
   const plantillaStore = usePlantillaStore();
 
-  // Search
+  // ==================== SEARCH ====================
   const globalSearch = ref('');
   const jobSearch = ref('');
 
-  // Data
+  // ==================== DATA ====================
   const raters = ref([]);
   const raterJobs = ref([]);
   const isLoadingJobs = ref(false);
   const jobLoadError = ref('');
-
-  // Loading state for the main table
   const isLoadingTable = ref(false);
 
-  // Modal state
+  // ==================== MODAL STATE ====================
   const showModal = ref(false);
   const showError = ref(false);
   const isSubmitting = ref(false);
@@ -558,19 +678,20 @@
   const currentRaterId = ref(null);
   const currentRaterName = ref('');
   const currentRaterOffice = ref('');
-
   const currentOfficeRaters = ref([]);
 
-  // View dialog state
+  // ==================== VIEW DIALOG ====================
   const showViewDialog = ref(false);
   const currentViewRater = ref({
     id: null,
     name: '',
     position: '',
     office: '',
+    representative: '',
+    role: '',
   });
 
-  // Pagination state
+  // ==================== PAGINATION ====================
   const pagination = ref({
     sortBy: 'Position',
     descending: false,
@@ -579,28 +700,34 @@
     rowsNumber: 0,
   });
 
-  // Delete dialog state
+  // ==================== DELETE DIALOG ====================
   const showDeleteDialog = ref(false);
   const raterToDelete = ref(null);
 
-  // Form selections
+  // ==================== FORM STATE ====================
   const selectedPositions = ref([]);
   const selectedRater = ref(null);
   const selectedOffice = ref('');
   const activeStatus = ref(true);
+  // FIX: renamed from 'representation' to 'representative' to match API field name
+  const representative = ref('');
+  const selectedRole = ref(null);
 
-  // Options data
+  // ==================== ROLE OPTIONS ====================
+  const roleOptions = [
+    { label: 'Chairperson', value: 'Chairperson' },
+    { label: 'Member', value: 'Member' },
+  ];
+
+  // ==================== OPTIONS DATA ====================
   const offices = ref([]);
   const positions = ref([]);
-
-  // Rater options for the selected office
   const filteredRatersByOffice = ref([]);
   const officeRatersRaw = ref([]);
   const isLoadingRaters = ref(false);
 
-  // Columns definition
+  // ==================== COLUMNS ====================
   const columns = [
-    // { name: 'id', label: 'ID', field: 'id', align: 'left', style: 'width: 5%' },
     {
       name: 'name',
       label: 'Rater Name',
@@ -649,7 +776,6 @@
     { name: 'actions', label: 'Actions', align: 'center', style: 'width: 5%' },
   ];
 
-  // Updated job columns to match API response
   const jobColumns = [
     {
       name: 'position',
@@ -677,26 +803,24 @@
       label: 'Status',
       field: 'status',
       align: 'center',
-      style: 'width: 15',
+      style: 'width: 15%',
     },
   ];
 
-  // **NEW: Process raters to handle new API structure**
+  // ==================== COMPUTED ====================
+
   const processedRaters = computed(() => {
     return raters.value.map((rater) => {
-      // Handle job_batches_rsp being an array of objects
       const jobBatchesArray = Array.isArray(rater.job_batches_rsp) ? rater.job_batches_rsp : [];
-
       return {
         ...rater,
-        job_batches_rsp_array: jobBatchesArray, // Store the array for display
-        Rater: rater.name || rater.Rater, // Backwards compatibility
-        Office: rater.office || rater.Office, // Backwards compatibility
+        job_batches_rsp_array: jobBatchesArray,
+        Rater: rater.name || rater.Rater,
+        Office: rater.office || rater.Office,
       };
     });
   });
 
-  // Computed
   const filteredRaters = computed(() => {
     if (!globalSearch.value) return processedRaters.value;
     const searchTerm = globalSearch.value.toLowerCase();
@@ -731,22 +855,14 @@
     return [allOption, ...positions.value];
   });
 
-  // Calculate total applicants
   const totalApplicants = computed(() => {
     return raterJobs.value.reduce((total, job) => {
       return total + parseInt(job.applicant || 0);
     }, 0);
   });
 
-  // Methods
-  const showAddModal = () => {
-    isEditMode.value = false;
-    showModal.value = true;
-    resetForm();
-    activeStatus.value = true;
-  };
+  // ==================== POSITION SELECTION METHODS ====================
 
-  // **FIXED: Position selection methods**
   const isPositionSelected = (id) => {
     if (id === 'all') {
       return (
@@ -766,7 +882,6 @@
       }
       return;
     }
-
     if (checked) {
       if (!selectedPositions.value.includes(id)) {
         selectedPositions.value = [...selectedPositions.value, id];
@@ -777,14 +892,12 @@
   };
 
   const handlePositionSelection = (newSelection) => {
-    // Remove 'all' from the array - we don't store it, just use it for UI
     const filtered = newSelection.filter((id) => id !== 'all');
-
-    // Remove duplicates using Set
     selectedPositions.value = [...new Set(filtered)];
   };
 
-  // Fetch employees by selected office name (server-side filtered)
+  // ==================== OFFICE / RATER FETCH ====================
+
   const fetchEmployeesByOffice = async (officeName) => {
     isLoadingRaters.value = true;
     filteredRatersByOffice.value = [];
@@ -811,7 +924,6 @@
     }
   };
 
-  // When office is changed, fetch employees under that office
   const handleOfficeChange = async (OfficeName) => {
     selectedRater.value = null;
     if (!OfficeName) {
@@ -823,7 +935,6 @@
     await fetchEmployeesByOffice(OfficeName);
   };
 
-  // Local search within fetched employees for this office
   const filterRatersByOffice = (val, update) => {
     if (typeof update !== 'function') return;
     update(() => {
@@ -838,6 +949,8 @@
     });
   };
 
+  // ==================== FORM HELPERS ====================
+
   const resetForm = () => {
     selectedPositions.value = [];
     selectedRater.value = null;
@@ -850,6 +963,9 @@
     currentOfficeRaters.value = [];
     showError.value = false;
     activeStatus.value = true;
+    // FIX: reset 'representative' (not 'representation')
+    representative.value = '';
+    selectedRole.value = null;
   };
 
   const closeModal = () => {
@@ -858,7 +974,15 @@
     isEditMode.value = false;
   };
 
-  // Updated viewRater method to properly handle the API response structure
+  const showAddModal = () => {
+    isEditMode.value = false;
+    showModal.value = true;
+    resetForm();
+    activeStatus.value = true;
+  };
+
+  // ==================== VIEW RATER ====================
+
   const viewRater = async (rater) => {
     currentViewRater.value = {
       id: rater.id,
@@ -866,6 +990,9 @@
       position: rater.Position || 'N/A',
       office: rater.office,
       status: rater.status,
+      // FIX: check both 'representative' and 'representation' from API response
+      representative: rater.representative || rater.representation || '',
+      role: rater.role || '',
     };
 
     isLoadingJobs.value = true;
@@ -913,13 +1040,18 @@
     }
   };
 
-  // **FIXED: Edit rater function to handle new API structure**
+  // ==================== EDIT RATER ====================
+
   const editRater = async (rater) => {
     try {
       isEditMode.value = true;
       currentRaterId.value = rater.id;
       currentRaterName.value = rater.name;
       activeStatus.value = !!rater.active;
+
+      // FIX: check both 'representative' and 'representation' from API response
+      representative.value = rater.representative || rater.representation || '';
+      selectedRole.value = rater.role || null;
 
       if (
         !offices.value.length &&
@@ -938,25 +1070,17 @@
         offices.value = names.map((n) => ({ label: n, value: n }));
       }
 
-      // Pre-select office by name
       selectedOffice.value = rater.office || '';
 
-      // Populate rater list for that office
       if (selectedOffice.value) {
         await fetchEmployeesByOffice(selectedOffice.value);
         currentOfficeRaters.value = officeRatersRaw.value;
       }
 
-      // **FIXED: Handle new API structure for job_batches_rsp**
       selectedPositions.value = [];
 
-      // Get position IDs directly from the array of objects
       const jobBatchesArray = Array.isArray(rater.job_batches_rsp) ? rater.job_batches_rsp : [];
 
-      console.log('Job batches from rater:', jobBatchesArray);
-      console.log('Available positions:', positions.value);
-
-      // Extract IDs directly from the job_batches_rsp array
       const matchedIds = [];
       jobBatchesArray.forEach((jobBatch) => {
         const id = jobBatch.id;
@@ -965,11 +1089,7 @@
         }
       });
 
-      console.log('Matched position IDs:', matchedIds);
-
-      // Set the selected positions (no 'all', no duplicates)
       selectedPositions.value = matchedIds;
-
       showModal.value = true;
     } catch (error) {
       console.error('Error setting up edit mode:', error);
@@ -977,8 +1097,16 @@
     }
   };
 
+  // ==================== UPDATE RATER ====================
+
   const updateRater = async () => {
-    if (selectedPositions.value.length === 0 || !selectedOffice.value) {
+    // FIX: added !representative.value and !selectedRole.value to validation
+    if (
+      selectedPositions.value.length === 0 ||
+      !selectedOffice.value ||
+      !representative.value ||
+      !selectedRole.value
+    ) {
       showError.value = true;
       return;
     }
@@ -994,6 +1122,9 @@
         job_batches_rsp_id: selectedPositions.value.filter((id) => id !== 'all'),
         Office: selectedOffice.value,
         active: activeStatus.value,
+        // FIX: key is 'representative' (not 'representation') to match API
+        representative: representative.value,
+        role: selectedRole.value,
       };
 
       const result = await authStore.rater_edit(raterId, userData);
@@ -1013,8 +1144,17 @@
     }
   };
 
+  // ==================== ADD RATER ====================
+
   const addRater = async () => {
-    if (selectedPositions.value.length === 0 || !selectedOffice.value || !selectedRater.value) {
+    // FIX: added !representative.value and !selectedRole.value to validation
+    if (
+      selectedPositions.value.length === 0 ||
+      !selectedOffice.value ||
+      !selectedRater.value ||
+      !representative.value ||
+      !selectedRole.value
+    ) {
       showError.value = true;
       return;
     }
@@ -1036,6 +1176,9 @@
         job_batches_rsp_id: jobBatchIds,
         Office: selectedOffice.value,
         active: activeStatus.value,
+        // FIX: key is 'representative' (not 'representation') to match API
+        representative: representative.value,
+        role: selectedRole.value,
       };
 
       const result = await authStore.Rater_register(userData);
@@ -1056,7 +1199,8 @@
     }
   };
 
-  // Centralized method to load raters with loading state
+  // ==================== LOAD / DELETE ====================
+
   const loadRaters = async () => {
     isLoadingTable.value = true;
     try {
@@ -1077,6 +1221,8 @@
     raterToDelete.value = null;
   };
 
+  // ==================== LIFECYCLE ====================
+
   onMounted(async () => {
     isLoadingTable.value = true;
     try {
@@ -1092,10 +1238,8 @@
       isLoadingTable.value = false;
     }
 
-    // Positions for selection
     positions.value = jobPostStore.jobPosts.map((post) => ({ id: post.id, name: post.Position }));
 
-    // Populate office options from store (name-only)
     if (Array.isArray(plantillaStore.office) && plantillaStore.office.length > 0) {
       const names = Array.from(
         new Set(
@@ -1109,9 +1253,7 @@
   });
 
   watch(showModal, (val) => {
-    if (val && isEditMode.value) {
-      // already set in editRater
-    } else if (val && !isEditMode.value) {
+    if (val && !isEditMode.value) {
       activeStatus.value = true;
     }
   });
@@ -1136,7 +1278,7 @@
     white-space: normal;
     max-width: 100%;
     font-size: 12px;
-    line-height: 1 3;
+    line-height: 1.3;
     padding-left: 8px;
     padding-right: 8px;
     box-sizing: border-box;
@@ -1157,7 +1299,6 @@
     top: 0;
   }
 
-  /* No horizontal scrolling styles */
   .no-horizontal-scroll {
     table-layout: fixed;
     width: 100%;
@@ -1170,19 +1311,16 @@
     word-break: break-word;
   }
 
-  /* Position column styles */
   .position-column {
     width: 35%;
     max-width: 300px;
   }
 
-  /* Office column styles */
   .office-column {
     width: 40%;
     max-width: 350px;
   }
 
-  /* Full text display for position and office */
   .full-position-text,
   .full-office-text {
     white-space: normal;
@@ -1196,7 +1334,7 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .sticky-info {
@@ -1204,7 +1342,7 @@
     top: 65px;
     z-index: 2;
     background: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0 05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   }
 
   .scrollable-content {

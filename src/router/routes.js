@@ -25,6 +25,15 @@ const routes = [
         meta: { auth: true, role: 'admin' },
       },
       {
+        path: '/admin/application/:id',
+        name: 'Manual Application',
+        component: () => import('pages/admin/AdminApplication.vue'),
+        meta: {
+          auth: true,
+          role: 'admin',
+        },
+      },
+      {
         path: '/applicant',
         name: 'Applicant List',
         component: () => import('pages/admin/ApplicantPage.vue'),
@@ -35,6 +44,13 @@ const routes = [
         path: '/schedule',
         name: 'Schedule List',
         component: () => import('pages/admin/SchedulePage.vue'),
+        meta: { auth: true, role: 'admin' },
+      },
+
+      {
+        path: '/exam-score',
+        name: 'Exam Score List',
+        component: () => import('pages/admin/ExamScore.vue'),
         meta: { auth: true, role: 'admin' },
       },
       {

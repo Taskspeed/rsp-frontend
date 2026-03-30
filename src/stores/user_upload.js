@@ -19,7 +19,7 @@ export const useUser_upload = defineStore('user_upload', () => {
   }
 
   /**
-   * Process application submission with email
+   * Process application submission with email (for public applicants)
    * @param {string} email - User's email address
    */
   async function processSubmission(email) {
@@ -46,10 +46,7 @@ export const useUser_upload = defineStore('user_upload', () => {
       formData.append('job_batches_rsp_id', selectedJob.value.id);
       formData.append('excel_file', uploadedFile.value);
       formData.append('zip_file', uploadedZipFile.value);
-      formData.append('email', email); // Include email in submission
-
-      // console.log('Submitting application with email:', email);
-      // console.log('Job ID:', selectedJob.value.id);
+      formData.append('email', email);
 
       const response = await adminApi.post('/applicant/submissions', formData, {
         headers: {
@@ -57,23 +54,58 @@ export const useUser_upload = defineStore('user_upload', () => {
         },
       });
 
-      // console.log('Submission response:', response);
-
       isSubmitting.value = false;
       return response;
     } catch (error) {
-      // console.error('Submission error:', error);
       isSubmitting.value = false;
-
       errorMessage.value =
         error.response?.data?.message || error.message || 'Failed to submit application';
-
       throw error;
     }
   }
 
   /**
-   * Reset the upload store state
+   * Process manual application submission by admin (no email required)
+   * Uses /applicant/submissions/manual endpoint
+   */
+  async function processManualSubmission() {
+    if (!uploadedFile.value || !uploadedZipFile.value) {
+      errorMessage.value = 'Both Excel and ZIP files are required';
+      throw new Error(errorMessage.value);
+    }
+
+    if (!selectedJob.value || !selectedJob.value.id) {
+      errorMessage.value = 'No job selected';
+      throw new Error(errorMessage.value);
+    }
+
+    isSubmitting.value = true;
+    errorMessage.value = '';
+
+    try {
+      const formData = new FormData();
+      formData.append('job_batches_rsp_id', selectedJob.value.id);
+      formData.append('excel_file', uploadedFile.value);
+      formData.append('zip_file', uploadedZipFile.value);
+
+      const response = await adminApi.post('/applicant/submissions/manual', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      isSubmitting.value = false;
+      return response;
+    } catch (error) {
+      isSubmitting.value = false;
+      errorMessage.value =
+        error.response?.data?.message || error.message || 'Failed to submit manual application';
+      throw error;
+    }
+  }
+
+  /**
+   * Reset the upload store state (keeps selectedJob for navigation)
    */
   function reset() {
     uploadedFile.value = null;
@@ -81,7 +113,6 @@ export const useUser_upload = defineStore('user_upload', () => {
     isSubmitting.value = false;
     successDialog.value = false;
     errorMessage.value = '';
-    // Note: Don't reset selectedJob as it might be needed for navigation
   }
 
   /**
@@ -104,6 +135,7 @@ export const useUser_upload = defineStore('user_upload', () => {
     // Actions
     setSelectedJob,
     processSubmission,
+    processManualSubmission,
     reset,
     clearAll,
   };

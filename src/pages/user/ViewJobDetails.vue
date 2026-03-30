@@ -542,12 +542,6 @@
             </div>
           </div>
 
-          <div class="text-caption text-grey-7 q-mb-lg token-info">
-            <span class="text-weight-bold">Confirmation Token:</span>
-            <br />
-            {{ confirmationToken.substring(0, 20) }}...
-          </div>
-
           <div class="text-center text-grey-7 update-note">
             Your previous application will be updated with the newly submitted files.
           </div>
