@@ -45,7 +45,7 @@
               <strong>Note:</strong>
               If ZIP upload is
               <strong>not required</strong>
-              for the position’s qualifications, you can upload an
+              for the position's qualifications, you can upload an
               <strong>empty ZIP</strong>
               (ZIP file with no documents inside).
             </span>
@@ -106,7 +106,7 @@
                   v-for="category in documentExamples"
                   :key="category.folder"
                 >
-                  <div class="category-header">
+                  <div class="category-header" :class="`category-header-${category.color}`">
                     <q-icon
                       :name="category.icon"
                       :color="category.color"
@@ -126,6 +126,92 @@
                       {{ item }}
                     </q-chip>
                   </div>
+
+                  <!-- Work Experience Sheet - Only for Experience category -->
+                  <div v-if="category.folder === 'experience'" class="wes-card-integrated">
+                    <div class="wes-header-integrated">
+                      <div class="wes-badge-integrated bg-green-2 text-green">
+                        <q-icon name="work" size="18px" class="q-mr-sm" />
+                        <span class="text-weight-bold">Work Experience Sheet</span>
+                      </div>
+
+                      <div class="wes-title-integrated">
+                        Download, fill up, then upload to
+                        <strong>experience</strong>
+                      </div>
+                    </div>
+
+                    <div class="wes-body-integrated">
+                      <div class="wes-steps-integrated">
+                        <div class="wes-step-integrated">
+                          <div class="wes-step-no-integrated bg-green-1 text-green">A</div>
+                          <div class="wes-step-content-integrated">
+                            <div class="wes-step-title-integrated">
+                              Download the template (DOCX)
+                            </div>
+
+                            <q-btn
+                              color="green"
+                              size="md"
+                              unelevated
+                              icon="download"
+                              label="Download Work Experience Sheet"
+                              class="q-mt-sm"
+                              @click="downloadWES"
+                            />
+                          </div>
+                        </div>
+
+                        <div class="wes-step-integrated">
+                          <div class="wes-step-no-integrated bg-green-1 text-green">B</div>
+                          <div class="wes-step-content-integrated">
+                            <div class="wes-step-title-integrated">Fill it up</div>
+                            <div class="wes-step-desc-integrated">
+                              Open the downloaded document and complete all required fields, then
+                              save it.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="wes-step-integrated">
+                          <div class="wes-step-no-integrated bg-green-1 text-green">C</div>
+                          <div class="wes-step-content-integrated">
+                            <div class="wes-step-title-integrated">
+                              Upload to the
+                              <strong>experience</strong>
+                              folder
+                            </div>
+                            <div class="wes-step-desc-integrated">
+                              Export/save as
+                              <strong>PDF</strong>
+                              or take a clear
+                              <strong>photo/scan</strong>
+                              (image), then include it in:
+                              <span class="inline-pill">experience/</span>
+                            </div>
+
+                            <q-banner
+                              class="wes-note-integrated bg-green-1 text-green q-mt-sm"
+                              rounded
+                              dense
+                            >
+                              <template v-slot:avatar>
+                                <q-icon name="tips_and_updates" />
+                              </template>
+                              <span class="banner-text">
+                                You can upload the Work Experience Sheet as
+                                <strong>PDF</strong>
+                                or
+                                <strong>Image</strong>
+                                (JPG/PNG/etc.).
+                              </span>
+                            </q-banner>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- end WES -->
                 </div>
               </div>
 
@@ -138,86 +224,6 @@
                   JPG, JPEG, PNG, GIF, BMP, TIFF, PDF
                 </span>
               </q-banner>
-
-              <!-- Sub-instruction: Work Experience Sheet -->
-              <div class="wes-card q-mt-md">
-                <div class="wes-header">
-                  <div class="wes-badge bg-orange-2 text-orange">
-                    <q-icon name="work" size="18px" class="q-mr-sm" />
-                    <span class="text-weight-bold">Work Experience Sheet</span>
-                  </div>
-
-                  <div class="wes-title">
-                    Download, fill up, then upload to
-                    <strong>experience</strong>
-                  </div>
-                </div>
-
-                <div class="wes-body">
-                  <div class="wes-steps">
-                    <div class="wes-step">
-                      <div class="wes-step-no bg-orange-1 text-orange">A</div>
-                      <div class="wes-step-content">
-                        <div class="wes-step-title">Download the template (DOCX)</div>
-
-                        <q-btn
-                          color="orange"
-                          size="md"
-                          unelevated
-                          icon="download"
-                          label="Download Work Experience Sheet"
-                          class="q-mt-sm"
-                          @click="downloadWES"
-                        />
-                      </div>
-                    </div>
-
-                    <div class="wes-step">
-                      <div class="wes-step-no bg-blue-1 text-blue">B</div>
-                      <div class="wes-step-content">
-                        <div class="wes-step-title">Fill it up</div>
-                        <div class="wes-step-desc">
-                          Open the downloaded document and complete all required fields, then save
-                          it.
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="wes-step">
-                      <div class="wes-step-no bg-green-1 text-green">C</div>
-                      <div class="wes-step-content">
-                        <div class="wes-step-title">
-                          Upload to the
-                          <strong>experience</strong>
-                          folder
-                        </div>
-                        <div class="wes-step-desc">
-                          Export/save as
-                          <strong>PDF</strong>
-                          or take a clear
-                          <strong>photo/scan</strong>
-                          (image), then include it in:
-                          <span class="inline-pill">experience/</span>
-                        </div>
-
-                        <q-banner class="wes-note bg-grey-2 text-grey-9 q-mt-sm" rounded dense>
-                          <template v-slot:avatar>
-                            <q-icon name="tips_and_updates" />
-                          </template>
-                          <span class="banner-text">
-                            You can upload the Work Experience Sheet as
-                            <strong>PDF</strong>
-                            or
-                            <strong>Image</strong>
-                            (JPG/PNG/etc.).
-                          </span>
-                        </q-banner>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- end WES -->
             </div>
           </div>
 
@@ -458,7 +464,6 @@
       color: 'green',
       examples: [
         'Certificate of Employment',
-        'Work Experience Sheet (download, fill up, then upload)',
         'Performance Evaluation',
         'Work Portfolio',
         'Other Documents',
@@ -677,6 +682,23 @@
     gap: 8px;
   }
 
+  /* Color-specific category headers */
+  .category-header-blue {
+    background-color: #e3f2fd;
+  }
+
+  .category-header-green {
+    background-color: #e8f5e9;
+  }
+
+  .category-header-purple {
+    background-color: #f3e5f5;
+  }
+
+  .category-header-orange {
+    background-color: #fff3e0;
+  }
+
   .category-title {
     text-transform: capitalize;
     font-size: 0.95rem;
@@ -688,21 +710,22 @@
     flex-wrap: wrap;
   }
 
-  /* WES block (matches modal design language) */
-  .wes-card {
-    border: 1px solid #ffe0b2;
-    background: #fff8f0;
-    border-radius: 12px;
+  /* Integrated WES card (inside category) */
+  .wes-card-integrated {
+    border: 1px solid #c8e6c9;
+    background: #f1f8f5;
+    border-radius: 8px;
     overflow: hidden;
+    margin: 10px 12px 10px 12px;
   }
 
-  .wes-header {
-    padding: 14px 16px;
-    border-bottom: 1px solid #ffe0b2;
-    background: linear-gradient(0deg, rgba(255, 243, 224, 1) 0%, rgba(255, 248, 240, 1) 100%);
+  .wes-header-integrated {
+    padding: 12px 14px;
+    border-bottom: 1px solid #c8e6c9;
+    background: linear-gradient(0deg, rgba(232, 245, 233, 1) 0%, rgba(241, 248, 245, 1) 100%);
   }
 
-  .wes-badge {
+  .wes-badge-integrated {
     display: inline-flex;
     align-items: center;
     padding: 6px 10px;
@@ -710,68 +733,64 @@
     font-size: 0.9rem;
   }
 
-  .wes-title {
-    margin-top: 10px;
-    font-size: 0.95rem;
-    color: #4e342e;
+  .wes-title-integrated {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: #1b5e20;
     line-height: 1.4;
   }
 
-  .wes-body {
-    padding: 16px;
-  }
-
-  .wes-steps {
-    display: grid;
-    gap: 12px;
-  }
-
-  .wes-step {
-    display: grid;
-    grid-template-columns: 34px 1fr;
-    gap: 12px;
-    align-items: flex-start;
+  .wes-body-integrated {
     padding: 12px;
-    border-radius: 10px;
+  }
+
+  .wes-steps-integrated {
+    display: grid;
+    gap: 10px;
+  }
+
+  .wes-step-integrated {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px;
+    border-radius: 8px;
     border: 1px solid #f0f0f0;
     background: white;
   }
 
-  .wes-step-no {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
+  .wes-step-no-integrated {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 800;
+    font-size: 0.9rem;
   }
 
-  .wes-step-title {
+  .wes-step-title-integrated {
     font-weight: 700;
     color: #333;
     margin-bottom: 4px;
-  }
-
-  .wes-step-desc {
-    color: #666;
     font-size: 0.9rem;
-    line-height: 1.45;
   }
 
-  .docx-path {
-    font-family: 'Monaco', 'Consolas', monospace;
-    font-size: 0.85rem;
-    background: #f7f7f7;
-    border: 1px solid #eee;
-    padding: 2px 6px;
-    border-radius: 6px;
+  .wes-step-content-integrated {
     word-break: break-word;
+  }
+
+  .wes-step-desc-integrated {
+    color: #666;
+    font-size: 0.85rem;
+    line-height: 1.4;
   }
 
   .inline-pill {
     font-family: 'Monaco', 'Consolas', monospace;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     background: #f7f7f7;
     border: 1px solid #eee;
     padding: 2px 6px;
@@ -780,8 +799,10 @@
     margin-left: 4px;
   }
 
-  .wes-note {
-    border-radius: 10px;
+  .wes-note-integrated {
+    border-radius: 8px;
+    border: 1px solid #a5d6a7 !important;
+    background-color: #e8f5e9 !important;
   }
 
   /* ZIP Instructions */
@@ -963,8 +984,8 @@
       padding: 0 36px;
     }
 
-    .wes-step {
-      grid-template-columns: 34px 1fr;
+    .wes-step-integrated {
+      grid-template-columns: 28px 1fr;
     }
   }
 
@@ -1051,6 +1072,46 @@
       padding: 10px 8px;
     }
 
+    .wes-card-integrated {
+      margin: 12px 8px 0 8px;
+    }
+
+    .wes-header-integrated {
+      padding: 10px 12px;
+    }
+
+    .wes-title-integrated {
+      font-size: 0.85rem;
+    }
+
+    .wes-body-integrated {
+      padding: 10px;
+    }
+
+    .wes-steps-integrated {
+      gap: 8px;
+    }
+
+    .wes-step-integrated {
+      grid-template-columns: 26px 1fr;
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .wes-step-no-integrated {
+      width: 26px;
+      height: 26px;
+      font-size: 0.8rem;
+    }
+
+    .wes-step-title-integrated {
+      font-size: 0.85rem;
+    }
+
+    .wes-step-desc-integrated {
+      font-size: 0.8rem;
+    }
+
     .zip-step {
       padding: 12px;
       flex-direction: column;
@@ -1098,21 +1159,6 @@
       min-width: 0;
       padding: 0 24px;
     }
-
-    .wes-body {
-      padding: 12px;
-    }
-
-    .wes-step {
-      grid-template-columns: 30px 1fr;
-      padding: 10px;
-    }
-
-    .wes-step-no {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-    }
   }
 
   /* Extra Small (<360px) */
@@ -1157,6 +1203,35 @@
 
     .category-title {
       font-size: 0.8rem;
+    }
+
+    .category-header {
+      padding: 8px 10px;
+    }
+
+    .wes-card-integrated {
+      margin: 10px 6px 0 6px;
+    }
+
+    .wes-header-integrated {
+      padding: 8px 10px;
+    }
+
+    .wes-title-integrated {
+      font-size: 0.8rem;
+    }
+
+    .wes-step-integrated {
+      padding: 8px;
+      gap: 6px;
+    }
+
+    .wes-step-title-integrated {
+      font-size: 0.8rem;
+    }
+
+    .wes-step-desc-integrated {
+      font-size: 0.75rem;
     }
 
     .zip-step {
