@@ -139,9 +139,9 @@
                   <div class="step-icon bg-green-1">
                     <q-icon name="file_download" :size="iconSize" color="green" />
                   </div>
-                  <div class="step-title text-green">Download Application Form</div>
+                  <div class="step-title text-green">Download Data Sheet</div>
                   <div class="step-description">
-                    Get the application template to fill with your details
+                    Get the data sheet template to fill with your details.
                   </div>
                   <q-btn
                     label="DOWNLOAD TEMPLATE"
