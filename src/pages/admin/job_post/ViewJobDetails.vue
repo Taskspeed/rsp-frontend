@@ -363,6 +363,7 @@
                   label="Unoccupied"
                   color="red-9"
                   rounded
+                  class="q-pa-xs"
                   dense
                   no-caps
                   style="font-size: 8pt"
@@ -1251,6 +1252,15 @@
   }
 
   function viewApplicantScore(applicantRow) {
+    const jobpostId = selectedJob.value?.id; // current job post id
+    const applicantId =
+      applicantRow.submission_id || applicantRow.nPersonalInfo_id || applicantRow.id;
+
+    if (jobpostId && applicantId) {
+      jobPostStore.fetchApplicantScoreDetails(applicantId, jobpostId);
+    }
+
+    // keep your existing modal setup
     const historyData =
       applicantRow.originalData?.history || applicantRow.history || applicantRow.raw?.history || [];
     scoreModal.value = {

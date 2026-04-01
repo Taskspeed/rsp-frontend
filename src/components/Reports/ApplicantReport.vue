@@ -137,7 +137,6 @@
                 // Green banner (drawn first, so it's behind)
                 {
                   canvas: [
-                   
                     {
                       type: 'rect',
                       x: (595.28 - 523.28) / 2, // (A4 width - rect width) / 2 = centered
@@ -147,7 +146,6 @@
                       color: '#008000',
                       alignment: 'center',
                     },
-                  
                   ],
                 },
 
@@ -207,13 +205,12 @@
                           color: '#00703c',
                           alignment: 'left',
                         },
-                          {
-                          text: 'CITY HUMAN RESOURCE MANAGEMENT OFFICE',
+                        {
+                          text: 'HUMAN RESOURCE MERIT PROMOTION AND SELECTION BOARD',
                           fontSize: 13,
                           bold: true,
                           color: 'white',
                           margin: [0, 5, 0, 0],
-                         
                         },
                       ],
                     },

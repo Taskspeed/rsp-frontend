@@ -548,9 +548,10 @@
         console.log('Loading score data for applicant:', props.applicant);
 
         const lookupKey = applicantLookupKey.value;
+        const jobpostId = props.jobDetails?.id; // ✅ job post id
 
-        if (!props.applicant || !lookupKey) {
-          console.warn('No applicant lookup key available (nPersonalInfo_id or ControlNo)');
+        if (!props.applicant || !lookupKey || !jobpostId) {
+          console.warn('Missing applicant lookup key or jobpostId');
           raterScores.value = [];
           finalScores.value = null;
           applicantImageUrl.value = '';
@@ -563,7 +564,7 @@
           dataLoading.value = true;
 
           // ✅ API returns: { applicant: {...}, history: [...] }
-          const scoreData = await jobPostStore.fetchApplicantScoreDetails(lookupKey);
+          const scoreData = await jobPostStore.fetchApplicantScoreDetails(lookupKey, jobpostId);
           console.log('Fetched score details:', scoreData);
 
           const apiApplicant = scoreData?.applicant || {};

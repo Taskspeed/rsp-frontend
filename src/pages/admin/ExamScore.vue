@@ -1,6 +1,6 @@
 <template>
   <q-page class="q-pa-md">
-    <!-- Page Header -->
+    <!-- ── Page Header ─────────────────────────────────────────────── -->
     <div class="column items-start justify-center q-mb-md">
       <h5 class="text-h5 q-ma-none"><b>Exam Score</b></h5>
       <div class="q-pa-md q-gutter-sm">
@@ -13,49 +13,125 @@
       </div>
     </div>
 
-    <!-- Table Toolbar -->
-    <div class="row justify-between items-center q-mb-md">
-      <q-input
-        v-model="globalSearch"
-        outlined
-        dense
-        placeholder="Search applicants..."
-        style="max-width: 300px"
-        clearable
-      >
-        <template #prepend>
-          <q-icon name="search" color="primary" />
-        </template>
-      </q-input>
+    <!-- ── Filters / Toolbar ───────────────────────────────────────── -->
+    <div class="row items-center q-col-gutter-md q-mb-md">
+      <div class="col-12 col-md-4">
+        <q-input v-model="globalSearch" outlined dense placeholder="Search applicants..." clearable>
+          <template #prepend>
+            <q-icon name="search" color="primary" />
+          </template>
+        </q-input>
+      </div>
 
-      <q-btn
-        rounded
-        unelevated
-        color="primary"
-        icon="add"
-        label="Add Score"
-        @click="openAddDialog()"
-      />
+      <div class="col-12 col-md-4">
+        <q-select
+          v-model="mainPositionFilter"
+          :options="mainPositionOptions"
+          label="Filter by Position"
+          outlined
+          dense
+          clearable
+        >
+          <template #prepend><q-icon name="work" /></template>
+        </q-select>
+      </div>
+
+      <!-- Date filter group -->
+      <!-- <div class="col-12 col-md-6">
+        <div class="row items-center">
+          <div class="col-12 col-md-4" style="padding-left: 17%">
+            <q-btn-toggle
+              v-model="dateFilterMode"
+              unelevated
+              dense
+              toggle-color="primary"
+              :options="[
+                { label: 'Specific', value: 'specific' },
+                { label: 'Range', value: 'range' },
+              ]"
+            />
+          </div>
+
+          <div class="col-12 col-md-8" v-if="dateFilterMode === 'specific'">
+            <q-input v-model="specificDate" outlined dense label="Exam Date" clearable>
+              <template #append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="specificDate" mask="YYYY-MM-DD">
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+
+          <div class="col-12 col-md-8" v-else>
+            <q-input
+              :model-value="dateRangeLabel"
+              outlined
+              dense
+              label="Exam Date Range"
+              readonly
+              clearable
+              @clear="clearDateRange"
+            >
+              <template #append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="dateRange" range mask="YYYY-MM-DD">
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+        </div>
+      </div> -->
+
+      <div class="col-12 col-md- text-right">
+        <q-btn
+          rounded
+          unelevated
+          color="primary"
+          icon="add"
+          label="Add Score"
+          @click="openAddDialog"
+        />
+      </div>
     </div>
 
-    <!-- Main Table -->
+    <!-- ── Main Table ────────────────────────────────────────────────── -->
     <q-table
       :rows="rows"
       :columns="columns"
-      row-key="id"
+      row-key="submission_id"
       v-model:pagination="pagination"
-      :rows-number="total"
       :loading="loading"
       @request="onRequest"
-      :rows-per-page-options="[10, 20, 50, 100]"
       flat
+      wrap-cells
     >
-      <template #body-cell-score="p">
+      <template #body-cell-status="p">
+        <q-td :props="p">
+          <q-badge :color="getStatusColor(p.row.status)" :label="p.row.status || 'N/A'" />
+        </q-td>
+      </template>
+
+      <template #body-cell-exam_score="p">
         <q-td :props="p" class="text-center">
-          <q-badge
-            :color="getScoreColor(p.row.raw_score, p.row.total_items)"
-            :label="p.row.raw_score === null ? 'N/A' : `${p.row.raw_score}/${p.row.total_items}`"
-          />
+          <span class="text-body2">
+            {{
+              p.row.exam_score === null || p.row.exam_score === undefined
+                ? 'N/A'
+                : `${formatScore(p.row.exam_score)} / ${formatScore(p.row.exam_total_score)}`
+            }}
+          </span>
         </q-td>
       </template>
 
@@ -80,33 +156,98 @@
       </template>
     </q-table>
 
-    <!-- ================================================================ -->
-    <!-- STEP MODAL: Step 1 Encode -> Step 2 Review -> Save               -->
-    <!-- ================================================================ -->
-    <q-dialog v-model="dialog" persistent maximized-mobile>
+    <!-- ================================================================
+         ADD SCORE DIALOG
+         ================================================================ -->
+    <q-dialog
+      v-model="dialog"
+      persistent
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-card class="score-dialog-card">
-        <!-- Header -->
-        <q-card-section class="dialog-header header-add">
-          <div class="row items-center no-wrap">
-            <q-icon name="grading" size="28px" class="q-mr-sm" />
-            <div>
-              <div class="text-h6 text-bold">Add Exam Scores</div>
-              <div class="text-caption opacity-80">
-                Step {{ step }} of 2 — {{ step === 1 ? 'Encoding' : 'Review' }}
-              </div>
-            </div>
+        <q-card-section class="dialog-header-light">
+          <q-icon name="grading" color="primary" size="28px" class="q-mr-sm" />
+          <div>
+            <div class="text-h6 text-bold text-grey-9">Add Exam Scores</div>
+            <div class="text-caption text-grey-6">Step {{ step }} of 3 — {{ stepTitle }}</div>
           </div>
-          <q-btn flat round dense icon="close" class="close-btn" v-close-popup />
+          <q-space />
+          <q-btn flat round dense icon="close" color="grey-7" v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section class="q-pa-sm">
-          <q-stepper v-model="step" flat animated color="primary" header-nav class="q-pa-none">
-            <!-- ===================== Step 1: Encoding ===================== -->
-            <q-step :name="1" title="Encoding" icon="edit_note" :done="step > 1">
+        <q-card-section class="dialog-body q-pa-none">
+          <q-stepper
+            v-model="step"
+            flat
+            animated
+            color="primary"
+            header-nav
+            class="q-pa-none full-height-stepper"
+          >
+            <q-step :name="1" title="Select Applicants" icon="person_add" :done="step > 1">
+              <div class="q-pa-lg">
+                <div class="row q-col-gutter-md q-mb-md items-end">
+                  <div class="col-12 col-md-6">
+                    <q-select
+                      v-model="selectedPosition"
+                      :options="positionOptions"
+                      label="Filter by Position"
+                      outlined
+                      dense
+                      use-input
+                      fill-input
+                      input-debounce="200"
+                      clearable
+                      @filter="filterPositions"
+                      @update:model-value="onPositionChange"
+                      @clear="onPositionChange"
+                    >
+                      <template #prepend><q-icon name="work" /></template>
+                    </q-select>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <q-input
+                      v-model="applicantSearch"
+                      outlined
+                      dense
+                      clearable
+                      placeholder="Search applicant..."
+                      @update:model-value="fetchNoScoreWithFilters"
+                      @clear="fetchNoScoreWithFilters"
+                    >
+                      <template #prepend><q-icon name="search" color="primary" /></template>
+                    </q-input>
+                  </div>
+                </div>
+
+                <q-table
+                  :rows="filteredNoScoreApplicants"
+                  :columns="applicantColumns"
+                  row-key="submission_id"
+                  selection="multiple"
+                  v-model:selected="selectedApplicants"
+                  v-model:pagination="noScorePagination"
+                  :loading="store.loading"
+                  @request="onModalRequest"
+                  flat
+                  class="q-mt-md"
+                  wrap-cells
+                >
+                  <template #no-data>
+                    <div class="full-width row flex-center q-pa-md text-grey">
+                      No applicants without exam scores found
+                    </div>
+                  </template>
+                </q-table>
+              </div>
+            </q-step>
+
+            <q-step :name="2" title="Encoding" icon="edit_note" :done="step > 2">
               <div class="row no-wrap">
-                <!-- Left Panel -->
                 <div class="left-panel q-pa-lg">
                   <div class="section-label q-mb-md">
                     <q-icon name="fact_check" size="16px" class="q-mr-xs" />
@@ -181,63 +322,27 @@
                   >
                     <template #prepend><q-icon name="notes" size="18px" /></template>
                   </q-input>
-
-                  <q-separator class="q-my-md" />
-
-                  <div class="section-label q-mb-sm">
-                    <q-icon name="work" size="16px" class="q-mr-xs" />
-                    Position + Applicants
-                  </div>
-
-                  <q-select
-                    v-model="selectedPosition"
-                    :options="positionOptions"
-                    label="Position Available"
-                    outlined
-                    dense
-                    use-input
-                    fill-input
-                    input-debounce="200"
-                    clearable
-                    @filter="filterPositions"
-                  />
-
-                  <q-input
-                    v-model="applicantSearch"
-                    outlined
-                    dense
-                    clearable
-                    class="q-mt-sm"
-                    placeholder="Search applicant..."
-                  >
-                    <template #prepend><q-icon name="search" color="primary" /></template>
-                  </q-input>
                 </div>
 
                 <q-separator vertical />
 
-                <!-- Right Panel -->
                 <div class="right-panel q-pa-lg">
                   <div class="row items-center justify-between q-mb-md">
                     <div class="section-label">
                       <q-icon name="grading" size="16px" class="q-mr-xs" />
                       Encoding (Raw Score)
                     </div>
-
                     <q-badge color="grey-2" text-color="grey-9" class="q-pa-sm">
                       {{ encodedCount }} encoded
                     </q-badge>
                   </div>
 
-                  <!-- Modal table WITHOUT action column -->
                   <q-table
-                    :rows="pagedApplicants"
+                    :rows="selectedApplicants"
                     :columns="encodeColumns"
-                    row-key="id"
-                    v-model:pagination="encodePagination"
-                    :rows-number="filteredApplicants.length"
-                    :rows-per-page-options="[10, 20, 50]"
+                    row-key="submission_id"
                     flat
+                    wrap-cells
                   >
                     <template #body-cell-score="p">
                       <q-td :props="p">
@@ -248,7 +353,7 @@
                           outlined
                           style="max-width: 160px"
                           :rules="[
-                            (v) => v === null || v === '' || Number(v) >= 0 || 'Must be >= 0',
+                            (v) => v === null || v === '' || Number(v) >= 0 || 'Must be ≥ 0',
                             (v) =>
                               v === null ||
                               v === '' ||
@@ -269,143 +374,127 @@
 
                     <template #no-data>
                       <div class="full-width row flex-center q-pa-md text-grey">
-                        No applicants found for the selected filter
+                        No applicants selected
                       </div>
                     </template>
                   </q-table>
                 </div>
               </div>
-
-              <!-- Navigation: left = Cancel, right = Next -->
-              <q-stepper-navigation class="q-mt-md">
-                <div class="row items-center justify-between">
-                  <q-btn rounded flat color="grey-7" label="Cancel" v-close-popup />
-
-                  <q-btn
-                    rounded
-                    unelevated
-                    color="primary"
-                    label="Next"
-                    icon-right="arrow_forward"
-                    @click="goToReview"
-                  />
-                </div>
-              </q-stepper-navigation>
             </q-step>
 
-            <!-- ===================== Step 2: Review ===================== -->
-            <q-step :name="2" title="Review" icon="visibility">
+            <q-step :name="3" title="Review" icon="visibility">
               <div class="q-pa-lg">
-                <div class="row q-col-gutter-md items-end">
-                  <div class="col-12 col-md-4">
-                    <q-select
-                      v-model="reviewPosition"
-                      :options="positionOptions"
-                      label="Filter by Position"
-                      outlined
-                      dense
-                      use-input
-                      fill-input
-                      input-debounce="200"
-                      clearable
-                      @filter="filterPositions"
-                    />
-                  </div>
-
-                  <div class="col-12 col-md-8">
-                    <q-input
-                      v-model="reviewSearch"
-                      outlined
-                      dense
-                      clearable
-                      placeholder="Search in review..."
-                    >
-                      <template #prepend><q-icon name="search" color="primary" /></template>
-                    </q-input>
-                  </div>
-                </div>
-
-                <q-banner class="q-mt-md bg-blue-1 text-blue-10" rounded>
+                <q-banner class="q-mb-md bg-blue-1 text-blue-10" rounded>
                   Please verify the scores below. If something is wrong, click
                   <b>Back</b>
                   to edit.
                 </q-banner>
 
-                <div class="q-mt-md">
-                  <q-table :rows="reviewRows" :columns="reviewColumns" row-key="id" flat>
-                    <template #body-cell-score="p">
-                      <q-td :props="p" class="text-center">
-                        <q-badge
-                          :color="getScoreColor(p.row.raw_score, p.row.total_items)"
-                          :label="
-                            p.row.raw_score === null
-                              ? 'N/A'
-                              : `${p.row.raw_score}/${p.row.total_items}`
-                          "
-                        />
-                      </q-td>
-                    </template>
+                <q-table
+                  :rows="reviewRows"
+                  :columns="reviewColumns"
+                  row-key="submission_id"
+                  flat
+                  wrap-cells
+                >
+                  <template #body-cell-score="p">
+                    <q-td :props="p" class="text-center">
+                      <span class="text-body2">
+                        {{
+                          p.row.raw_score === null || p.row.raw_score === undefined
+                            ? 'N/A'
+                            : `${formatScore(p.row.raw_score)} / ${formatScore(p.row.total_items)}`
+                        }}
+                      </span>
+                    </q-td>
+                  </template>
 
-                    <template #no-data>
-                      <div class="full-width row flex-center q-pa-md text-grey">
-                        No encoded applicants yet
-                      </div>
-                    </template>
-                  </q-table>
-                </div>
+                  <template #no-data>
+                    <div class="full-width row flex-center q-pa-md text-grey">
+                      No encoded applicants yet
+                    </div>
+                  </template>
+                </q-table>
               </div>
-
-              <!-- Navigation: left = Back, right = Save -->
-              <q-stepper-navigation class="q-mt-md">
-                <div class="row items-center justify-between">
-                  <q-btn
-                    rounded
-                    flat
-                    color="grey-8"
-                    label="Back"
-                    icon="arrow_back"
-                    @click="step = 1"
-                  />
-
-                  <q-btn
-                    rounded
-                    unelevated
-                    color="primary"
-                    label="Save"
-                    icon="save"
-                    :disable="reviewRows.length === 0"
-                    :loading="loading"
-                    @click="saveSession"
-                  />
-                </div>
-              </q-stepper-navigation>
             </q-step>
           </q-stepper>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
-    <!-- View Details Dialog -->
-    <q-dialog v-model="showDetailDialog" persistent maximized-mobile>
-      <q-card class="score-dialog-card">
-        <q-card-section class="dialog-header header-view">
-          <div class="row items-center no-wrap">
-            <q-icon name="grading" size="28px" class="q-mr-sm" />
-            <div>
-              <div class="text-h6 text-bold">Exam Score Details</div>
-              <div class="text-caption opacity-80">Viewing full exam score record</div>
-            </div>
-          </div>
-          <q-btn flat round dense icon="close" class="close-btn" v-close-popup />
         </q-card-section>
 
         <q-separator />
 
-        <q-card-section
-          v-if="selectedScore"
-          class="q-pa-lg"
-          style="overflow-y: auto; max-height: 65vh"
-        >
+        <q-card-actions align="right" class="dialog-footer q-px-lg q-py-md">
+          <q-btn v-if="step === 1" flat label="Cancel" color="grey-7" v-close-popup />
+          <q-btn
+            v-if="step === 2"
+            flat
+            label="Back"
+            color="grey-7"
+            icon="arrow_back"
+            @click="step = 1"
+          />
+          <q-btn
+            v-if="step === 3"
+            flat
+            label="Back"
+            color="grey-7"
+            icon="arrow_back"
+            @click="step = 2"
+          />
+
+          <q-btn
+            v-if="step === 1"
+            unelevated
+            label="Next"
+            color="primary"
+            icon-right="arrow_forward"
+            :disable="selectedApplicants.length === 0"
+            @click="step = 2"
+          />
+          <q-btn
+            v-if="step === 2"
+            unelevated
+            label="Next"
+            color="primary"
+            icon-right="arrow_forward"
+            @click="goToReview"
+          />
+          <q-btn
+            v-if="step === 3"
+            unelevated
+            label="Save"
+            color="primary"
+            icon="save"
+            :disable="reviewRows.length === 0"
+            :loading="store.loading"
+            @click="saveSession"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- View Dialog (same style) -->
+    <q-dialog
+      v-model="showDetailDialog"
+      persistent
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card class="score-dialog-card">
+        <q-card-section class="dialog-header-light">
+          <q-icon name="grading" color="primary" size="28px" class="q-mr-sm" />
+          <div>
+            <div class="text-h6 text-bold text-grey-9">Exam Score Details</div>
+            <div class="text-caption text-grey-6">Viewing full exam score record</div>
+          </div>
+          <q-space />
+          <q-btn flat round dense icon="close" color="grey-7" v-close-popup />
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section v-if="selectedScore" class="dialog-body q-pa-lg detail-scroll">
+          <!-- Applicant info -->
           <div class="section-label q-mb-md">
             <q-icon name="person" size="16px" class="q-mr-xs" />
             Applicant Information
@@ -431,9 +520,22 @@
                   <div class="info-value">{{ selectedScore.position || 'N/A' }}</div>
                 </div>
               </div>
+              <div class="col-12 col-md-4">
+                <div class="info-field">
+                  <div class="info-label">Applicant Type</div>
+                  <div class="info-value">{{ selectedScore.applicant_type || 'N/A' }}</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="info-field">
+                  <div class="info-label">Control No</div>
+                  <div class="info-value">{{ selectedScore.ControlNo || 'N/A' }}</div>
+                </div>
+              </div>
             </div>
           </div>
 
+          <!-- Score details -->
           <div class="section-label q-mb-md">
             <q-icon name="grading" size="16px" class="q-mr-xs" />
             Score Details
@@ -443,40 +545,56 @@
             <div class="row q-col-gutter-md">
               <div class="col-12 col-md-3">
                 <div class="info-field">
-                  <div class="info-label">Exam</div>
-                  <div class="info-value">{{ selectedScore.exam_title || 'N/A' }}</div>
+                  <div class="info-label">Status</div>
+                  <div class="info-value">
+                    <q-badge
+                      :color="getStatusColor(selectedScore.status)"
+                      :label="selectedScore.status || 'N/A'"
+                    />
+                  </div>
                 </div>
               </div>
-              <div class="col-12 col-md-3">
+              <div class="col-12 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Exam Type</div>
                   <div class="info-value">{{ selectedScore.exam_type || 'N/A' }}</div>
                 </div>
               </div>
-              <div class="col-12 col-md-3">
+              <div class="col-12 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Exam Date</div>
                   <div class="info-value">{{ selectedScore.exam_date || 'N/A' }}</div>
                 </div>
               </div>
-
               <div class="col-12 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Raw Score</div>
-                  <div class="info-value">{{ selectedScore.raw_score ?? 'N/A' }}</div>
+                  <div class="info-value">
+                    {{
+                      selectedScore.exam_score === null || selectedScore.exam_score === undefined
+                        ? 'N/A'
+                        : formatScore(selectedScore.exam_score)
+                    }}
+                  </div>
                 </div>
               </div>
               <div class="col-12 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Total Score</div>
-                  <div class="info-value">{{ selectedScore.total_items ?? 'N/A' }}</div>
+                  <div class="info-value">
+                    {{
+                      selectedScore.exam_total_score === null ||
+                      selectedScore.exam_total_score === undefined
+                        ? 'N/A'
+                        : formatScore(selectedScore.exam_total_score)
+                    }}
+                  </div>
                 </div>
               </div>
-
-              <div v-if="selectedScore.remarks" class="col-12">
+              <div v-if="selectedScore.exam_remarks" class="col-12">
                 <div class="info-field">
                   <div class="info-label">Remarks</div>
-                  <div class="info-value">{{ selectedScore.remarks }}</div>
+                  <div class="info-value">{{ selectedScore.exam_remarks }}</div>
                 </div>
               </div>
             </div>
@@ -484,419 +602,582 @@
         </q-card-section>
 
         <q-separator />
-        <div class="dialog-footer row justify-end items-center q-pa-md">
-          <q-btn rounded flat label="Close" color="grey-7" v-close-popup />
-        </div>
+
+        <q-card-actions align="right" class="dialog-footer q-px-lg q-py-md">
+          <q-btn flat label="Close" color="grey-7" v-close-popup />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 
-<script setup>
-  import { ref, computed, onMounted, watch } from 'vue';
+<script>
+  import { useExamScoreStore } from 'src/stores/examScoreStore';
 
-  let searchTimeout = null;
+  export default {
+    name: 'ExamScorePage',
 
-  // ---------------------------
-  // Static data (table rows)
-  // ---------------------------
-  const allScores = ref([
-    {
-      id: 1,
-      firstname: 'Ana',
-      lastname: 'Santos',
-      position: 'Developer',
-      exam_title: 'JavaScript Basics',
-      exam_type: 'Written',
-      exam_date: '2026-03-01',
-      raw_score: 45,
-      total_items: 50,
-      remarks: 'Excellent',
+    setup() {
+      const store = useExamScoreStore();
+      return { store };
     },
-  ]);
 
-  // Applicants list for modal dropdown (static)
-  const applicants = ref([
-    { id: 101, firstname: 'Ana', lastname: 'Santos', position: 'Developer' },
-    { id: 102, firstname: 'Ben', lastname: 'Cruz', position: 'Developer' },
-    { id: 103, firstname: 'Cara', lastname: 'Reyes', position: 'QA Engineer' },
-    { id: 104, firstname: 'Dino', lastname: 'Lopez', position: 'QA Engineer' },
-    { id: 105, firstname: 'Elle', lastname: 'Garcia', position: 'Support' },
-  ]);
-
-  // q-table data
-  const rows = ref([]);
-  const total = ref(0);
-  const loading = ref(false);
-
-  const globalSearch = ref('');
-
-  const pagination = ref({
-    sortBy: 'lastname',
-    descending: false,
-    page: 1,
-    rowsPerPage: 10,
-    rowsNumber: 0,
-  });
-
-  const columns = computed(() => [
-    { name: 'lastname', label: 'Last Name', align: 'left', field: 'lastname', sortable: true },
-    { name: 'firstname', label: 'First Name', align: 'left', field: 'firstname', sortable: true },
-    {
-      name: 'position',
-      label: 'Position Applied',
-      align: 'left',
-      field: 'position',
-      sortable: true,
-    },
-    { name: 'exam_title', label: 'Exam', align: 'left', field: 'exam_title', sortable: true },
-    { name: 'exam_date', label: 'Exam Date', align: 'left', field: 'exam_date', sortable: true },
-    { name: 'score', label: 'Score', align: 'center', field: 'score', sortable: false },
-    { name: 'action', label: 'Action', align: 'center', field: 'action', sortable: false },
-  ]);
-
-  const getScoreColor = (raw, totalItems) => {
-    if (raw === null || raw === undefined) return 'grey';
-    const r = Number(raw);
-    const t = Number(totalItems);
-    if (!Number.isFinite(r) || !Number.isFinite(t) || t <= 0) return 'grey';
-
-    const pct = (r / t) * 100;
-    if (pct >= 85) return 'positive';
-    if (pct >= 75) return 'orange';
-    return 'negative';
-  };
-
-  // local filter/sort/paginate for main table
-  const applyLocalQuery = () => {
-    loading.value = true;
-
-    const search = (globalSearch.value || '').trim().toLowerCase();
-    let filtered = [...allScores.value];
-
-    if (search) {
-      filtered = filtered.filter((r) => {
-        const haystack = [
-          r.firstname,
-          r.lastname,
-          r.position,
-          r.exam_title,
-          r.exam_type,
-          r.exam_date,
-          r.raw_score,
-          r.total_items,
-          r.remarks,
-        ]
-          .map((x) => (x ?? '').toString().toLowerCase())
-          .join(' ');
-        return haystack.includes(search);
-      });
-    }
-
-    const { sortBy, descending, page, rowsPerPage } = pagination.value;
-    if (sortBy) {
-      filtered.sort((a, b) => {
-        const av = a[sortBy];
-        const bv = b[sortBy];
-        if (av === null || av === undefined) return 1;
-        if (bv === null || bv === undefined) return -1;
-
-        if (typeof av === 'number' && typeof bv === 'number') return descending ? bv - av : av - bv;
-        const as = av.toString().toLowerCase();
-        const bs = bv.toString().toLowerCase();
-        if (as < bs) return descending ? 1 : -1;
-        if (as > bs) return descending ? -1 : 1;
-        return 0;
-      });
-    }
-
-    total.value = filtered.length;
-    pagination.value.rowsNumber = total.value;
-
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    rows.value = filtered.slice(start, end);
-
-    loading.value = false;
-  };
-
-  const onRequest = (props) => {
-    pagination.value = { ...pagination.value, ...props.pagination };
-    applyLocalQuery();
-  };
-
-  watch(globalSearch, () => {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      pagination.value.page = 1;
-      applyLocalQuery();
-    }, 400);
-  });
-
-  // ---------------------------
-  // View details (table)
-  const showDetailDialog = ref(false);
-  const selectedScore = ref(null);
-
-  const viewScore = (row) => {
-    selectedScore.value = row;
-    showDetailDialog.value = true;
-  };
-
-  // ---------------------------
-  // Step modal state
-  const dialog = ref(false);
-  const step = ref(1);
-
-  const examTypeOptions = [
-    { label: 'Written', value: 'Written' },
-    { label: 'Practical', value: 'Practical' },
-    { label: 'Interview', value: 'Interview' },
-  ];
-
-  const emptySession = () => ({
-    exam_title: '',
-    exam_type: null,
-    exam_date: '2026-03-29',
-    total_items: 50,
-    remarks: '',
-  });
-  const session = ref(emptySession());
-
-  // scores typed in modal by applicantId
-  const modalScores = ref(new Map()); // applicantId -> { raw_score }
-
-  // filters in encoding
-  const selectedPosition = ref(null);
-  const applicantSearch = ref('');
-
-  // position dropdown options
-  const positionOptionsBase = computed(() => {
-    const set = new Set(applicants.value.map((a) => a.position).filter(Boolean));
-    return Array.from(set)
-      .sort()
-      .map((p) => ({ label: p, value: p }));
-  });
-  const positionOptions = ref(positionOptionsBase.value);
-  watch(positionOptionsBase, (v) => (positionOptions.value = v));
-
-  const filterPositions = (val, update) => {
-    update(() => {
-      const needle = (val || '').toLowerCase();
-      positionOptions.value = positionOptionsBase.value.filter((o) =>
-        o.label.toLowerCase().includes(needle),
-      );
-    });
-  };
-
-  // encoding table pagination
-  const encodePagination = ref({
-    sortBy: 'lastname',
-    descending: false,
-    page: 1,
-    rowsPerPage: 10,
-    rowsNumber: 0,
-  });
-
-  /**
-   * NOTE: action column removed here
-   */
-  const encodeColumns = computed(() => [
-    { name: 'lastname', label: 'Last Name', align: 'left', field: 'lastname', sortable: true },
-    { name: 'firstname', label: 'First Name', align: 'left', field: 'firstname', sortable: true },
-    { name: 'position', label: 'Position', align: 'left', field: 'position', sortable: true },
-    { name: 'score', label: 'Raw Score', align: 'left', field: 'raw_score', sortable: false },
-  ]);
-
-  const filteredApplicants = computed(() => {
-    const pos = selectedPosition.value?.value ?? selectedPosition.value ?? null;
-    const needle = (applicantSearch.value || '').trim().toLowerCase();
-
-    let list = applicants.value;
-    if (pos) list = list.filter((a) => a.position === pos);
-
-    if (needle) {
-      list = list.filter((a) => {
-        const h = `${a.firstname} ${a.lastname} ${a.position}`.toLowerCase();
-        return h.includes(needle);
-      });
-    }
-
-    return list.map((a) => {
-      const saved = modalScores.value.get(a.id) || { raw_score: null };
+    data() {
       return {
-        ...a,
-        _saved: { ...saved },
-        _draft: { raw_score: saved.raw_score },
+        // table
+        globalSearch: '',
+        pagination: {
+          sortBy: 'lastname',
+          descending: false,
+          page: 1,
+          rowsPerPage: 10,
+          rowsNumber: 0,
+        },
+        searchTimeout: null,
+
+        // filters (main table)
+        mainPositionFilter: null,
+        mainPositionOptionsData: [],
+        dateFilterMode: 'specific',
+        specificDate: null,
+        dateRange: null,
+
+        // dialogs
+        dialog: false,
+        showDetailDialog: false,
+        selectedScore: null,
+
+        // stepper
+        step: 1,
+
+        // session
+        session: {
+          exam_title: '',
+          exam_type: null,
+          exam_date: new Date().toISOString().split('T')[0],
+          total_items: 50,
+          remarks: '',
+        },
+        examTypeOptions: [
+          { label: 'Written', value: 'written' },
+          { label: 'Practical', value: 'practical' },
+          { label: 'Interview', value: 'interview' },
+        ],
+
+        // step 1 state
+        selectedPosition: null,
+        applicantSearch: '',
+        selectedApplicants: [],
+        positionOptionsData: [],
+
+        // modal step-1 pagination
+        noScorePagination: {
+          sortBy: null,
+          descending: false,
+          page: 1,
+          rowsPerPage: 10,
+          rowsNumber: 0,
+        },
+        noScoreSearchTimeout: null,
+
+        // score map
+        modalScores: new Map(),
       };
-    });
-  });
-
-  watch(
-    () => filteredApplicants.value.length,
-    (len) => {
-      encodePagination.value.rowsNumber = len;
     },
-    { immediate: true },
-  );
 
-  const pagedApplicants = computed(() => {
-    const { page, rowsPerPage } = encodePagination.value;
-    const start = (page - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    return filteredApplicants.value.slice(start, end);
-  });
+    computed: {
+      rows() {
+        return this.store.scores || [];
+      },
+      loading() {
+        return this.store.loading;
+      },
 
-  const commitDraft = (row) => {
-    const raw = row._draft.raw_score;
+      dateRangeLabel() {
+        if (!this.dateRange || !this.dateRange.from || !this.dateRange.to) return '';
+        return `${this.dateRange.from} → ${this.dateRange.to}`;
+      },
 
-    if (raw === null || raw === '' || raw === undefined) {
-      modalScores.value.set(row.id, { raw_score: null });
-      return;
-    }
+      columns() {
+        return [
+          {
+            name: 'lastname',
+            label: 'Last Name',
+            align: 'left',
+            field: 'lastname',
+            sortable: true,
+          },
+          {
+            name: 'firstname',
+            label: 'First Name',
+            align: 'left',
+            field: 'firstname',
+            sortable: true,
+          },
+          { name: 'position', label: 'Position', align: 'left', field: 'position', sortable: true },
+          {
+            name: 'exam_type',
+            label: 'Exam Type',
+            align: 'left',
+            field: 'exam_type',
+            sortable: true,
+          },
+          {
+            name: 'exam_date',
+            label: 'Exam Date',
+            align: 'left',
+            field: 'exam_date',
+            sortable: true,
+          },
+          {
+            name: 'exam_score',
+            label: 'Score',
+            align: 'center',
+            field: 'exam_score',
+            sortable: true,
+          },
+          // { name: 'action', label: 'Action', align: 'center', field: 'action', sortable: false },
+        ];
+      },
 
-    modalScores.value.set(row.id, { raw_score: Number(raw) });
-  };
+      applicantColumns() {
+        return [
+          {
+            name: 'lastname',
+            label: 'Last Name',
+            align: 'left',
+            field: 'lastname',
+            sortable: true,
+            style: 'width: 13%',
+            headerStyle: 'width: 13%',
+          },
+          {
+            name: 'firstname',
+            label: 'First Name',
+            align: 'left',
+            field: 'firstname',
+            sortable: true,
+            style: 'width: 13%',
+            headerStyle: 'width: 13%',
+          },
+          {
+            name: 'position',
+            label: 'Position',
+            align: 'left',
+            field: 'position',
+            sortable: true,
+            style: 'width: 50%',
+            headerStyle: 'width: 50%',
+          },
+          {
+            name: 'applicant_type',
+            label: 'Type',
+            align: 'left',
+            field: 'applicant_type',
+            sortable: true,
+            style: 'width: 10%',
+            headerStyle: 'width: 10%',
+          },
+          {
+            name: 'status',
+            label: 'Status',
+            align: 'left',
+            field: 'status',
+            sortable: true,
+            style: 'width: 10%',
+            headerStyle: 'width: 10%',
+          },
+        ];
+      },
 
-  const encodedCount = computed(() => {
-    let c = 0;
-    for (const v of modalScores.value.values()) {
-      if (v && v.raw_score !== null && v.raw_score !== undefined) c += 1;
-    }
-    return c;
-  });
+      encodeColumns() {
+        return [
+          {
+            name: 'lastname',
+            label: 'Last Name',
+            align: 'left',
+            field: 'lastname',
+            sortable: true,
+          },
+          {
+            name: 'firstname',
+            label: 'First Name',
+            align: 'left',
+            field: 'firstname',
+            sortable: true,
+          },
+          { name: 'position', label: 'Position', align: 'left', field: 'position', sortable: true },
+          { name: 'score', label: 'Raw Score', align: 'left', field: 'raw_score', sortable: false },
+        ];
+      },
 
-  // Review step filters
-  const reviewPosition = ref(null);
-  const reviewSearch = ref('');
+      reviewColumns() {
+        return [
+          {
+            name: 'lastname',
+            label: 'Last Name',
+            align: 'left',
+            field: 'lastname',
+            sortable: true,
+          },
+          {
+            name: 'firstname',
+            label: 'First Name',
+            align: 'left',
+            field: 'firstname',
+            sortable: true,
+          },
+          { name: 'position', label: 'Position', align: 'left', field: 'position', sortable: true },
+          { name: 'score', label: 'Score', align: 'center', field: 'score', sortable: false },
+        ];
+      },
 
-  const reviewRows = computed(() => {
-    const pos = reviewPosition.value?.value ?? reviewPosition.value ?? null;
-    const needle = (reviewSearch.value || '').trim().toLowerCase();
+      positionOptions() {
+        return this.positionOptionsData || [];
+      },
 
-    const joined = applicants.value
-      .map((a) => {
-        const s = modalScores.value.get(a.id);
-        if (!s) return null;
+      mainPositionOptions() {
+        return this.mainPositionOptionsData || [];
+      },
+
+      stepTitle() {
+        return ['Select Applicants', 'Encoding', 'Review'][this.step - 1] || '';
+      },
+
+      filteredNoScoreApplicants() {
+        return (this.store.noScoreApplicants || []).map((a) => {
+          const saved = this.modalScores.get(a.submission_id) || { raw_score: null };
+          return { ...a, _saved: { ...saved }, _draft: { raw_score: saved.raw_score } };
+        });
+      },
+
+      encodedCount() {
+        let count = 0;
+        for (const applicant of this.selectedApplicants) {
+          const score = this.modalScores.get(applicant.submission_id);
+          if (score && score.raw_score !== null && score.raw_score !== undefined) count++;
+        }
+        return count;
+      },
+
+      reviewRows() {
+        return this.selectedApplicants
+          .map((a) => {
+            const s = this.modalScores.get(a.submission_id);
+            if (!s || (s.raw_score === null && s.raw_score === undefined)) return null;
+            return {
+              submission_id: a.submission_id,
+              firstname: a.firstname,
+              lastname: a.lastname,
+              position: a.position,
+              raw_score: s.raw_score ?? null,
+              total_items: Number(this.session.total_items) || 0,
+            };
+          })
+          .filter(Boolean)
+          .sort((a, b) => (a.lastname || '').localeCompare(b.lastname || ''));
+      },
+    },
+
+    watch: {
+      globalSearch() {
+        this.debouncedFetchScores();
+      },
+      mainPositionFilter() {
+        this.fetchScoresWithFilters();
+      },
+      specificDate() {
+        if (this.dateFilterMode === 'specific') this.fetchScoresWithFilters();
+      },
+      dateRange: {
+        handler() {
+          if (this.dateFilterMode === 'range') this.fetchScoresWithFilters();
+        },
+        deep: true,
+      },
+      'store.scores': {
+        handler(newVal) {
+          if (!Array.isArray(newVal)) return;
+          const positions = new Set(newVal.map((a) => a.position).filter(Boolean));
+          this.mainPositionOptionsData = Array.from(positions)
+            .sort()
+            .map((p) => ({ label: p, value: p }));
+        },
+        deep: true,
+      },
+      'store.noScoreApplicants': {
+        handler(newVal) {
+          if (!Array.isArray(newVal)) return;
+          const positions = new Set(newVal.map((a) => a.position).filter(Boolean));
+          this.positionOptionsData = Array.from(positions)
+            .sort()
+            .map((p) => ({ label: p, value: p }));
+        },
+        deep: true,
+      },
+      'store.noScorePagination': {
+        handler(val) {
+          if (!val) return;
+          this.noScorePagination.page = val.currentPage || 1;
+          this.noScorePagination.rowsPerPage = val.perPage || 10;
+        },
+        deep: true,
+      },
+    },
+
+    methods: {
+      debouncedFetchScores() {
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+          this.fetchScoresWithFilters();
+        }, 400);
+      },
+
+      buildMainFilters() {
         return {
-          id: a.id,
-          firstname: a.firstname,
-          lastname: a.lastname,
-          position: a.position,
-          raw_score: s.raw_score ?? null,
-          total_items: Number(session.value.total_items) || 0,
+          page: this.pagination.page,
+          sortBy: this.pagination.sortBy,
+          descending: this.pagination.descending,
+          search: this.globalSearch || undefined,
+          position: this.mainPositionFilter?.value ?? this.mainPositionFilter ?? undefined,
+          exam_date:
+            this.dateFilterMode === 'specific' && this.specificDate ? this.specificDate : undefined,
+          exam_date_from:
+            this.dateFilterMode === 'range' && this.dateRange?.from
+              ? this.dateRange.from
+              : undefined,
+          exam_date_to:
+            this.dateFilterMode === 'range' && this.dateRange?.to ? this.dateRange.to : undefined,
         };
-      })
-      .filter(Boolean);
+      },
 
-    let out = joined;
-    if (pos) out = out.filter((r) => r.position === pos);
+      fetchScoresWithFilters() {
+        this.pagination.page = 1;
+        const params = this.buildMainFilters();
+        this.store.fetchScores({ ...params, page: 1 }).then(() => {
+          this.pagination.rowsNumber = this.store.pagination.total;
+        });
+      },
 
-    if (needle) {
-      out = out.filter((r) => {
-        const h = `${r.firstname} ${r.lastname} ${r.position} ${r.raw_score}`.toLowerCase();
-        return h.includes(needle);
+      clearDateRange() {
+        this.dateRange = null;
+        this.fetchScoresWithFilters();
+      },
+
+      formatScore(value) {
+        if (value === null || value === undefined) return 'N/A';
+        const num = Number(value);
+        if (!Number.isFinite(num)) return 'N/A';
+        return Number.isInteger(num) ? String(num) : String(parseFloat(num.toFixed(2)));
+      },
+
+      getStatusColor(status) {
+        if (!status) return 'grey';
+        const s = status.toLowerCase();
+        if (s === 'qualified') return 'positive';
+        if (s === 'hired') return 'blue';
+        if (s === 'unqualified') return 'negative';
+        return 'grey-7';
+      },
+
+      onRequest(props) {
+        const { page, sortBy, descending } = props.pagination;
+        this.pagination.page = page;
+        this.pagination.sortBy = sortBy;
+        this.pagination.descending = descending;
+
+        const params = this.buildMainFilters();
+        this.store.fetchScores({ ...params, page, sortBy, descending }).then(() => {
+          this.pagination.rowsNumber = this.store.pagination.total;
+        });
+      },
+
+      onModalRequest(props) {
+        const { page, rowsPerPage } = props.pagination;
+        this.noScorePagination.page = page;
+        this.noScorePagination.rowsPerPage = rowsPerPage;
+        this.store
+          .fetchNoScoreApplicants({
+            page,
+            perPage: rowsPerPage,
+            search: this.applicantSearch,
+            position: this.selectedPosition?.value ?? this.selectedPosition ?? undefined,
+          })
+          .then(() => {
+            this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
+          });
+      },
+
+      fetchNoScoreWithFilters() {
+        if (this.noScoreSearchTimeout) clearTimeout(this.noScoreSearchTimeout);
+        this.noScoreSearchTimeout = setTimeout(() => {
+          this.noScorePagination.page = 1;
+          this.store
+            .fetchNoScoreApplicants({
+              page: 1,
+              perPage: this.noScorePagination.rowsPerPage,
+              search: this.applicantSearch,
+              position: this.selectedPosition?.value ?? this.selectedPosition ?? undefined,
+            })
+            .then(() => {
+              this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
+            });
+        }, 400);
+      },
+
+      viewScore(row) {
+        this.selectedScore = row;
+        this.showDetailDialog = true;
+      },
+
+      openAddDialog() {
+        this.session = {
+          exam_title: '',
+          exam_type: null,
+          exam_date: new Date().toISOString().split('T')[0],
+          total_items: 50,
+          remarks: '',
+        };
+        this.modalScores = new Map();
+        this.selectedPosition = null;
+        this.applicantSearch = '';
+        this.selectedApplicants = [];
+        this.noScorePagination.page = 1;
+        this.step = 1;
+        this.dialog = true;
+        this.store.fetchNoScoreApplicants({ page: 1, perPage: 10 }).then(() => {
+          this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
+        });
+      },
+
+      filterPositions(val, update) {
+        update(() => {
+          const needle = (val || '').toLowerCase();
+          const applicants = this.store.noScoreApplicants || [];
+          const positions = new Set(applicants.map((a) => a.position).filter(Boolean));
+          this.positionOptionsData = Array.from(positions)
+            .sort()
+            .filter((p) => p.toLowerCase().includes(needle))
+            .map((p) => ({ label: p, value: p }));
+        });
+      },
+
+      onPositionChange() {
+        this.noScorePagination.page = 1;
+        this.store
+          .fetchNoScoreApplicants({
+            page: 1,
+            perPage: this.noScorePagination.rowsPerPage,
+            search: this.applicantSearch,
+            position: this.selectedPosition?.value ?? this.selectedPosition ?? undefined,
+          })
+          .then(() => {
+            this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
+          });
+      },
+
+      commitDraft(row) {
+        const raw = row._draft.raw_score;
+        if (raw === null || raw === '' || raw === undefined) {
+          this.modalScores.set(row.submission_id, { raw_score: null });
+          return;
+        }
+        this.modalScores.set(row.submission_id, { raw_score: Number(raw) });
+      },
+
+      goToReview() {
+        if (
+          !this.session.exam_title ||
+          !this.session.exam_type ||
+          Number(this.session.total_items) <= 0
+        ) {
+          this.$q.notify({ type: 'negative', message: 'Please fill all exam details' });
+          return;
+        }
+        if (this.encodedCount === 0) {
+          this.$q.notify({ type: 'negative', message: 'Please encode at least one score' });
+          return;
+        }
+        this.step = 3;
+      },
+
+      async saveSession() {
+        const scores = Array.from(this.modalScores.entries()).filter(
+          ([, score]) => score.raw_score !== null && score.raw_score !== undefined,
+        );
+
+        if (scores.length === 0) {
+          this.$q.notify({ type: 'negative', message: 'Please encode at least one score' });
+          return;
+        }
+
+        try {
+          const payload = {
+            applicants: scores.map(([submissionId, score]) => ({
+              submission_id: Number(submissionId),
+              exam_score: Number(score.raw_score),
+              exam_details: this.session.exam_title,
+              exam_type: this.session.exam_type,
+              exam_total_score: Number(this.session.total_items),
+              exam_date: this.session.exam_date,
+              exam_remarks: this.session.remarks || '',
+            })),
+          };
+
+          await this.store.saveScores(payload);
+
+          this.$q.notify({ type: 'positive', message: 'All exam scores saved successfully' });
+          this.dialog = false;
+          await this.store.fetchScores({ page: 1 });
+        } catch (error) {
+          this.$q.notify({
+            type: 'negative',
+            message: error.response?.data?.message || 'Error saving exam scores',
+          });
+        }
+      },
+    },
+
+    mounted() {
+      this.store.fetchScores({ page: 1 }).then(() => {
+        this.pagination.rowsNumber = this.store.pagination.total;
       });
-    }
-
-    out.sort((a, b) => (a.lastname || '').localeCompare(b.lastname || ''));
-    return out;
-  });
-
-  const reviewColumns = computed(() => [
-    { name: 'lastname', label: 'Last Name', align: 'left', field: 'lastname', sortable: true },
-    { name: 'firstname', label: 'First Name', align: 'left', field: 'firstname', sortable: true },
-    { name: 'position', label: 'Position', align: 'left', field: 'position', sortable: true },
-    { name: 'score', label: 'Score', align: 'center', field: 'score', sortable: false },
-  ]);
-
-  const goToReview = () => {
-    // simple guard (optional)
-    if (
-      !session.value.exam_title ||
-      !session.value.exam_type ||
-      Number(session.value.total_items) <= 0
-    )
-      return;
-    step.value = 2;
+    },
   };
-
-  // Open modal
-  const openAddDialog = () => {
-    session.value = emptySession();
-    modalScores.value = new Map();
-    selectedPosition.value = null;
-    applicantSearch.value = '';
-    reviewPosition.value = null;
-    reviewSearch.value = '';
-    step.value = 1;
-    dialog.value = true;
-  };
-
-  // Save modal session into main table
-  const saveSession = () => {
-    loading.value = true;
-
-    const created = [];
-    for (const [applicantId, s] of modalScores.value.entries()) {
-      const a = applicants.value.find((x) => x.id === applicantId);
-      if (!a) continue;
-      if (s.raw_score === null || s.raw_score === undefined) continue;
-
-      created.push({
-        id: Date.now() + Math.floor(Math.random() * 100000),
-        firstname: a.firstname,
-        lastname: a.lastname,
-        position: a.position,
-        exam_title: session.value.exam_title,
-        exam_type: session.value.exam_type,
-        exam_date: session.value.exam_date,
-        raw_score: s.raw_score,
-        total_items: Number(session.value.total_items) || 0,
-        remarks: session.value.remarks,
-      });
-    }
-
-    allScores.value.unshift(...created);
-
-    loading.value = false;
-    dialog.value = false;
-    applyLocalQuery();
-  };
-
-  onMounted(() => {
-    applyLocalQuery();
-  });
 </script>
 
 <style scoped>
   .score-dialog-card {
-    width: 90vw;
-    max-width: 1100px;
+    width: 100vw;
+    max-width: 1500px;
+    height: 90vh;
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    border-radius: 0;
+    overflow: hidden;
   }
 
-  .dialog-header {
+  .dialog-header-light {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 16px 20px;
-    color: white;
+    background: #fff;
     flex-shrink: 0;
   }
-  .header-add {
-    background: #00b034;
+
+  .dialog-footer {
+    background: #fff;
+    flex-shrink: 0;
   }
-  .header-view {
-    background: #1565c0;
+
+  .dialog-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
-  .close-btn {
-    color: rgba(255, 255, 255, 0.8);
-  }
-  .close-btn:hover {
-    color: white;
+
+  .full-height-stepper {
+    height: 100%;
   }
 
   .left-panel {
@@ -943,8 +1224,22 @@
     color: #212121;
   }
 
-  .dialog-footer {
-    flex-shrink: 0;
-    background: #fafafa;
+  .detail-scroll {
+    overflow-y: auto;
+    max-height: 65vh;
+  }
+
+  :deep(.q-table__container) {
+    overflow-x: hidden !important;
+  }
+  :deep(.q-table) {
+    table-layout: fixed;
+    width: 100%;
+  }
+  :deep(.q-table th),
+  :deep(.q-table td) {
+    word-break: break-word;
+    white-space: normal !important;
+    overflow-wrap: break-word;
   }
 </style>

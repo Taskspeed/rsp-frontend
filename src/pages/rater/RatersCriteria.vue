@@ -37,7 +37,6 @@
       </div>
     </div>
 
-    <!-- Positions table -->
     <q-table
       :rows="filteredPositions"
       :columns="columns"
@@ -49,10 +48,7 @@
       wrap-cells
       class="full-width"
       row-key="id"
-
-
     >
-      <!-- Actions column -->
       <template v-slot:body-cell-actions="props">
         <q-td :props="props" class="text-center">
           <div class="row justify-center q-gutter-xs">
@@ -69,6 +65,7 @@
             >
               <q-tooltip>Rate</q-tooltip>
             </q-btn>
+
             <q-btn
               v-else
               dense
@@ -82,11 +79,24 @@
             >
               <q-tooltip>View</q-tooltip>
             </q-btn>
+
+            <q-btn
+              v-if="props.row.submitted"
+              dense
+              flat
+              round
+              color="secondary"
+              icon="print"
+              size="md"
+              class="action-btn"
+              @click="openPrintModal(props.row)"
+            >
+              <q-tooltip>Print</q-tooltip>
+            </q-btn>
           </div>
         </q-td>
       </template>
 
-      <!-- No data message -->
       <template v-slot:no-data>
         <div class="full-width row flex-center q-pa-lg">
           <q-icon name="assignment" size="3em" color="grey-5" />
@@ -95,7 +105,6 @@
       </template>
     </q-table>
 
-    <!-- Rating Modal -->
     <RatingForm
       v-model="showRatingModal"
       :position="selectedPosition"
@@ -108,7 +117,6 @@
       @close="handleRatingModalClose"
     />
 
-    <!-- View Rated Modal -->
     <ViewRated
       v-model="showViewRatedModal"
       :position="selectedPosition"
@@ -117,6 +125,12 @@
       :applicants="positionApplicants"
       :loading="loadingModalData"
       @close="handleViewRatedModalClose"
+    />
+
+    <PrintRatedModal
+      v-model="showPrintModal"
+      :position-id="selectedPosition.id"
+      @close="handlePrintModalClose"
     />
   </div>
 </template>
@@ -128,47 +142,41 @@
   import { useQuasar } from 'quasar';
   import RatingForm from 'components/RatingForm.vue';
   import ViewRated from 'components/ViewRatedModal.vue';
+  import PrintRatedModal from 'components/Reports/RatingFormReport.vue';
 
   export default {
     name: 'PositionsTable',
     components: {
       RatingForm,
       ViewRated,
+      PrintRatedModal,
     },
     setup() {
       const $q = useQuasar();
-
-      // Store
       const raterStore = use_rater_store();
       const { assignedJobs, loading } = storeToRefs(raterStore);
 
-      // Filters
       const search = ref('');
       const officeFilter = ref(null);
       const statusFilter = ref(null);
 
-      // Pagination
-      const pagination = ref({
-        rowsPerPage: 10,
-      });
+      const pagination = ref({ rowsPerPage: 10 });
 
-      // Modal state
       const showRatingModal = ref(false);
       const showViewRatedModal = ref(false);
+      const showPrintModal = ref(false);
       const selectedPosition = ref({});
       const positionCriteria = ref({});
       const rawCriteria = ref(null);
       const positionApplicants = ref([]);
       const loadingModalData = ref(false);
 
-      // Table columns
       const columns = [
         {
           name: 'office',
           label: 'Office',
           field: (row) => row.office || row.Office || 'N/A',
           align: 'left',
-          // sortable: true,
           style: 'width: 40%',
         },
         {
@@ -176,7 +184,6 @@
           label: 'Position',
           field: (row) => row.position || row.Position || 'N/A',
           align: 'left',
-          // sortable: true,
           style: 'width: 30%',
         },
         {
@@ -184,20 +191,10 @@
           label: 'Actions',
           field: 'actions',
           align: 'center',
-          // sortable: false,
           style: 'width: 30%',
         },
-        //    {
-        //   name: 'submitted',
-        //   label: 'submitted',
-        //   field: 'submitted',
-        //   align: 'center',
-        //   // sortable: true,
-        //   style: 'width: 30%',
-        // },
       ];
 
-      // Office options
       const officeOptions = computed(() => {
         if (!Array.isArray(assignedJobs.value)) return [];
         const offices = [
@@ -206,7 +203,6 @@
         return offices.map((office) => ({ label: office, value: office }));
       });
 
-      // Status options
       const statusOptions = computed(() => {
         if (!Array.isArray(assignedJobs.value)) return [];
         const statuses = [...new Set(assignedJobs.value.map((job) => job.status).filter(Boolean))];
@@ -217,24 +213,23 @@
         }));
       });
 
-      // Filtered positions
       const filteredPositions = computed(() => {
         if (!Array.isArray(assignedJobs.value)) return [];
-        return assignedJobs.value.filter((job) => {
-          const searchTerm = search.value.toLowerCase();
-          const matchesSearch =
-            !searchTerm ||
-            (job.position || job.Position || '').toLowerCase().includes(searchTerm) ||
-            (job.office || job.Office || '').toLowerCase().includes(searchTerm);
-          const matchesOffice =
-            !officeFilter.value ||
-            job.office === officeFilter.value ||
-            job.Office === officeFilter.value;
-          const matchesStatus = !statusFilter.value || job.status === statusFilter.value;
-          return matchesSearch && matchesOffice && matchesStatus;
-        })
-         //  PRIORITY SORT: submitted === false first
-        .sort((a, b) => Number(a.submitted) - Number(b.submitted));
+        return assignedJobs.value
+          .filter((job) => {
+            const searchTerm = search.value.toLowerCase();
+            const matchesSearch =
+              !searchTerm ||
+              (job.position || job.Position || '').toLowerCase().includes(searchTerm) ||
+              (job.office || job.Office || '').toLowerCase().includes(searchTerm);
+            const matchesOffice =
+              !officeFilter.value ||
+              job.office === officeFilter.value ||
+              job.Office === officeFilter.value;
+            const matchesStatus = !statusFilter.value || job.status === statusFilter.value;
+            return matchesSearch && matchesOffice && matchesStatus;
+          })
+          .sort((a, b) => Number(a.submitted) - Number(b.submitted));
       });
 
       const formatStatus = (status) => {
@@ -245,15 +240,8 @@
           .join(' ');
       };
 
-      /**
-       * Transform criteria data from API format to modal format
-       * This ensures all criteria items with their percentages are properly passed
-       */
       const transformCriteriaData = (criteriaData) => {
         if (!criteriaData) return {};
-
-        // Get the weight (max rate) from the first item of each array
-        // All items in the same category should have the same weight
         const educationWeight = criteriaData.educations?.[0]?.weight || '20';
         const experienceWeight = criteriaData.experiences?.[0]?.weight || '20';
         const trainingWeight = criteriaData.trainings?.[0]?.weight || '15';
@@ -299,83 +287,49 @@
         };
       };
 
-      // Open rating modal for a position
-      const openRatingModal = async (position) => {
+      const loadPositionData = async (position) => {
         selectedPosition.value = position;
         loadingModalData.value = true;
-        showRatingModal.value = true;
 
         try {
           const result = await raterStore.fetch_criteria_applicant(position.id);
-
-          console.log('Fetched criteria result:', result);
-
           if (result && result.criteria && result.criteria.length > 0) {
             const criteriaData = result.criteria[0];
-
-            // Store the raw criteria data
             rawCriteria.value = criteriaData;
-
-            // Transform the criteria data to include all items with their percentages
             positionCriteria.value = transformCriteriaData(criteriaData);
-
-            console.log('Raw criteria:', rawCriteria.value);
-            console.log('Transformed criteria:', positionCriteria.value);
           } else {
             positionCriteria.value = {};
             rawCriteria.value = null;
           }
 
           positionApplicants.value = result && result.applicants ? result.applicants : [];
-        } catch (error) {
-          console.error('Error fetching position data:', error);
+          return true;
+        } catch {
           $q.notify({
             color: 'negative',
             message: 'Failed to load position data',
             icon: 'error',
             position: 'top',
           });
-          showRatingModal.value = false;
+          return false;
         } finally {
           loadingModalData.value = false;
         }
       };
 
-      // Open view rated modal for a position
+      const openRatingModal = async (position) => {
+        const ok = await loadPositionData(position);
+        if (ok) showRatingModal.value = true;
+      };
+
       const openViewRatedModal = async (position) => {
+        const ok = await loadPositionData(position);
+        if (ok) showViewRatedModal.value = true;
+      };
+
+      const openPrintModal = (position) => {
         selectedPosition.value = position;
-        loadingModalData.value = true;
-        showViewRatedModal.value = true;
-
-        try {
-          const result = await raterStore.fetch_criteria_applicant(position.id);
-
-          if (result && result.criteria && result.criteria.length > 0) {
-            const criteriaData = result.criteria[0];
-
-            // Store the raw criteria data
-            rawCriteria.value = criteriaData;
-
-            // Transform the criteria data to include all items with their percentages
-            positionCriteria.value = transformCriteriaData(criteriaData);
-          } else {
-            positionCriteria.value = {};
-            rawCriteria.value = null;
-          }
-
-          positionApplicants.value = result && result.applicants ? result.applicants : [];
-        } catch (error) {
-          console.error('Error fetching position data:', error);
-          $q.notify({
-            color: 'negative',
-            message: 'Failed to load position data',
-            icon: 'error',
-            position: 'top',
-          });
-          showViewRatedModal.value = false;
-        } finally {
-          loadingModalData.value = false;
-        }
+        showPrintModal.value = true;
       };
 
       const saveDraft = async (data) => {
@@ -406,7 +360,6 @@
         }
       };
 
-      // Handle ratings submission
       const handleRatingsSubmit = async (data) => {
         try {
           const result = await raterStore.submitRatings(data.applicants, data.positionId);
@@ -433,14 +386,16 @@
         }
       };
 
-      // When modal is closed after save or cancel
       const handleRatingModalClose = () => {
         showRatingModal.value = false;
       };
 
-      // When view rated modal is closed
       const handleViewRatedModalClose = () => {
         showViewRatedModal.value = false;
+      };
+
+      const handlePrintModalClose = () => {
+        showPrintModal.value = false;
       };
 
       onMounted(() => {
@@ -458,22 +413,23 @@
         statusOptions,
         filteredPositions,
 
-        // Modal state
         showRatingModal,
         showViewRatedModal,
+        showPrintModal,
         selectedPosition,
         positionCriteria,
         rawCriteria,
         positionApplicants,
         loadingModalData,
 
-        // Methods
         openRatingModal,
         openViewRatedModal,
+        openPrintModal,
         handleRatingsSubmit,
         saveDraft,
         handleRatingModalClose,
         handleViewRatedModalClose,
+        handlePrintModalClose,
       };
     },
   };
@@ -484,7 +440,6 @@
     max-width: 1200px;
     margin: 0 auto;
   }
-  /* Table styling */
   :deep(.q-table) {
     th,
     td {
@@ -496,7 +451,6 @@
       font-weight: bold;
     }
   }
-  /* Action buttons styling */
   .action-btn {
     margin: 0 2px;
     &:hover {
