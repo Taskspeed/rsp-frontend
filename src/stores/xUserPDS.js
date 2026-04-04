@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { adminApi } from 'src/boot/axios_admin';
 import { toast } from 'src/boot/toast'; // Import toast instance
+import { LocalStorage } from 'quasar';
 
 export const usexPDS = defineStore('xPDS', {
   state: () => ({
@@ -12,11 +13,8 @@ export const usexPDS = defineStore('xPDS', {
   actions: {
     async fetchxPDS(controlno) {
       try {
-        const token = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('admin_token='))
-          ?.split('=')[1];
-
+        const token = LocalStorage.getItem('admin_token');
+        if (!token) throw new Error('No authentication token found');
         this.loading = true;
         const response = await adminApi.post(
           '/xPDS',

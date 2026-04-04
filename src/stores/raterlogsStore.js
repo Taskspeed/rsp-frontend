@@ -24,24 +24,5 @@ export const useLogsStore = defineStore('logs', {
       }
     },
 
-    // async logAction(actions) {
-    //   const token = document.cookie
-    //     .split('; ')
-    //     .find((row) => row.startsWith('rater_token='))
-    //     ?.split('=')[1];
-    //   try {
-    //     await raterApi.post(
-    //       '/logs/auth',
-    //       { action: actions },
-    //       {
-    //         headers: {
-    //           Authorization: `Bearer ${token}`,
-    //         },
-    //       },
-    //     );
-    //   } catch (e) {
-    //     console.log(e);
-    //   }
-    // },
   },
 });

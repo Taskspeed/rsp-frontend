@@ -1,5 +1,6 @@
 import { boot } from 'quasar/wrappers';
 import axios from 'axios';
+import { LocalStorage } from 'quasar';
 
 const adminApi = axios.create({
   baseURL: process.env.VUE_APP_API_URL,
@@ -12,9 +13,10 @@ const adminApi = axios.create({
 });
 
 adminApi.interceptors.request.use((config) => {
-  const token = document.cookie
-    .split('; ')
-    .find((row) => row.startsWith('admin_token='))?.split('=')[1];
+  // const token = document.cookie
+  //   .split('; ')
+  //   .find((row) => row.startsWith('admin_token='))?.split('=')[1];
+    const token = LocalStorage.getItem('admin_token');
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

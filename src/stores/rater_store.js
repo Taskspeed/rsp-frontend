@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { raterApi } from 'boot/axios_rater';
+import { LocalStorage } from 'quasar';
 
 export const use_rater_store = defineStore('rater', () => {
   const assignedJobs = ref([]);
@@ -152,10 +153,7 @@ export const use_rater_store = defineStore('rater', () => {
     };
 
     try {
-      const token = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('rater_token='))
-        ?.split('=')[1];
+      const token = LocalStorage.getItem('rater_token');
 
       if (!token) throw new Error('No authentication token found');
 
@@ -205,11 +203,7 @@ export const use_rater_store = defineStore('rater', () => {
     loading.value = true;
     error.value = null;
     try {
-      const token = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('rater_token='))
-        ?.split('=')[1];
-
+      const token = LocalStorage.getItem('rater_token');
       if (!token) throw new Error('No authentication token found');
 
       const { data } = await raterApi.get('/rater/assigned-job-batches', {

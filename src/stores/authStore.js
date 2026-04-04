@@ -3,12 +3,13 @@ import { adminApi } from 'boot/axios_admin';
 import { toast } from 'src/boot/toast';
 import { usePlantillaStore } from 'stores/plantillaStore';
 import { Notify } from 'quasar';
+import { LocalStorage } from 'quasar';
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: null,
-    isAuthenticated: false,
-    user: null,
+    token: LocalStorage.getItem('admin_token') || null,
+    isAuthenticated: !!LocalStorage.getItem('admin_token'),
+    user: LocalStorage.getItem('admin_user') || null,
     loading: false,
     loadUser: false,
 
@@ -20,6 +21,32 @@ export const useAuthStore = defineStore('auth', {
   }),
 
   actions: {
+    // ✅ Save token and user to LocalStorage
+    saveAuthState(token, user) {
+      this.token = token;
+      this.isAuthenticated = true;
+      this.user = user;
+      LocalStorage.set('admin_token', token);
+      LocalStorage.set('admin_user', user);
+      adminApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    },
+
+    clearAuthState() {
+      this.token = null;
+      this.isAuthenticated = false;
+      this.user = null;
+      this.errors = {};
+      this.loading = false;
+      LocalStorage.remove('admin_token');
+      LocalStorage.remove('admin_user');
+      delete adminApi.defaults.headers.common['Authorization'];
+    },
+
+    //  save the token in to local storage
+    getToken() {
+      return this.token || LocalStorage.getItem('admin_token');
+    },
+
     async resetPassword(userId) {
       try {
         await adminApi.post(`/users/reset-password/${userId}`);
@@ -81,8 +108,8 @@ export const useAuthStore = defineStore('auth', {
           this.isAuthenticated = true;
           this.user = response.data.user;
 
-          document.cookie = `admin_token=${response.data.token}; path=/`;
-
+          // document.cookie = `admin_token=${response.data.token}; path=/`;
+          this.saveAuthState(response.data.token, response.data.user);
           await this.checkAuth();
 
           toast.success('You are now logged in!');
@@ -129,25 +156,13 @@ export const useAuthStore = defineStore('auth', {
           headers: { Authorization: `Bearer ${token}` },
         });
       } catch (error) {
-        toast.error('An error occurred during logout or token error');
         console.log(error);
       } finally {
-        this.token = null;
-        this.isAuthenticated = false;
-        this.user = null;
-        this.errors = {};
-        this.loading = false;
-
-        const cookieSettings = [
-          'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;',
-          'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure;',
-          'admin_token=; path=/; domain=' +
-            window.location.hostname +
-            '; expires=Thu, 01 Jan 1970 00:00:00 GMT;',
-        ];
-        cookieSettings.forEach((setting) => (document.cookie = setting));
-
+        // ✅ Always clear regardless of API result
+        this.clearAuthState();
+        toast.success('Logout Successfully');
         this.router?.push?.({ name: 'Admin Login' });
+        this.loading = false;
       }
     },
 
@@ -169,6 +184,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = token;
         this.isAuthenticated = true;
         this.user = res.data.data;
+        LocalStorage.set('admin_user', res.data.data);
         this.errors = {};
         return true;
       } catch (error) {
@@ -250,6 +266,7 @@ export const useAuthStore = defineStore('auth', {
         if (response.data.status) {
           if (this.user && this.user.id === id) {
             this.user = { ...this.user, ...response.data.data };
+            LocalStorage.set('admin_user', this.user); //
           }
           return response.data.data;
         }
@@ -340,14 +357,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    getToken() {
-      if (this.token) return this.token;
-      return document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('admin_token='))
-        ?.split('=')[1];
-    },
-
+  
     async get_all_raters() {
       this.loadUser = true;
 
