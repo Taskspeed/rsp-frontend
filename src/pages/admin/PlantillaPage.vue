@@ -664,6 +664,7 @@
   import axios from 'axios';
   // import { useLogsStore } from 'stores/logsStore';
   import { useQuasar } from 'quasar';
+  import { LocalStorage } from 'quasar';
 
   const router = useRouter();
   const authStore = useAuthStore();
@@ -1161,11 +1162,11 @@ const handleEmployeeAdded = async () => {
         return reject(new Error(errorMessage));
       }
 
-      const token = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('admin_token='))
-        ?.split('=')[1];
-
+      // const token = document.cookie
+      //   .split('; ')
+      //   .find((row) => row.startsWith('admin_token='))
+      //   ?.split('=')[1];
+    const token = LocalStorage.getItem('admin_token');
       const requestConfig = {
         headers: {
           'Content-Type': 'application/json',
