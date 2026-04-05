@@ -1111,21 +1111,32 @@ const handleEmployeeAdded = async () => {
         jobCriteria,
       });
 
-      // Log the action
-      // logStore.logAction(
-      //   `${authStore.user.name} created a job post for ${postJobDetails.value.position}. PositionID: ${postJobDetails.value.PositionID}, ItemNo: ${postJobDetails.value.ItemNo}`,
-      // );
 
       // Close modal first
+      // showVacantPositionModal.value = false;
+
+      // // Add small delay to ensure modal closes
+      // await new Promise((resolve) => setTimeout(resolve, 300));
+      // await usePlantilla.fetchPlantilla();
+      // positions.value = usePlantilla.plantilla.map((item) => ({
+      //   ...item,
+      //   Status: item.designationStatus || 'VACANT',
+      // }));
+
       showVacantPositionModal.value = false;
 
       // Add small delay to ensure modal closes
       await new Promise((resolve) => setTimeout(resolve, 300));
-      await usePlantilla.fetchPlantilla();
-      positions.value = usePlantilla.plantilla.map((item) => ({
-        ...item,
-        Status: item.designationStatus || 'VACANT',
-      }));
+
+      // pass the current selected office instead of calling without argument
+      const currentOffice = currentStructure.value?.office;
+      if (currentOffice) {
+        await usePlantilla.fetchPlantilla(currentOffice);
+        positions.value = usePlantilla.plantilla.map((item) => ({
+          ...item,
+          Status: item.designationStatus || 'VACANT',
+        }));
+      }
 
       // Refresh job posts from API
       await jobPostStore.job_post();
