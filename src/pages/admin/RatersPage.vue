@@ -167,41 +167,65 @@
           </q-banner>
 
           <!-- Select Positions -->
-          <div class="q-mb-md">
-            <div class="text-subtitle2 text-weight-medium">
-              Select Job Positions to Rate
-              <span class="text-negative">*</span>
-            </div>
-            <q-select
-              v-model="selectedPositions"
-              multiple
-              :options="positionsWithAllOption"
-              option-value="id"
-              option-label="name"
-              label="Select one or more positions"
-              outlined
-              dense
-              use-chips
-              emit-value
-              map-options
-              @update:model-value="handlePositionSelection"
-            >
-              <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.name }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-checkbox
-                      :model-value="isPositionSelected(scope.opt.id)"
-                      @update:model-value="(val) => togglePosition(scope.opt.id, val)"
-                      @click.stop
-                    />
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-          </div>
+       <!-- Select Positions -->
+<div class="q-mb-md">
+  <div class="text-subtitle2 text-weight-medium">
+    Select Job Positions to Rate
+    <span class="text-negative">*</span>
+  </div>
+  <q-select
+    ref="positionSelect" 
+    v-model="selectedPositions"
+    multiple
+    :options="positionsWithAllOption"
+    option-value="id"
+    option-label="name"
+    label="Select one or more positions"
+    outlined
+    dense
+    use-chips
+    emit-value
+    map-options
+    @update:model-value="handlePositionSelection"
+    @before-show="snapshotPositions"
+  >
+    <template v-slot:option="scope">
+      <q-item v-bind="scope.itemProps">
+        <q-item-section>
+          <q-item-label>{{ scope.opt.name }}</q-item-label>
+        </q-item-section>
+        <q-item-section side>
+          <q-checkbox
+            :model-value="isPositionSelected(scope.opt.id)"
+            @update:model-value="(val) => togglePosition(scope.opt.id, val)"
+            @click.stop
+          />
+        </q-item-section>
+      </q-item>
+    </template>
+
+      <template v-slot:after-options>
+      <div class="q-pa-sm row q-gutter-sm">
+        <q-btn
+          label="Cancel"
+          color="negative"
+          outlined
+          dense
+          class="col"
+          @click.stop="cancelPositionSelect"
+        />
+        <q-btn
+          label="Confirm"
+          color="primary"
+          unelevated
+          dense
+          class="col"
+          @click.stop="closePositionSelect"
+        />
+      </div>
+    </template>
+      </q-select>
+    </div>
 
           <!-- ==================== ADD MODE ==================== -->
           <template v-if="!isEditMode">
@@ -261,6 +285,18 @@
                     </q-item-section>
                   </q-item>
                 </template>
+                       <template v-slot:after-options>
+          <div class="q-pa-sm">
+            <q-btn
+              label="Confirm"
+              color="primary"
+              unelevated
+              dense
+              class="full-width"
+              @click.stop="closePositionSelect"
+            />
+          </div>
+        </template>
               </q-select>
             </div>
 
@@ -345,6 +381,26 @@
                 <template v-slot:prepend>
                   <q-icon name="business" />
                 </template>
+                      <template v-slot:after-options>
+                <div class="q-pa-sm row q-gutter-sm">
+                  <q-btn
+                    label="Cancel"
+                    color="negative"
+                    outlined
+                    dense
+                    class="col"
+                    @click.stop="cancelPositionSelect"
+                  />
+                  <q-btn
+                    label="Confirm"
+                    color="primary"
+                    unelevated
+                    dense
+                    class="col"
+                    @click.stop="closePositionSelect"
+                  />
+                </div>
+              </template>
               </q-select>
             </div>
 
@@ -647,7 +703,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted, watch } from 'vue';
+  import { ref, computed, onMounted, watch, nextTick } from 'vue';
   import { useAuthStore } from 'stores/authStore';
   import { useJobPostStore } from 'stores/jobPostStore';
   import { usePlantillaStore } from 'stores/plantillaStore';
@@ -725,6 +781,28 @@
   const filteredRatersByOffice = ref([]);
   const officeRatersRaw = ref([]);
   const isLoadingRaters = ref(false);
+
+  // ==================== btn select job post  ====================
+const positionSelect = ref(null); // ← ref to control the dropdown
+
+const closePositionSelect = async () => {
+  await nextTick()
+  if (positionSelect.value) {
+    positionSelect.value.hidePopup?.() // try hidePopup first
+    ?? positionSelect.value.hide?.()   // fallback to hide
+  }
+}
+const positionSnapshot = ref([])
+
+const snapshotPositions = () => {
+  positionSnapshot.value = [...selectedPositions.value]
+}
+
+const cancelPositionSelect = () => {
+  selectedPositions.value = [...positionSnapshot.value] // restore previous
+  positionSelect.value?.hidePopup()
+}
+
 
   // ==================== COLUMNS ====================
   const columns = [
