@@ -357,7 +357,7 @@
               <div>
                 <div class="text-h6 text-primary text-bold">Rating Results</div>
                 <q-input
-                  v-model="applicantSearchRate"
+                   v-model="ratingApplicantSearch"
                   outlined
                   dense
                   placeholder="Search Applicant..."
@@ -401,6 +401,10 @@
               dense
               separator="cell"
               color="primary"
+                v-model:pagination="ratingPagination"
+
+              :rows-per-page-options="[2, 10, 20, 50, 100, 0]"
+            @request="onApplicantRatingRequest"
             >
               <template #body-cell-name="props">
                 <q-td :props="props">{{ props.row.firstname }} {{ props.row.lastname }}</q-td>
@@ -721,7 +725,7 @@
   const authStore = useAuthStore();
 
   const applicantSearch = ref('');
-  const applicantSearchRate = ref('');
+  // const applicantSearchRate = ref('');
   const isLoading = ref(false);
   const sendEvalConfirmDialog = ref(false);
 
@@ -733,6 +737,16 @@
   const displayHistoryId = ref(null);
   const isNavigating = ref(false);
   const lastLoadedId = ref(null);
+
+  const ratingPagination = ref({
+  page: 1,
+  rowsPerPage: 10,
+  rowsNumber: 0,      // ← total from meta.total
+  sortBy: null,
+  descending: false,
+});
+
+
 
   const selectedJob = ref({
     Position: '',
@@ -800,7 +814,9 @@
   });
 
   const globalSearch = ref('');
+  const ratingApplicantSearch = ref('');
   let searchTimeout = null;
+    let ratingSearchTimeout = null;   // ← separate timeout
 
   // Pagination/sort changes — no debounce needed here
   const onApplicantRequest = async (props) => {
@@ -836,6 +852,42 @@
     }, 500); // ✅ 500ms debounce
   });
 
+
+  // Pagination/sort changes — no debounce needed here
+  const onApplicantRatingRequest = async (props) => {
+    const { page, rowsPerPage } = props.pagination;
+    const perPage = rowsPerPage === 0 ? 'all' : rowsPerPage;
+
+    await jobPostStore.fetch_applicant_rating(selectedJob.value.id, {
+      page,
+      perPage,
+      search: ratingApplicantSearch.value,
+    });
+
+    ratingPagination.value.page = page;
+    ratingPagination.value.rowsPerPage = rowsPerPage;
+    ratingPagination.value.rowsNumber = jobPostStore.ratingMeta?.total || 0;
+  };
+
+  // Watch for search changes — reset to page 1
+  // ✅ Debounced watch — only fires 500ms after user stops typing
+
+
+  watch(ratingApplicantSearch, (newValue) => {
+    if (ratingSearchTimeout) clearTimeout(ratingSearchTimeout);
+    ratingSearchTimeout = setTimeout(async () => {
+      ratingPagination.value.page = 1;
+      await jobPostStore.fetch_applicant_rating(selectedJob.value.id, {
+        page: 1,
+        perPage:
+          ratingPagination.value.rowsPerPage === 0
+            ? 'all'
+            : ratingPagination.value.rowsPerPage,
+        search: newValue,
+      });
+      ratingPagination.value.rowsNumber = jobPostStore.ratingMeta?.total || 0;
+    }, 500); // ✅ 500ms debounce
+  });
   // onMounted — also pass id
   // onMounted(async () => {
   //   await jobPostStore.fetch_applicant(selectedJob.value.id, { // ✅ pass id
@@ -896,8 +948,8 @@
 
   // ===== Filtered Ratings =====
   const filteredApplicantsRate = computed(() => {
-    if (!applicantSearchRate.value) return formattedApplicantRatings.value;
-    const search = applicantSearchRate.value.toLowerCase();
+    if (!ratingApplicantSearch.value) return formattedApplicantRatings.value;
+    const search = ratingApplicantSearch.value.toLowerCase();
     return formattedApplicantRatings.value.filter((applicant) => {
       const fullName = `${applicant.firstname} ${applicant.lastname}`.toLowerCase();
       return (
@@ -913,7 +965,7 @@
       );
     });
   });
-
+// const filteredApplicantsRate = computed(() => jobPostStore.applicant_rating || []);
   const historyOptions = computed(() => {
     if (!selectedJob.value?.history?.length) return [];
     return [...selectedJob.value.history]
@@ -943,7 +995,13 @@
           search: '',
         }),
 
-        jobPostStore.fetch_applicant_rating(id),
+        jobPostStore.fetch_applicant_rating(id,{
+          // ✅ pass id directly, not selectedJob.value.id
+          page: 1,
+          perPage: ratingPagination.value.rowsPerPage,
+          search: '',
+        }
+        ),
       ]);
       if (jobDetails.status === 'rejected') throw new Error('Failed to fetch job details');
       const details = jobDetails.value;
@@ -979,6 +1037,8 @@
       displayHistoryId.value = details.id;
       lastLoadedId.value = details.id;
       applicantPagination.value.rowsNumber = totalApplicants.value; // ✅ sync pagination here
+      ratingPagination.value.rowsNumber = jobPostStore.ratingMeta?.total || 0; // ✅ add this
+
 
       return details;
     } catch (error) {
