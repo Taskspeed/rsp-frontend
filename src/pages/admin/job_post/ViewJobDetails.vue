@@ -1349,13 +1349,13 @@ const onApplicantRequest = async (props) => {
   }
 
   function viewApplicantScore(applicantRow) {
-    const jobpostId = selectedJob.value?.id; // current job post id
-    const applicantId =
-      applicantRow.submission_id || applicantRow.nPersonalInfo_id || applicantRow.id;
+    // const jobpostId = selectedJob.value?.id; // current job post id
+    // const applicantId =
+    //   applicantRow.submission_id || applicantRow.nPersonalInfo_id || applicantRow.id;
 
-    if (jobpostId && applicantId) {
-      jobPostStore.fetchApplicantScoreDetails(applicantId, jobpostId);
-    }
+    // if (jobpostId && applicantId) {
+    //   jobPostStore.fetchApplicantScoreDetails(applicantId, jobpostId);
+    // }
 
     // keep your existing modal setup
     const historyData =
