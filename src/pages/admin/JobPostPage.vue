@@ -1,3 +1,4 @@
+<!-- job post page-->
 <template>
   <q-page class="q-pa-md">
     <div class="column items-start justify-center q-mb-md">

@@ -21,6 +21,17 @@ export const useJobPostStore = defineStore('jobPost', {
     confirmationExpiresAt: null,
     // postDate: null,
     // endDate: null
+    applicantMeta: {
+    total_applicants: 0,
+    internal_applicants: 0,
+    external_applicants: 0,
+    assessed: '0/0',
+    qualified_applicants: 0,
+    unqualified_applicants: 0,
+    current_page: 1,
+    last_page: 1,
+  },
+
   }),
 
   getters: {
@@ -187,19 +198,49 @@ export const useJobPostStore = defineStore('jobPost', {
       }
     },
 
-    async fetch_applicant(id) {
-      this.loading = true;
-      try {
-        const { data } = await adminApi.get(`/job-batches-rsp/applicant/view/${id}`);
-        this.applicant = data.applicants;
-        this.error = null;
-      } catch (error) {
-        this.error = error;
-        toast.error('Failed to fetch applicants.');
-      } finally {
-        this.loading = false;
-      }
-    },
+    // async fetch_applicant(id) {
+    //   this.loading = true;
+    //   try {
+    //     const { data } = await adminApi.get(`/job-batches-rsp/applicant/view/${id}`);
+    //     this.applicant = data.applicants;
+    //     this.error = null;
+    //   } catch (error) {
+    //     this.error = error;
+    //     toast.error('Failed to fetch applicants.');
+    //   } finally {
+    //     this.loading = false;
+    //   }
+    // },
+
+ async fetch_applicant(id, page = 1, perPage = 10) {
+  this.loading = true;
+  try {
+    const { data } = await adminApi.get(`/job-batches-rsp/applicant/view/${id}`, {
+      params: {
+        page: perPage === 'all' ? 1 : page,  // reset to 1 if fetching all
+        per_page: perPage,
+      },
+    });
+
+    this.applicant = data.applicants?.data ?? [];
+    this.applicantMeta = {
+      total_applicants: data.total_applicants ?? 0,
+      internal_applicants: data.internal_applicants ?? 0,
+      external_applicants: data.external_applicants ?? 0,
+      assessed: data.assessed ?? '0/0',
+      qualified_applicants: data.qualified_applicants ?? 0,
+      unqualified_applicants: data.unqualified_applicants ?? 0,
+      current_page: data.applicants?.current_page ?? 1,
+      last_page: data.applicants?.last_page ?? 1,
+    };
+    this.error = null;
+  } catch (error) {
+    this.error = error;
+    toast.error('Failed to fetch applicants.');
+  } finally {
+    this.loading = false;
+  }
+},
 
     async fetch_applicant_rating(id) {
       this.loading = true;
