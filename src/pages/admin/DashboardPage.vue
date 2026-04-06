@@ -41,7 +41,7 @@
             <q-chip dense class="q-my-xs row justify-start">
               Total Positions:
               <q-badge rounded dense class="text-bold q-ml-xs">
-                {{ Number(dashboardStore.fundedData?.total || 0).toLocaleString() }}
+                {{ Number(dashboardStore.fundedData?.total_positions || 0).toLocaleString() }}
               </q-badge>
             </q-chip>
             <q-chip dense class="q-my-xs row justify-start">
@@ -274,10 +274,10 @@ const columns = [
   { name: "jobs", label: "Position", align: "left", field: "Position", sortable: true },
   // { name: "status", label: "Status", align: "left", field: "status", sortable: true },
   {
-    name: "total_applicants",
+    name: "total_applicant",
     label: "No. of Applicants",
     align: "center",
-    field: "total_applicants",
+    field: "total_applicant",
     sortable: true,
   },
   {
@@ -318,10 +318,8 @@ const viewJob = (row) => {
 };
 
 onMounted(async () => {
-  await Promise.all([dashboardStore.fetchFundedCount()]);
+  await dashboardStore.status();
   await useJobPost.job_post();
-
-  console.log("Jobs loaded (republished jobs will be filtered out)");
 });
 </script>
 

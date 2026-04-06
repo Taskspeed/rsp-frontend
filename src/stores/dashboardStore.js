@@ -16,27 +16,42 @@ export const DashboardStore = defineStore('dashboard', {
     unqualified: 0,
     pending: 0,
     total: 0,
+    total_applicant: 0,
+    total_positions: 0,
   }),
 
   actions: {
-    async status() {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await adminApi.get('dashboard');
-        const data = await response.data;
-        this.qualified = data.qualified;
-        this.unqualified = data.unqualified;
-        this.pending = data.pending;
-        this.total = data.total;
-        // Optional: Show a toast
-        // toast.success('Status fetched successfully!');
-      } catch (error) {
-        console.error('Error fetching the status:', error);
-        this.error = 'Failed to fetch status summary.';
-        // toast.error('Failed to fetch status summary.');
-      }
-    },
+      async status() {
+        if (this.loading) return; // ← guard against duplicate calls
+
+        this.loading = true;
+        this.error = null;
+        try {
+          const response = await adminApi.get('dashboard');
+          const data = response.data;
+
+          this.fundedData = {
+            total_positions: data.total_positions,
+            funded: data.funded,
+            unfunded: data.unfunded,
+            occupied: data.occupied,
+            unoccupied: data.unoccupied,
+          };
+
+          this.qualified = data.qualified;
+          this.unqualified = data.unqualified;
+          this.pending = data.pending;
+          this.total_applicant = data.total_applicant;
+
+
+          return data;
+        } catch (error) {
+          console.error('Error fetching the status:', error);
+          this.error = 'Failed to fetch status summary.';
+        } finally {
+          this.loading = false;
+        }
+      },
 
     async fetch_vwActive() {
       this.loading = true;
@@ -50,18 +65,18 @@ export const DashboardStore = defineStore('dashboard', {
         toast.error('Failed to Load vwactive');
       }
     },
-    async fetchFundedCount() {
-      this.loading = true;
-      this.error = null;
-      try {
-        const response = await adminApi.get('/plantilla/status');
-        this.fundedData = response.data;
-        return response.data;
-      } catch {
-        toast.error('Failed to Load funded data');
-      }
-    },
-    //
+    // async fetchFundedCount() {
+    //   this.loading = true;
+    //   this.error = null;
+    //   try {
+    //     const response = await adminApi.get('/plantilla/status');
+    //     this.fundedData = response.data;
+    //     return response.data;
+    //   } catch {
+    //     toast.error('Failed to Load funded data');
+    //   }
+    // },
+    // //
     async fetchStatus(status) {
       this.loading = true;
       const jsonEncode = {

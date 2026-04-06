@@ -8,7 +8,7 @@
             <div class="row items-center no-wrap full-width">
               <div class="col stats-text">
                 <div class="label-text">Total Applicants</div>
-                <div class="value-text text-primary">{{ dashboardStore.total }}</div>
+                <div class="value-text text-primary">{{ dashboardStore.total_applicant }}</div>
               </div>
               <div class="col-auto icon-container">
                 <q-icon name="groups" size="40px" color="primary" />
