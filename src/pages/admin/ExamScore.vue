@@ -15,7 +15,7 @@
 
     <!-- ── Filters / Toolbar ───────────────────────────────────────── -->
     <div class="row items-center q-col-gutter-md q-mb-md">
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-sm-6 col-md-4">
         <q-input v-model="globalSearch" outlined dense placeholder="Search applicants..." clearable>
           <template #prepend>
             <q-icon name="search" color="primary" />
@@ -23,7 +23,7 @@
         </q-input>
       </div>
 
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-sm-6 col-md-4">
         <q-select
           v-model="mainPositionFilter"
           :options="mainPositionOptions"
@@ -36,125 +36,64 @@
         </q-select>
       </div>
 
-      <!-- Date filter group -->
-      <!-- <div class="col-12 col-md-6">
-        <div class="row items-center">
-          <div class="col-12 col-md-4" style="padding-left: 17%">
-            <q-btn-toggle
-              v-model="dateFilterMode"
-              unelevated
-              dense
-              toggle-color="primary"
-              :options="[
-                { label: 'Specific', value: 'specific' },
-                { label: 'Range', value: 'range' },
-              ]"
-            />
-          </div>
-
-          <div class="col-12 col-md-8" v-if="dateFilterMode === 'specific'">
-            <q-input v-model="specificDate" outlined dense label="Exam Date" clearable>
-              <template #append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="specificDate" mask="YYYY-MM-DD">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Close" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-
-          <div class="col-12 col-md-8" v-else>
-            <q-input
-              :model-value="dateRangeLabel"
-              outlined
-              dense
-              label="Exam Date Range"
-              readonly
-              clearable
-              @clear="clearDateRange"
-            >
-              <template #append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dateRange" range mask="YYYY-MM-DD">
-                      <div class="row items-center justify-end">
-                        <q-btn v-close-popup label="Close" color="primary" flat />
-                      </div>
-                    </q-date>
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-        </div>
-      </div> -->
-
-      <div class="col-12 col-md- text-right">
-        <q-btn
-          rounded
-          unelevated
-          color="primary"
-          icon="add"
-          label="Add Score"
-          @click="openAddDialog"
-        />
+      <div class="col-12 col-md-4 flex justify-end">
+        <q-btn rounded unelevated color="primary" icon="add" @click="openAddDialog">
+          <span class="gt-xs q-ml-xs">Add Score</span>
+        </q-btn>
       </div>
     </div>
 
     <!-- ── Main Table ────────────────────────────────────────────────── -->
-    <q-table
-      :rows="rows"
-      :columns="columns"
-      row-key="submission_id"
-      v-model:pagination="pagination"
-      :loading="loading"
-      @request="onRequest"
-      flat
-      wrap-cells
-    >
-      <template #body-cell-status="p">
-        <q-td :props="p">
-          <q-badge :color="getStatusColor(p.row.status)" :label="p.row.status || 'N/A'" />
-        </q-td>
-      </template>
+    <div class="table-scroll-wrapper">
+      <q-table
+        :rows="rows"
+        :columns="columns"
+        row-key="submission_id"
+        v-model:pagination="pagination"
+        :loading="loading"
+        @request="onRequest"
+        flat
+        wrap-cells
+      >
+        <template #body-cell-status="p">
+          <q-td :props="p">
+            <q-badge :color="getStatusColor(p.row.status)" :label="p.row.status || 'N/A'" />
+          </q-td>
+        </template>
 
-      <template #body-cell-exam_score="p">
-        <q-td :props="p" class="text-center">
-          <span class="text-body2">
-            {{
-              p.row.exam_score === null || p.row.exam_score === undefined
-                ? 'N/A'
-                : `${formatScore(p.row.exam_score)} / ${formatScore(p.row.exam_total_score)}`
-            }}
-          </span>
-        </q-td>
-      </template>
+        <template #body-cell-exam_score="p">
+          <q-td :props="p" class="text-center">
+            <span class="text-body2">
+              {{
+                p.row.exam_score === null || p.row.exam_score === undefined
+                  ? 'N/A'
+                  : `${formatScore(p.row.exam_score)} / ${formatScore(p.row.exam_total_score)}`
+              }}
+            </span>
+          </q-td>
+        </template>
 
-      <template #body-cell-action="p">
-        <q-td :props="p">
-          <q-btn
-            flat
-            round
-            dense
-            color="blue"
-            class="bg-blue-1"
-            icon="visibility"
-            @click="viewScore(p.row)"
-          >
-            <q-tooltip>View Details</q-tooltip>
-          </q-btn>
-        </q-td>
-      </template>
+        <template #body-cell-action="p">
+          <q-td :props="p">
+            <q-btn
+              flat
+              round
+              dense
+              color="blue"
+              class="bg-blue-1"
+              icon="visibility"
+              @click="viewScore(p.row)"
+            >
+              <q-tooltip>View Details</q-tooltip>
+            </q-btn>
+          </q-td>
+        </template>
 
-      <template #no-data>
-        <div class="full-width row flex-center q-pa-md text-grey">No Exam Scores Found</div>
-      </template>
-    </q-table>
+        <template #no-data>
+          <div class="full-width row flex-center q-pa-md text-grey">No Exam Scores Found</div>
+        </template>
+      </q-table>
+    </div>
 
     <!-- ================================================================
          ADD SCORE DIALOG
@@ -167,8 +106,9 @@
       transition-hide="slide-down"
     >
       <q-card class="score-dialog-card">
+        <!-- Header -->
         <q-card-section class="dialog-header-light">
-          <q-icon name="grading" color="primary" size="28px" class="q-mr-sm" />
+          <q-icon name="grading" color="primary" size="24px" class="q-mr-sm gt-xs" />
           <div>
             <div class="text-h6 text-bold text-grey-9">Add Exam Scores</div>
             <div class="text-caption text-grey-6">Step {{ step }} of 3 — {{ stepTitle }}</div>
@@ -179,268 +119,283 @@
 
         <q-separator />
 
-        <q-card-section class="dialog-body q-pa-none">
-          <q-stepper
-            v-model="step"
-            flat
-            animated
-            color="primary"
-            header-nav
-            class="q-pa-none full-height-stepper"
+        <!-- Stepper header -->
+        <div class="stepper-tabs row q-px-md q-pt-sm">
+          <div
+            v-for="(s, i) in stepDefs"
+            :key="i"
+            class="stepper-tab"
+            :class="{ active: step === i + 1, done: step > i + 1 }"
           >
-            <q-step :name="1" title="Select Applicants" icon="person_add" :done="step > 1">
-              <div class="q-pa-lg">
-                <div class="row q-col-gutter-md q-mb-md items-end">
-                  <div class="col-12 col-md-6">
-                    <q-select
-                      v-model="selectedPosition"
-                      :options="positionOptions"
-                      label="Filter by Position"
-                      outlined
-                      dense
-                      use-input
-                      fill-input
-                      input-debounce="200"
-                      clearable
-                      @filter="filterPositions"
-                      @update:model-value="onPositionChange"
-                      @clear="onPositionChange"
-                    >
-                      <template #prepend><q-icon name="work" /></template>
-                    </q-select>
-                  </div>
-                  <div class="col-12 col-md-6">
-                    <q-input
-                      v-model="applicantSearch"
-                      outlined
-                      dense
-                      clearable
-                      placeholder="Search applicant..."
-                      @update:model-value="fetchNoScoreWithFilters"
-                      @clear="fetchNoScoreWithFilters"
-                    >
-                      <template #prepend><q-icon name="search" color="primary" /></template>
-                    </q-input>
-                  </div>
-                </div>
+            <q-icon :name="step > i + 1 ? 'check_circle' : s.icon" size="18px" class="q-mr-xs" />
+            <span class="gt-xs">{{ s.title }}</span>
+          </div>
+        </div>
 
-                <q-table
-                  :rows="filteredNoScoreApplicants"
-                  :columns="applicantColumns"
-                  row-key="submission_id"
-                  selection="multiple"
-                  v-model:selected="selectedApplicants"
-                  v-model:pagination="noScorePagination"
-                  :loading="store.loading"
-                  @request="onModalRequest"
-                  flat
-                  class="q-mt-md"
-                  wrap-cells
+        <q-separator />
+
+        <!-- Dialog Body -->
+        <div class="dialog-body">
+          <!-- ── Step 1: Select Applicants ── -->
+          <div v-if="step === 1" class="q-pa-md">
+            <div class="row q-col-gutter-md q-mb-md items-end">
+              <div class="col-12 col-sm-6">
+                <!--
+                  FIX: emit-value + map-options so v-model holds the raw string (not an object).
+                       @filter does a fast client-side search over allPositionOptions.
+                       @update:model-value fires the API fetch with the selected string.
+                       @clear resets and re-fetches without a position filter.
+                -->
+                <q-select
+                  v-model="selectedPosition"
+                  :options="positionOptionsData"
+                  label="Filter by Position"
+                  outlined
+                  dense
+                  use-input
+                  input-debounce="200"
+                  clearable
+                  emit-value
+                  map-options
+                  @filter="filterPositions"
+                  @update:model-value="onPositionChange"
+                  @clear="onPositionClear"
                 >
-                  <template #no-data>
-                    <div class="full-width row flex-center q-pa-md text-grey">
-                      No applicants without exam scores found
-                    </div>
+                  <template #prepend><q-icon name="work" /></template>
+                  <template #no-option>
+                    <q-item>
+                      <q-item-section class="text-grey">No positions found</q-item-section>
+                    </q-item>
                   </template>
-                </q-table>
+                </q-select>
               </div>
-            </q-step>
-
-            <q-step :name="2" title="Encoding" icon="edit_note" :done="step > 2">
-              <div class="row no-wrap">
-                <div class="left-panel q-pa-lg">
-                  <div class="section-label q-mb-md">
-                    <q-icon name="fact_check" size="16px" class="q-mr-xs" />
-                    Exam Setup
-                  </div>
-
-                  <q-input
-                    v-model="session.exam_title"
-                    label="Exam Details"
-                    outlined
-                    dense
-                    class="q-mb-md"
-                  >
-                    <template #prepend><q-icon name="description" size="18px" /></template>
-                  </q-input>
-
-                  <q-select
-                    v-model="session.exam_type"
-                    :options="examTypeOptions"
-                    label="Exam Type"
-                    outlined
-                    dense
-                    emit-value
-                    map-options
-                    clearable
-                    class="q-mb-md"
-                  >
-                    <template #prepend><q-icon name="category" size="18px" /></template>
-                  </q-select>
-
-                  <q-input
-                    v-model.number="session.total_items"
-                    label="Total Score"
-                    type="number"
-                    outlined
-                    dense
-                    class="q-mb-md"
-                    :rules="[(v) => Number(v) > 0 || 'Total score must be > 0']"
-                  >
-                    <template #prepend><q-icon name="numbers" size="18px" /></template>
-                  </q-input>
-
-                  <q-input
-                    v-model="session.exam_date"
-                    label="Exam Date"
-                    outlined
-                    dense
-                    class="q-mb-md"
-                  >
-                    <template #prepend><q-icon name="event" size="18px" /></template>
-                    <template #append>
-                      <q-icon name="event" class="cursor-pointer">
-                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-date v-model="session.exam_date" mask="YYYY-MM-DD">
-                            <div class="row items-center justify-end">
-                              <q-btn v-close-popup label="Close" color="primary" flat />
-                            </div>
-                          </q-date>
-                        </q-popup-proxy>
-                      </q-icon>
-                    </template>
-                  </q-input>
-
-                  <q-input
-                    v-model="session.remarks"
-                    label="Remarks"
-                    type="textarea"
-                    outlined
-                    dense
-                    rows="3"
-                    class="q-mb-md"
-                  >
-                    <template #prepend><q-icon name="notes" size="18px" /></template>
-                  </q-input>
-                </div>
-
-                <q-separator vertical />
-
-                <div class="right-panel q-pa-lg">
-                  <div class="row items-center justify-between q-mb-md">
-                    <div class="section-label">
-                      <q-icon name="grading" size="16px" class="q-mr-xs" />
-                      Encoding (Raw Score)
-                    </div>
-                    <q-badge color="grey-2" text-color="grey-9" class="q-pa-sm">
-                      {{ encodedCount }} encoded
-                    </q-badge>
-                  </div>
-
-                  <q-table
-                    :rows="selectedApplicants"
-                    :columns="encodeColumns"
-                    row-key="submission_id"
-                    flat
-                    wrap-cells
-                  >
-                    <template #body-cell-score="p">
-                      <q-td :props="p">
-                        <q-input
-                          v-model.number="p.row._draft.raw_score"
-                          type="number"
-                          dense
-                          outlined
-                          style="max-width: 160px"
-                          :rules="[
-                            (v) => v === null || v === '' || Number(v) >= 0 || 'Must be ≥ 0',
-                            (v) =>
-                              v === null ||
-                              v === '' ||
-                              Number(session.total_items) <= 0 ||
-                              Number(v) <= Number(session.total_items) ||
-                              `Max is ${session.total_items}`,
-                          ]"
-                          @blur="commitDraft(p.row)"
-                        >
-                          <template #append>
-                            <div class="text-caption text-grey-7 q-pr-xs">
-                              / {{ session.total_items || 0 }}
-                            </div>
-                          </template>
-                        </q-input>
-                      </q-td>
-                    </template>
-
-                    <template #no-data>
-                      <div class="full-width row flex-center q-pa-md text-grey">
-                        No applicants selected
-                      </div>
-                    </template>
-                  </q-table>
-                </div>
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="applicantSearch"
+                  outlined
+                  dense
+                  clearable
+                  placeholder="Search applicant..."
+                  @update:model-value="fetchNoScoreWithFilters"
+                  @clear="onApplicantSearchClear"
+                >
+                  <template #prepend><q-icon name="search" color="primary" /></template>
+                </q-input>
               </div>
-            </q-step>
+            </div>
 
-            <q-step :name="3" title="Review" icon="visibility">
-              <div class="q-pa-lg">
-                <q-banner class="q-mb-md bg-blue-1 text-blue-10" rounded>
-                  Please verify the scores below. If something is wrong, click
-                  <b>Back</b>
-                  to edit.
-                </q-banner>
+            <div class="table-scroll-wrapper">
+              <q-table
+                :rows="store.noScoreApplicants"
+                :columns="applicantColumns"
+                row-key="submission_id"
+                selection="multiple"
+                v-model:selected="selectedApplicants"
+                v-model:pagination="noScorePagination"
+                :loading="store.loading"
+                @request="onModalRequest"
+                flat
+                wrap-cells
+              >
+                <template #no-data>
+                  <div class="full-width row flex-center q-pa-md text-grey">
+                    No applicants without exam scores found
+                  </div>
+                </template>
+              </q-table>
+            </div>
+          </div>
 
+          <!-- ── Step 2: Encoding ── -->
+          <div v-if="step === 2" class="step2-layout">
+            <!-- Left: Exam Setup -->
+            <div class="step2-left q-pa-md">
+              <div class="section-label q-mb-md">
+                <q-icon name="fact_check" size="16px" class="q-mr-xs" />
+                Exam Setup
+              </div>
+
+              <q-input
+                v-model="session.exam_title"
+                label="Exam Details"
+                outlined
+                dense
+                class="q-mb-md"
+              >
+                <template #prepend><q-icon name="description" size="18px" /></template>
+              </q-input>
+
+              <q-select
+                v-model="session.exam_type"
+                :options="examTypeOptions"
+                label="Exam Type"
+                outlined
+                dense
+                emit-value
+                map-options
+                clearable
+                class="q-mb-md"
+              >
+                <template #prepend><q-icon name="category" size="18px" /></template>
+              </q-select>
+
+              <q-input
+                v-model.number="session.total_items"
+                label="Total Score"
+                type="number"
+                outlined
+                dense
+                class="q-mb-md"
+                :rules="[(v) => Number(v) > 0 || 'Total score must be > 0']"
+              >
+                <template #prepend><q-icon name="numbers" size="18px" /></template>
+              </q-input>
+
+              <q-input v-model="session.exam_date" label="Exam Date" outlined dense class="q-mb-md">
+                <template #prepend><q-icon name="event" size="18px" /></template>
+                <template #append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="session.exam_date" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Close" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+
+              <q-input
+                v-model="session.remarks"
+                label="Remarks"
+                type="textarea"
+                outlined
+                dense
+                rows="3"
+                class="q-mb-md"
+              >
+                <template #prepend><q-icon name="notes" size="18px" /></template>
+              </q-input>
+            </div>
+
+            <q-separator :vertical="!isMobile" />
+
+            <!-- Right: Score Encoding -->
+            <div class="step2-right q-pa-md">
+              <div class="row items-center justify-between q-mb-md">
+                <div class="section-label">
+                  <q-icon name="grading" size="16px" class="q-mr-xs" />
+                  Encoding (Raw Score)
+                </div>
+                <q-badge color="grey-2" text-color="grey-9" class="q-pa-sm">
+                  {{ encodedCount }} encoded
+                </q-badge>
+              </div>
+
+              <div class="table-scroll-wrapper">
                 <q-table
-                  :rows="reviewRows"
-                  :columns="reviewColumns"
+                  :rows="selectedApplicants"
+                  :columns="encodeColumns"
                   row-key="submission_id"
                   flat
                   wrap-cells
                 >
                   <template #body-cell-score="p">
-                    <q-td :props="p" class="text-center">
-                      <span class="text-body2">
-                        {{
-                          p.row.raw_score === null || p.row.raw_score === undefined
-                            ? 'N/A'
-                            : `${formatScore(p.row.raw_score)} / ${formatScore(p.row.total_items)}`
-                        }}
-                      </span>
+                    <q-td :props="p">
+                      <q-input
+                        v-model.number="draftScores[p.row.submission_id]"
+                        type="number"
+                        dense
+                        outlined
+                        style="min-width: 120px; max-width: 160px"
+                        :rules="[
+                          (v) =>
+                            v === null ||
+                            v === '' ||
+                            v === undefined ||
+                            Number(v) >= 0 ||
+                            'Must be ≥ 0',
+                          (v) =>
+                            v === null ||
+                            v === '' ||
+                            v === undefined ||
+                            Number(session.total_items) <= 0 ||
+                            Number(v) <= Number(session.total_items) ||
+                            `Max is ${session.total_items}`,
+                        ]"
+                        @update:model-value="(val) => commitScore(p.row.submission_id, val)"
+                        @blur="() => commitScoreFromBlur(p.row.submission_id)"
+                      >
+                        <template #append>
+                          <div class="text-caption text-grey-7 q-pr-xs">
+                            / {{ session.total_items || 0 }}
+                          </div>
+                        </template>
+                      </q-input>
                     </q-td>
                   </template>
 
                   <template #no-data>
                     <div class="full-width row flex-center q-pa-md text-grey">
-                      No encoded applicants yet
+                      No applicants selected
                     </div>
                   </template>
                 </q-table>
               </div>
-            </q-step>
-          </q-stepper>
-        </q-card-section>
+            </div>
+          </div>
 
+          <!-- ── Step 3: Review ── -->
+          <div v-if="step === 3" class="q-pa-md">
+            <q-banner class="q-mb-md bg-blue-1 text-blue-10" rounded>
+              Please verify the scores below. If something is wrong, click
+              <b>Back</b>
+              to edit.
+            </q-banner>
+
+            <div class="table-scroll-wrapper">
+              <q-table
+                :rows="reviewRows"
+                :columns="reviewColumns"
+                row-key="submission_id"
+                flat
+                wrap-cells
+              >
+                <template #body-cell-score="p">
+                  <q-td :props="p" class="text-center">
+                    <span class="text-body2">
+                      {{
+                        p.row.raw_score === null || p.row.raw_score === undefined
+                          ? 'N/A'
+                          : `${formatScore(p.row.raw_score)} / ${formatScore(p.row.total_items)}`
+                      }}
+                    </span>
+                  </q-td>
+                </template>
+
+                <template #no-data>
+                  <div class="full-width row flex-center q-pa-md text-grey">
+                    No encoded applicants yet
+                  </div>
+                </template>
+              </q-table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
         <q-separator />
-
-        <q-card-actions align="right" class="dialog-footer q-px-lg q-py-md">
+        <q-card-actions align="right" class="dialog-footer q-px-md q-py-sm">
           <q-btn v-if="step === 1" flat label="Cancel" color="grey-7" v-close-popup />
           <q-btn
-            v-if="step === 2"
+            v-if="step > 1"
             flat
             label="Back"
             color="grey-7"
             icon="arrow_back"
-            @click="step = 1"
+            @click="step--"
           />
-          <q-btn
-            v-if="step === 3"
-            flat
-            label="Back"
-            color="grey-7"
-            icon="arrow_back"
-            @click="step = 2"
-          />
-
           <q-btn
             v-if="step === 1"
             unelevated
@@ -472,17 +427,19 @@
       </q-card>
     </q-dialog>
 
-    <!-- View Dialog (same style) -->
+    <!-- ================================================================
+         VIEW DIALOG
+         ================================================================ -->
     <q-dialog
       v-model="showDetailDialog"
       persistent
-      maximized
+      :maximized="$q.screen.lt.sm"
       transition-show="slide-up"
       transition-hide="slide-down"
     >
-      <q-card class="score-dialog-card">
+      <q-card class="view-dialog-card">
         <q-card-section class="dialog-header-light">
-          <q-icon name="grading" color="primary" size="28px" class="q-mr-sm" />
+          <q-icon name="grading" color="primary" size="24px" class="q-mr-sm gt-xs" />
           <div>
             <div class="text-h6 text-bold text-grey-9">Exam Score Details</div>
             <div class="text-caption text-grey-6">Viewing full exam score record</div>
@@ -493,7 +450,7 @@
 
         <q-separator />
 
-        <q-card-section v-if="selectedScore" class="dialog-body q-pa-lg detail-scroll">
+        <q-card-section v-if="selectedScore" class="detail-scroll q-pa-lg">
           <!-- Applicant info -->
           <div class="section-label q-mb-md">
             <q-icon name="person" size="16px" class="q-mr-xs" />
@@ -502,31 +459,31 @@
 
           <div class="info-group q-mb-lg">
             <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">First Name</div>
                   <div class="info-value">{{ selectedScore.firstname || 'N/A' }}</div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Last Name</div>
                   <div class="info-value">{{ selectedScore.lastname || 'N/A' }}</div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Position Applied</div>
                   <div class="info-value">{{ selectedScore.position || 'N/A' }}</div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Applicant Type</div>
                   <div class="info-value">{{ selectedScore.applicant_type || 'N/A' }}</div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Control No</div>
                   <div class="info-value">{{ selectedScore.ControlNo || 'N/A' }}</div>
@@ -543,7 +500,7 @@
 
           <div class="info-group q-mb-lg">
             <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-3">
+              <div class="col-12 col-sm-6 col-md-3">
                 <div class="info-field">
                   <div class="info-label">Status</div>
                   <div class="info-value">
@@ -554,19 +511,19 @@
                   </div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Exam Type</div>
                   <div class="info-value">{{ selectedScore.exam_type || 'N/A' }}</div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Exam Date</div>
                   <div class="info-value">{{ selectedScore.exam_date || 'N/A' }}</div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Raw Score</div>
                   <div class="info-value">
@@ -578,7 +535,7 @@
                   </div>
                 </div>
               </div>
-              <div class="col-12 col-md-4">
+              <div class="col-12 col-sm-6 col-md-4">
                 <div class="info-field">
                   <div class="info-label">Total Score</div>
                   <div class="info-value">
@@ -603,7 +560,7 @@
 
         <q-separator />
 
-        <q-card-actions align="right" class="dialog-footer q-px-lg q-py-md">
+        <q-card-actions align="right" class="dialog-footer q-px-md q-py-sm">
           <q-btn flat label="Close" color="grey-7" v-close-popup />
         </q-card-actions>
       </q-card>
@@ -624,7 +581,6 @@
 
     data() {
       return {
-        // table
         globalSearch: '',
         pagination: {
           sortBy: 'lastname',
@@ -635,22 +591,21 @@
         },
         searchTimeout: null,
 
-        // filters (main table)
         mainPositionFilter: null,
         mainPositionOptionsData: [],
-        dateFilterMode: 'specific',
-        specificDate: null,
-        dateRange: null,
 
-        // dialogs
         dialog: false,
         showDetailDialog: false,
         selectedScore: null,
 
-        // stepper
         step: 1,
 
-        // session
+        stepDefs: [
+          { title: 'Select Applicants', icon: 'person_add' },
+          { title: 'Encoding', icon: 'edit_note' },
+          { title: 'Review', icon: 'visibility' },
+        ],
+
         session: {
           exam_title: '',
           exam_type: null,
@@ -664,13 +619,17 @@
           { label: 'Interview', value: 'interview' },
         ],
 
-        // step 1 state
+        // With emit-value + map-options, selectedPosition is always a plain string (or null).
         selectedPosition: null,
         applicantSearch: '',
         selectedApplicants: [],
+
+        // Full de-duplicated position list loaded once when the dialog opens.
+        // Client-side filtering slices this — no extra round-trips needed.
+        allPositionOptions: [],
+        // The subset shown in the dropdown after the user types.
         positionOptionsData: [],
 
-        // modal step-1 pagination
         noScorePagination: {
           sortBy: null,
           descending: false,
@@ -680,8 +639,12 @@
         },
         noScoreSearchTimeout: null,
 
-        // score map
-        modalScores: new Map(),
+        // Committed scores — plain object so Vue tracks changes reactively.
+        // key: String(submission_id), value: number | null
+        modalScores: {},
+        // Draft values bound directly to the q-input fields via v-model.
+        // key: submission_id (number/string), value: number | null | ''
+        draftScores: {},
       };
     },
 
@@ -692,10 +655,8 @@
       loading() {
         return this.store.loading;
       },
-
-      dateRangeLabel() {
-        if (!this.dateRange || !this.dateRange.from || !this.dateRange.to) return '';
-        return `${this.dateRange.from} → ${this.dateRange.to}`;
+      isMobile() {
+        return this.$q.screen.lt.md;
       },
 
       columns() {
@@ -736,7 +697,7 @@
             field: 'exam_score',
             sortable: true,
           },
-          // { name: 'action', label: 'Action', align: 'center', field: 'action', sortable: false },
+          { name: 'action', label: 'Action', align: 'center', field: 'action', sortable: false },
         ];
       },
 
@@ -748,8 +709,6 @@
             align: 'left',
             field: 'lastname',
             sortable: true,
-            style: 'width: 13%',
-            headerStyle: 'width: 13%',
           },
           {
             name: 'firstname',
@@ -757,36 +716,16 @@
             align: 'left',
             field: 'firstname',
             sortable: true,
-            style: 'width: 13%',
-            headerStyle: 'width: 13%',
           },
-          {
-            name: 'position',
-            label: 'Position',
-            align: 'left',
-            field: 'position',
-            sortable: true,
-            style: 'width: 50%',
-            headerStyle: 'width: 50%',
-          },
+          { name: 'position', label: 'Position', align: 'left', field: 'position', sortable: true },
           {
             name: 'applicant_type',
             label: 'Type',
             align: 'left',
             field: 'applicant_type',
             sortable: true,
-            style: 'width: 10%',
-            headerStyle: 'width: 10%',
           },
-          {
-            name: 'status',
-            label: 'Status',
-            align: 'left',
-            field: 'status',
-            sortable: true,
-            style: 'width: 10%',
-            headerStyle: 'width: 10%',
-          },
+          { name: 'status', label: 'Status', align: 'left', field: 'status', sortable: true },
         ];
       },
 
@@ -832,45 +771,33 @@
         ];
       },
 
-      positionOptions() {
-        return this.positionOptionsData || [];
-      },
-
       mainPositionOptions() {
-        return this.mainPositionOptionsData || [];
+        return this.mainPositionOptionsData;
       },
 
       stepTitle() {
         return ['Select Applicants', 'Encoding', 'Review'][this.step - 1] || '';
       },
 
-      filteredNoScoreApplicants() {
-        return (this.store.noScoreApplicants || []).map((a) => {
-          const saved = this.modalScores.get(a.submission_id) || { raw_score: null };
-          return { ...a, _saved: { ...saved }, _draft: { raw_score: saved.raw_score } };
-        });
-      },
-
       encodedCount() {
-        let count = 0;
-        for (const applicant of this.selectedApplicants) {
-          const score = this.modalScores.get(applicant.submission_id);
-          if (score && score.raw_score !== null && score.raw_score !== undefined) count++;
-        }
-        return count;
+        return this.selectedApplicants.filter((a) => {
+          const score = this.modalScores[String(a.submission_id)];
+          return score !== null && score !== undefined && score !== '';
+        }).length;
       },
 
       reviewRows() {
         return this.selectedApplicants
           .map((a) => {
-            const s = this.modalScores.get(a.submission_id);
-            if (!s || (s.raw_score === null && s.raw_score === undefined)) return null;
+            const key = String(a.submission_id);
+            const raw = this.modalScores[key];
+            if (raw === null || raw === undefined || raw === '') return null;
             return {
               submission_id: a.submission_id,
               firstname: a.firstname,
               lastname: a.lastname,
               position: a.position,
-              raw_score: s.raw_score ?? null,
+              raw_score: Number(raw),
               total_items: Number(this.session.total_items) || 0,
             };
           })
@@ -886,15 +813,6 @@
       mainPositionFilter() {
         this.fetchScoresWithFilters();
       },
-      specificDate() {
-        if (this.dateFilterMode === 'specific') this.fetchScoresWithFilters();
-      },
-      dateRange: {
-        handler() {
-          if (this.dateFilterMode === 'range') this.fetchScoresWithFilters();
-        },
-        deep: true,
-      },
       'store.scores': {
         handler(newVal) {
           if (!Array.isArray(newVal)) return;
@@ -905,64 +823,19 @@
         },
         deep: true,
       },
-      'store.noScoreApplicants': {
-        handler(newVal) {
-          if (!Array.isArray(newVal)) return;
-          const positions = new Set(newVal.map((a) => a.position).filter(Boolean));
-          this.positionOptionsData = Array.from(positions)
-            .sort()
-            .map((p) => ({ label: p, value: p }));
-        },
-        deep: true,
-      },
       'store.noScorePagination': {
         handler(val) {
           if (!val) return;
           this.noScorePagination.page = val.currentPage || 1;
           this.noScorePagination.rowsPerPage = val.perPage || 10;
+          this.noScorePagination.rowsNumber = val.total || 0;
         },
         deep: true,
       },
     },
 
     methods: {
-      debouncedFetchScores() {
-        if (this.searchTimeout) clearTimeout(this.searchTimeout);
-        this.searchTimeout = setTimeout(() => {
-          this.fetchScoresWithFilters();
-        }, 400);
-      },
-
-      buildMainFilters() {
-        return {
-          page: this.pagination.page,
-          sortBy: this.pagination.sortBy,
-          descending: this.pagination.descending,
-          search: this.globalSearch || undefined,
-          position: this.mainPositionFilter?.value ?? this.mainPositionFilter ?? undefined,
-          exam_date:
-            this.dateFilterMode === 'specific' && this.specificDate ? this.specificDate : undefined,
-          exam_date_from:
-            this.dateFilterMode === 'range' && this.dateRange?.from
-              ? this.dateRange.from
-              : undefined,
-          exam_date_to:
-            this.dateFilterMode === 'range' && this.dateRange?.to ? this.dateRange.to : undefined,
-        };
-      },
-
-      fetchScoresWithFilters() {
-        this.pagination.page = 1;
-        const params = this.buildMainFilters();
-        this.store.fetchScores({ ...params, page: 1 }).then(() => {
-          this.pagination.rowsNumber = this.store.pagination.total;
-        });
-      },
-
-      clearDateRange() {
-        this.dateRange = null;
-        this.fetchScoresWithFilters();
-      },
+      // ── Utilities ────────────────────────────────────────────────────
 
       formatScore(value) {
         if (value === null || value === undefined) return 'N/A';
@@ -980,16 +853,58 @@
         return 'grey-7';
       },
 
+      // Returns a clean string suitable for sending as an API param.
+      // Guards against both plain strings and accidental { label, value } objects.
+      resolvePositionValue(pos) {
+        if (!pos) return undefined;
+        if (typeof pos === 'object' && pos !== null) return pos.value || undefined;
+        if (typeof pos === 'string' && pos.trim() !== '') return pos.trim();
+        return undefined;
+      },
+
+      // ── Main table ───────────────────────────────────────────────────
+
+      debouncedFetchScores() {
+        if (this.searchTimeout) clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => this.fetchScoresWithFilters(), 400);
+      },
+
+      buildMainFilters() {
+        return {
+          page: this.pagination.page,
+          sortBy: this.pagination.sortBy,
+          descending: this.pagination.descending,
+          search: this.globalSearch || undefined,
+          position: this.mainPositionFilter?.value ?? this.mainPositionFilter ?? undefined,
+        };
+      },
+
+      fetchScoresWithFilters() {
+        this.pagination.page = 1;
+        this.store.fetchScores({ ...this.buildMainFilters(), page: 1 }).then(() => {
+          this.pagination.rowsNumber = this.store.pagination.total;
+        });
+      },
+
       onRequest(props) {
         const { page, sortBy, descending } = props.pagination;
         this.pagination.page = page;
         this.pagination.sortBy = sortBy;
         this.pagination.descending = descending;
+        this.store
+          .fetchScores({ ...this.buildMainFilters(), page, sortBy, descending })
+          .then(() => {
+            this.pagination.rowsNumber = this.store.pagination.total;
+          });
+      },
 
-        const params = this.buildMainFilters();
-        this.store.fetchScores({ ...params, page, sortBy, descending }).then(() => {
-          this.pagination.rowsNumber = this.store.pagination.total;
-        });
+      // ── Modal table ──────────────────────────────────────────────────
+
+      buildModalFilters() {
+        return {
+          search: this.applicantSearch || undefined,
+          position: this.resolvePositionValue(this.selectedPosition),
+        };
       },
 
       onModalRequest(props) {
@@ -997,12 +912,7 @@
         this.noScorePagination.page = page;
         this.noScorePagination.rowsPerPage = rowsPerPage;
         this.store
-          .fetchNoScoreApplicants({
-            page,
-            perPage: rowsPerPage,
-            search: this.applicantSearch,
-            position: this.selectedPosition?.value ?? this.selectedPosition ?? undefined,
-          })
+          .fetchNoScoreApplicants({ page, perPage: rowsPerPage, ...this.buildModalFilters() })
           .then(() => {
             this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
           });
@@ -1016,8 +926,7 @@
             .fetchNoScoreApplicants({
               page: 1,
               perPage: this.noScorePagination.rowsPerPage,
-              search: this.applicantSearch,
-              position: this.selectedPosition?.value ?? this.selectedPosition ?? undefined,
+              ...this.buildModalFilters(),
             })
             .then(() => {
               this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
@@ -1025,12 +934,77 @@
         }, 400);
       },
 
+      // ── Position filter (modal) ──────────────────────────────────────
+
+      // Called by q-select's @filter event while the user is typing.
+      // Searches allPositionOptions client-side — no API call needed here.
+      filterPositions(val, update) {
+        const needle = (val || '').toLowerCase().trim();
+        update(() => {
+          this.positionOptionsData = needle
+            ? this.allPositionOptions.filter((o) => o.label.toLowerCase().includes(needle))
+            : [...this.allPositionOptions];
+        });
+      },
+
+      // Called by @update:model-value when the user selects an option.
+      // Because of emit-value, `val` is the raw string (e.g. "Engineer").
+      onPositionChange(val) {
+        this.noScorePagination.page = 1;
+        this.store
+          .fetchNoScoreApplicants({
+            page: 1,
+            perPage: this.noScorePagination.rowsPerPage,
+            search: this.applicantSearch || undefined,
+            position: this.resolvePositionValue(val),
+          })
+          .then(() => {
+            this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
+          });
+      },
+
+      // Called by @clear when the user clicks the × on the position select.
+      onPositionClear() {
+        this.selectedPosition = null;
+        this.positionOptionsData = [...this.allPositionOptions];
+        this.noScorePagination.page = 1;
+        this.store
+          .fetchNoScoreApplicants({
+            page: 1,
+            perPage: this.noScorePagination.rowsPerPage,
+            search: this.applicantSearch || undefined,
+          })
+          .then(() => {
+            this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
+          });
+      },
+
+      // Called by @clear on the applicant search input.
+      onApplicantSearchClear() {
+        this.applicantSearch = '';
+        this.noScorePagination.page = 1;
+        this.store
+          .fetchNoScoreApplicants({
+            page: 1,
+            perPage: this.noScorePagination.rowsPerPage,
+            position: this.resolvePositionValue(this.selectedPosition),
+          })
+          .then(() => {
+            this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
+          });
+      },
+
+      // ── View ─────────────────────────────────────────────────────────
+
       viewScore(row) {
         this.selectedScore = row;
         this.showDetailDialog = true;
       },
 
-      openAddDialog() {
+      // ── Open Add Dialog ──────────────────────────────────────────────
+
+      async openAddDialog() {
+        // Reset all dialog state
         this.session = {
           exam_title: '',
           exam_type: null,
@@ -1038,52 +1012,64 @@
           total_items: 50,
           remarks: '',
         };
-        this.modalScores = new Map();
+        this.modalScores = {};
+        this.draftScores = {};
         this.selectedPosition = null;
         this.applicantSearch = '';
         this.selectedApplicants = [];
+        this.allPositionOptions = [];
+        this.positionOptionsData = [];
         this.noScorePagination.page = 1;
         this.step = 1;
         this.dialog = true;
-        this.store.fetchNoScoreApplicants({ page: 1, perPage: 10 }).then(() => {
-          this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
-        });
-      },
 
-      filterPositions(val, update) {
-        update(() => {
-          const needle = (val || '').toLowerCase();
-          const applicants = this.store.noScoreApplicants || [];
-          const positions = new Set(applicants.map((a) => a.position).filter(Boolean));
-          this.positionOptionsData = Array.from(positions)
+        // Step 1 — build the full position list for the dropdown.
+        // Fetch a large page once so the dropdown has every position available
+        // without needing a separate endpoint.
+        try {
+          await this.store.fetchNoScoreApplicants({ page: 1, perPage: 9999 });
+          const positions = new Set(
+            (this.store.noScoreApplicants || []).map((a) => a.position).filter(Boolean),
+          );
+          const opts = Array.from(positions)
             .sort()
-            .filter((p) => p.toLowerCase().includes(needle))
             .map((p) => ({ label: p, value: p }));
-        });
-      },
+          this.allPositionOptions = opts;
+          this.positionOptionsData = [...opts];
+        } catch {
+          // Non-fatal — table still works, dropdown will be empty
+        }
 
-      onPositionChange() {
-        this.noScorePagination.page = 1;
-        this.store
-          .fetchNoScoreApplicants({
-            page: 1,
-            perPage: this.noScorePagination.rowsPerPage,
-            search: this.applicantSearch,
-            position: this.selectedPosition?.value ?? this.selectedPosition ?? undefined,
-          })
+        // Step 2 — fetch the normal paginated first page for the table display.
+        await this.store
+          .fetchNoScoreApplicants({ page: 1, perPage: this.noScorePagination.rowsPerPage })
           .then(() => {
             this.noScorePagination.rowsNumber = this.store.noScorePagination.total;
           });
       },
 
-      commitDraft(row) {
-        const raw = row._draft.raw_score;
-        if (raw === null || raw === '' || raw === undefined) {
-          this.modalScores.set(row.submission_id, { raw_score: null });
-          return;
+      // ── Score commit ─────────────────────────────────────────────────
+
+      // Fires on every keystroke so reviewRows stays in sync immediately.
+      commitScore(submissionId, val) {
+        const key = String(submissionId);
+        if (val === null || val === '' || val === undefined) {
+          this.modalScores[key] = null;
+        } else {
+          const num = Number(val);
+          this.modalScores[key] = Number.isFinite(num) ? num : null;
         }
-        this.modalScores.set(row.submission_id, { raw_score: Number(raw) });
+        // Spread to a new object so Vue's reactivity system detects the change.
+        this.modalScores = { ...this.modalScores };
       },
+
+      // Safety-net: fires on blur in case the input was filled by
+      // autocomplete or another mechanism that bypassed the input event.
+      commitScoreFromBlur(submissionId) {
+        this.commitScore(submissionId, this.draftScores[submissionId]);
+      },
+
+      // ── Step navigation ──────────────────────────────────────────────
 
       goToReview() {
         if (
@@ -1101,21 +1087,24 @@
         this.step = 3;
       },
 
-      async saveSession() {
-        const scores = Array.from(this.modalScores.entries()).filter(
-          ([, score]) => score.raw_score !== null && score.raw_score !== undefined,
-        );
+      // ── Save ─────────────────────────────────────────────────────────
 
-        if (scores.length === 0) {
+      async saveSession() {
+        const scoredApplicants = this.selectedApplicants.filter((a) => {
+          const raw = this.modalScores[String(a.submission_id)];
+          return raw !== null && raw !== undefined && raw !== '';
+        });
+
+        if (scoredApplicants.length === 0) {
           this.$q.notify({ type: 'negative', message: 'Please encode at least one score' });
           return;
         }
 
         try {
           const payload = {
-            applicants: scores.map(([submissionId, score]) => ({
-              submission_id: Number(submissionId),
-              exam_score: Number(score.raw_score),
+            applicants: scoredApplicants.map((a) => ({
+              submission_id: Number(a.submission_id),
+              exam_score: Number(this.modalScores[String(a.submission_id)]),
               exam_details: this.session.exam_title,
               exam_type: this.session.exam_type,
               exam_total_score: Number(this.session.total_items),
@@ -1125,10 +1114,10 @@
           };
 
           await this.store.saveScores(payload);
-
           this.$q.notify({ type: 'positive', message: 'All exam scores saved successfully' });
           this.dialog = false;
           await this.store.fetchScores({ page: 1 });
+          this.pagination.rowsNumber = this.store.pagination.total;
         } catch (error) {
           this.$q.notify({
             type: 'negative',
@@ -1147,27 +1136,63 @@
 </script>
 
 <style scoped>
+  .table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .score-dialog-card {
-    width: 100vw;
-    max-width: 1500px;
+    width: 90vw;
     height: 90vh;
+    max-width: 90vw;
     display: flex;
     flex-direction: column;
     border-radius: 0;
     overflow: hidden;
   }
 
+  .view-dialog-card {
+    width: 95vw;
+    max-width: 860px;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+  }
+
   .dialog-header-light {
     display: flex;
     align-items: center;
-    padding: 16px 20px;
+    padding: 12px 16px;
     background: #fff;
     flex-shrink: 0;
   }
 
-  .dialog-footer {
+  .stepper-tabs {
+    gap: 0;
     background: #fff;
     flex-shrink: 0;
+  }
+  .stepper-tab {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #9e9e9e;
+    letter-spacing: 0.04em;
+    border-bottom: 3px solid transparent;
+    transition:
+      color 0.2s,
+      border-color 0.2s;
+    white-space: nowrap;
+  }
+  .stepper-tab.active {
+    color: #1976d2;
+    border-bottom-color: #1976d2;
+  }
+  .stepper-tab.done {
+    color: #2e7d32;
   }
 
   .dialog-body {
@@ -1176,19 +1201,44 @@
     overflow-y: auto;
   }
 
-  .full-height-stepper {
-    height: 100%;
+  .dialog-footer {
+    background: #fff;
+    flex-shrink: 0;
   }
 
-  .left-panel {
-    width: 360px;
+  .step2-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .step2-left {
+    width: 340px;
+    min-width: 280px;
     flex-shrink: 0;
     overflow-y: auto;
   }
-  .right-panel {
+
+  .step2-right {
     flex: 1;
     overflow-y: auto;
     min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    .step2-layout {
+      flex-direction: column;
+    }
+    .step2-left {
+      width: 100%;
+      min-width: unset;
+      flex-shrink: unset;
+      overflow-y: visible;
+    }
+    .step2-right {
+      overflow-y: visible;
+    }
   }
 
   .section-label {
@@ -1225,21 +1275,7 @@
   }
 
   .detail-scroll {
+    flex: 1;
     overflow-y: auto;
-    max-height: 65vh;
-  }
-
-  :deep(.q-table__container) {
-    overflow-x: hidden !important;
-  }
-  :deep(.q-table) {
-    table-layout: fixed;
-    width: 100%;
-  }
-  :deep(.q-table th),
-  :deep(.q-table td) {
-    word-break: break-word;
-    white-space: normal !important;
-    overflow-wrap: break-word;
   }
 </style>

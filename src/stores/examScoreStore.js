@@ -54,5 +54,16 @@ export const useExamScoreStore = defineStore('examScore', {
         this.loading = false;
       }
     },
+
+    // FIX: accept payload and send it to the API
+    async saveScores(payload) {
+      this.loading = true;
+      try {
+        const response = await adminApi.post('/applicant/exam/score', payload);
+        return response.data;
+      } finally {
+        this.loading = false;
+      }
+    },
   },
 });

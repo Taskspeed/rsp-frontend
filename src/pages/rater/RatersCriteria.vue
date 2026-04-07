@@ -129,7 +129,7 @@
 
     <PrintRatedModal
       v-model="showPrintModal"
-      :position-id="selectedPosition.id"
+      :job-batches-rsp-id="selectedPosition.job_batches_rsp_id || selectedPosition.id"
       @close="handlePrintModalClose"
     />
   </div>

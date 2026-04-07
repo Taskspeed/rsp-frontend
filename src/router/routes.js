@@ -193,6 +193,12 @@ const routes = [
         component: () => import('pages/rater/RatersCriteria.vue'),
       },
       {
+        path: '/uApplicant', // Changed from '/uCriteria' to relative path
+        name: 'Raters Applicant',
+        meta: { auth: true, role: 'rater' },
+        component: () => import('pages/rater/ApplicantRaterPage.vue'),
+      },
+      {
         path: '/rater/settings', // Changed from '/rater/settings' to relative path
         name: 'rater Settings',
         component: () => import('../components/Rater/Settings.vue'),

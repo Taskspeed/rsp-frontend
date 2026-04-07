@@ -48,16 +48,15 @@
 
 <script setup>
   import { ref, watch, onUnmounted, computed } from 'vue';
-  import { use_rater_store } from 'stores/rater_store';
+  import { use_rating_form_store } from 'stores/ratingFormStore';
 
   const props = defineProps({
     modelValue: Boolean,
-    positionId: { type: [String, Number], required: true },
+    jobBatchesRspId: { type: [String, Number], required: true },
   });
 
   const emit = defineEmits(['update:modelValue', 'close']);
 
-  // ✅ two-way v-model proxy
   const isOpen = computed({
     get: () => props.modelValue,
     set: (val) => emit('update:modelValue', val),
@@ -65,23 +64,31 @@
 
   const pdfUrl = ref(null);
   const isLoading = ref(false);
-  const raterStore = use_rater_store();
-  const applicants = ref([]);
+  const ratingFormStore = use_rating_form_store();
 
-  const hasApplicants = computed(
-    () => Array.isArray(applicants.value) && applicants.value.length > 0,
-  );
-
+  const hasApplicants = computed(() => ratingFormStore.hasApplicants);
   const isFetching = ref(false);
+
+  const reportData = computed(() => ratingFormStore.data || {});
+  const office = computed(() => reportData.value.office || '');
+  const position = computed(() => reportData.value.position || '');
+  const salaryGrade = computed(() => reportData.value.salary_grade || '');
+  const plantillaItemNo = computed(() => reportData.value.item_no || '');
+
+  const signatoryName = computed(() => reportData.value?.rater_assigned?.name || '');
+  const signatoryPosition = computed(() => reportData.value?.rater_assigned?.position || '');
+  const signatoryRepresentative = computed(
+    () => reportData.value?.rater_assigned?.representative || '',
+  );
+  const signatoryRole = computed(() => reportData.value?.rater_assigned?.role_type || '');
 
   watch(
     () => props.modelValue,
     async (val, prev) => {
-      // only when opening
-      if (val && !prev && props.positionId && !isFetching.value) {
+      if (val && !prev && props.jobBatchesRspId && !isFetching.value) {
         isFetching.value = true;
         try {
-          await fetchApplicants();
+          await fetchReport();
           await generatePdfContent();
         } finally {
           isFetching.value = false;
@@ -95,14 +102,10 @@
     emit('close');
   };
 
-  async function fetchApplicants() {
-    applicants.value = [];
+  async function fetchReport() {
     isLoading.value = true;
     try {
-      const result = await raterStore.fetch_criteria_applicant(props.positionId);
-      if (result && Array.isArray(result.applicants)) {
-        applicants.value = result.applicants;
-      }
+      await ratingFormStore.fetchRatingForm(props.jobBatchesRspId);
     } catch {
       // handled by store
     } finally {
@@ -112,11 +115,10 @@
 
   const calculateQS = (applicant) => {
     if (!applicant) return '-';
-    const rating = applicant.rating_score || {};
-    const edu = parseFloat(rating.education_score) || 0;
-    const exp = parseFloat(rating.experience_score) || 0;
-    const train = parseFloat(rating.training_score) || 0;
-    const perf = parseFloat(rating.performance_score) || 0;
+    const edu = parseFloat(applicant.education) || 0;
+    const exp = parseFloat(applicant.experience) || 0;
+    const train = parseFloat(applicant.training) || 0;
+    const perf = parseFloat(applicant.performance) || 0;
     if (edu === 0 && exp === 0 && train === 0 && perf === 0) return '-';
     return (edu + exp + train + perf).toFixed(2);
   };
@@ -125,12 +127,10 @@
     if (!applicant) return '-';
     const qs = calculateQS(applicant);
     if (qs === '-') return '-';
-    const rating = applicant.rating_score || {};
-    const bei = parseFloat(rating.behavioral_score) || 0;
+    const bei = parseFloat(applicant.behavioral) || 0;
     return (parseFloat(qs) + bei).toFixed(2);
   };
 
-  // ✅ Helper to convert logo to base64
   async function getImageBase64(url) {
     try {
       const response = await fetch(url);
@@ -153,11 +153,11 @@
       pdfUrl.value = null;
     }
 
-    if (!Array.isArray(applicants.value) || !applicants.value.length) {
-      return;
-    }
+    const applicants = ratingFormStore.ratingScores;
+    if (!Array.isArray(applicants) || !applicants.length) return;
 
     isLoading.value = true;
+
     try {
       const logoBase64 = await getImageBase64('/logo.png');
 
@@ -167,53 +167,133 @@
       const vfsFontsModule = await import('pdfmake/build/vfs_fonts');
       pdfMake.vfs = vfsFontsModule?.pdfMake?.vfs || vfsFontsModule?.vfs || vfsFontsModule;
 
-      const rows = [
-        [
-          { text: 'Applicant', style: 'tableHeader', alignment: 'center' },
-          { text: 'Education', style: 'tableHeader', alignment: 'center' },
-          { text: 'Experience', style: 'tableHeader', alignment: 'center' },
-          { text: 'Training', style: 'tableHeader', alignment: 'center' },
-          { text: 'Performance', style: 'tableHeader', alignment: 'center' },
-          { text: 'BEI', style: 'tableHeader', alignment: 'center' },
-          { text: 'QS Total', style: 'tableHeader', alignment: 'center' },
-          { text: 'Grand Total', style: 'tableHeader', alignment: 'center' },
-          { text: 'Rank', style: 'tableHeader', alignment: 'center' },
-        ],
-        ...applicants.value.map((a) => {
-          const rating = a.rating_score || {};
-          return [
-            `${a.firstname ?? ''} ${a.lastname ?? ''}`.trim(),
-            rating.education_score ?? '',
-            rating.experience_score ?? '',
-            rating.training_score ?? '',
-            rating.performance_score ?? '',
-            rating.behavioral_score ?? '',
-            calculateQS(a),
-            calculateTotal(a),
-            rating.ranking ?? '',
-          ];
-        }),
+      const qs = reportData.value.qs || {};
+      const criteria = reportData.value.criteria || {};
+      const criteriaOrder = [
+        'education',
+        'experience',
+        'training',
+        'performance',
+        'behavioral',
+        'exams',
       ];
+
+      const criteriaColumns = criteriaOrder
+        .filter((key) => Array.isArray(criteria[key]) && criteria[key].length > 0)
+        .map((key) => {
+          const weight = criteria[key]?.[0]?.weight || '';
+          const label = key === 'exams' ? 'Exam' : key.charAt(0).toUpperCase() + key.slice(1);
+          return {
+            key: key === 'exams' ? 'exam' : key,
+            label,
+            weight,
+            qsText: qs[key] || '',
+            items: criteria[key],
+          };
+        });
+
+      const headerRow1 = [
+        {
+          text: 'Applicant',
+          style: 'tableHeader',
+          alignment: 'center',
+          colSpan: 2,
+          rowSpan: 3,
+          border: [true, true, true, true],
+        },
+        {},
+        ...criteriaColumns.map((c) => ({
+          text: `${c.label} (${c.weight}%)`,
+          style: 'tableHeader',
+          alignment: 'center',
+          border: [true, true, true, true],
+        })),
+        {
+          text: 'QS Total',
+          style: 'tableHeader',
+          alignment: 'center',
+          rowSpan: 3,
+          border: [true, true, true, true],
+        },
+        {
+          text: 'Grand Total',
+          style: 'tableHeader',
+          alignment: 'center',
+          rowSpan: 3,
+          border: [true, true, true, true],
+        },
+        {
+          text: 'Rank',
+          style: 'tableHeader',
+          alignment: 'center',
+          rowSpan: 3,
+          border: [true, true, true, true],
+        },
+      ];
+
+      const headerRow2 = [
+        {},
+        {},
+        ...criteriaColumns.map((c) => ({
+          text: c.qsText || '-',
+          fontSize: 8,
+          alignment: 'left',
+        })),
+        {},
+        {},
+        {},
+      ];
+
+      const headerRow3 = [
+        {},
+        {},
+        ...criteriaColumns.map((c) => ({
+          text: c.items.map((i) => `${i.percentage}% - ${i.description}`).join('\n'),
+          fontSize: 7,
+          alignment: 'left',
+        })),
+        {},
+        {},
+        {},
+      ];
+
+      const rows = [
+        headerRow1,
+        headerRow2,
+        headerRow3,
+        ...applicants.map((a, index) => [
+          { text: String(index + 1), alignment: 'center' },
+          `${a.firstname ?? ''} ${a.lastname ?? ''}`.trim(),
+          ...criteriaColumns.map((c) => a[c.key] ?? ''),
+          calculateQS(a),
+          calculateTotal(a),
+          a.ranking ?? '',
+        ]),
+      ];
+
+      const colWidths = [30, 140, ...criteriaColumns.map(() => '*'), 55, 55, 40];
 
       const docDefinition = {
         pageSize: 'LEGAL',
         pageOrientation: 'landscape',
-        pageMargins: [72, 120, 72, 40],
+        pageMargins: [72, 120, 72, 40], // left, top, right, bottom
         header: function () {
           return {
             stack: [
+              // Green banner (drawn first, so it's behind)
               {
                 canvas: [
                   {
                     type: 'rect',
-                    x: (1008 - 936) / 2,
+                    x: (1008 - 936) / 2, // Legal landscape width is 1008 points
                     y: 60,
-                    w: 936,
+                    w: 936, // Adjusted width for legal landscape
                     h: 25,
                     color: '#008000',
                   },
                 ],
               },
+
               {
                 margin: [72, -65, 72, 0],
                 columns: [
@@ -232,6 +312,7 @@
                           },
                         ],
                       },
+
                       ...(logoBase64
                         ? [
                             {
@@ -271,7 +352,7 @@
                       },
                       {
                         text: 'HUMAN RESOURCE MERIT PROMOTION AND SELECTION BOARD',
-                        fontSize: 13,
+                        fontSize: 12,
                         bold: true,
                         color: 'white',
                         margin: [0, 5, 0, 0],
@@ -285,25 +366,125 @@
         },
         content: [
           {
-            text: 'RATING FROM FOR QUALIFICATION STANDARDS',
-            fontSize: 14,
+            text: 'RATING FORM FOR QUALIFICATION STANDARDS',
+            fontSize: 12,
             bold: true,
-            margin: [0, 0, 0, 16],
+            margin: [0, -20, 0, 10],
             alignment: 'center',
           },
           {
             table: {
-              headerRows: 1,
-              widths: [120, 70, 70, 70, 70, 55, 60, 65, 45],
+              widths: ['15%', '85%'],
+              body: [
+                [
+                  { text: 'Office:   ', fontSize: 8, border: [false, false, false, false] },
+                  {
+                    text: office.value,
+                    fontSize: 8,
+                    bold: true,
+                    border: [false, false, false, false],
+                  },
+                ],
+                [
+                  { text: 'Position:   ', fontSize: 9, border: [false, false, false, false] },
+                  {
+                    text: position.value,
+                    fontSize: 8,
+                    bold: true,
+                    border: [false, false, false, false],
+                  },
+                ],
+                [
+                  { text: 'Salary Grade:  ', fontSize: 8, border: [false, false, false, false] },
+                  {
+                    text: salaryGrade.value,
+                    fontSize: 8,
+                    bold: true,
+                    border: [false, false, false, false],
+                  },
+                ],
+                [
+                  {
+                    text: 'Plantilla Item No.:    ',
+                    fontSize: 8,
+                    border: [false, false, false, false],
+                  },
+                  {
+                    text: plantillaItemNo.value,
+                    fontSize: 8,
+                    bold: true,
+                    border: [false, false, false, false],
+                  },
+                ],
+              ],
+            },
+            margin: [0, 0, 0, 0],
+          },
+          {
+            table: {
+              headerRows: 0,
+              widths: colWidths,
               body: rows,
             },
             layout: {
-              fillColor: (rowIndex) => (rowIndex === 0 ? '#e0e0e0' : null),
+              hLineWidth: () => 0.5,
+              vLineWidth: () => 0.5,
+              hLineColor: () => '#000',
+              vLineColor: () => '#000',
+              paddingLeft: () => 4,
+              paddingRight: () => 4,
+              paddingTop: () => 2,
+              paddingBottom: () => 2,
+              fillColor: () => null,
             },
           },
+
+          // Signatory (centered)
+          {
+            margin: [0, 20, 0, 0],
+            stack: [
+              {
+                text: signatoryName.value || '',
+                alignment: 'center',
+                // decoration: 'underline',
+                bold: true,
+                fontSize: 9,
+              },
+              {
+                canvas: [
+                  {
+                    type: 'line',
+                    x1: 345,
+                    y1: 0,
+                    x2: 520,
+                    y2: 0,
+                    lineWidth: 1,
+                  },
+                ],
+                margin: [0, 4, 0, 4],
+              },
+              {
+                text: signatoryPosition.value || '',
+                alignment: 'center',
+                fontSize: 8,
+              },
+              {
+                text: signatoryRepresentative.value || '',
+                alignment: 'center',
+                fontSize: 8,
+                margin: [0, 2, 0, 0],
+              },
+              {
+                text: signatoryRole.value || '',
+                alignment: 'center',
+                fontSize: 8,
+                margin: [0, 2, 0, 0],
+              },
+            ],
+          },
         ],
-        styles: { tableHeader: { fontSize: 10, bold: true } },
-        defaultStyle: { fontSize: 9 },
+        styles: { tableHeader: { fontSize: 8, bold: true } },
+        defaultStyle: { fontSize: 7 },
       };
 
       const blob = await new Promise((resolve) => {

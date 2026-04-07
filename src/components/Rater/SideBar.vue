@@ -86,6 +86,7 @@
   const menuItems = ref([
     { label: 'Dashboard', route: '/uRater', icon: 'dashboard' },
     { label: 'Criteria', route: '/uCriteria', icon: 'list' },
+    { label: 'Applicant', route: '/uApplicant', icon: 'person' },
   ]);
 
   onMounted(() => {

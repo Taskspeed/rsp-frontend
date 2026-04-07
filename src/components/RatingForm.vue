@@ -83,10 +83,17 @@
                   Performance
                   <span class="text-caption">{{ performanceMaxRate }}%</span>
                 </th>
-                <th style="width: 110px">
+
+                <th v-if="hasExam" style="width: 110px">
+                  Exam
+                  <span class="text-caption">{{ examMaxRate }}%</span>
+                </th>
+
+                <th v-if="hasBehavioral" style="width: 110px">
                   BEI
                   <span class="text-caption">{{ behavioralMaxRate }}%</span>
                 </th>
+
                 <th style="width: 80px" class="text-center">
                   QS Total
                   <div class="text-caption">({{ qsMaxRate }}%)</div>
@@ -145,7 +152,20 @@
                     - {{ item.description }}
                   </div>
                 </td>
-                <td>
+
+                <td v-if="hasExam">
+                  <div class="text-weight-bold text-caption q-mb-xs">EXAM CRITERIA:</div>
+                  <div
+                    v-for="(item, index) in exam.items"
+                    :key="'exam-' + index"
+                    class="text-caption q-mb-xs criteria-item"
+                  >
+                    <span class="criteria-percentage">{{ item.percentage || item.weight }}%</span>
+                    - {{ item.description }}
+                  </div>
+                </td>
+
+                <td v-if="hasBehavioral">
                   <div class="text-weight-bold text-caption q-mb-xs">BEI CRITERIA:</div>
                   <div
                     v-for="(item, index) in behavioral.items"
@@ -237,7 +257,20 @@
                     />
                   </td>
 
-                  <td style="width: 110px">
+                  <td v-if="hasExam" style="width: 110px">
+                    <q-input
+                      v-model="applicant.examScore"
+                      type="text"
+                      dense
+                      outlined
+                      class="score-input"
+                      placeholder="-"
+                      readonly
+                      @click.stop
+                    />
+                  </td>
+
+                  <td v-if="hasBehavioral" style="width: 110px">
                     <q-input
                       v-model="applicant.behavioralScore"
                       type="text"
@@ -264,7 +297,7 @@
 
                 <!-- Expandable Details -->
                 <tr v-if="expandedApplicant === applicant.id">
-                  <td colspan="9" class="applicant-details">
+                  <td :colspan="detailsColspan" class="applicant-details">
                     <div class="row q-col-gutter-sm q-py-sm">
                       <div class="col-12 q-mb-sm">
                         <q-btn
@@ -400,7 +433,6 @@
 
       <!-- Footer (Sticky) -->
       <q-card-section class="footer-section sticky-footer">
-        <!-- Progress indicator -->
         <div v-if="!allApplicantsRated" class="row items-center q-mb-sm">
           <q-icon name="info" color="info" class="q-mr-xs" />
           <span class="text-caption text-info">
@@ -423,7 +455,6 @@
     </q-card>
   </q-dialog>
 
-  <!-- Use existing QS Modal Component -->
   <QualificationStandardModal
     v-model:show="showQSModal"
     :applicant-data="selectedApplicantForQS"
@@ -438,84 +469,67 @@
 
   const $q = useQuasar();
 
-  // Props
   const props = defineProps({
     modelValue: Boolean,
-    position: {
-      type: Object,
-      default: () => ({}),
-    },
-    criteria: {
-      type: Object,
-      default: () => ({}),
-    },
-    rawCriteria: {
-      type: Object,
-      default: () => null,
-    },
-    applicants: {
-      type: Array,
-      default: () => [],
-    },
+    position: { type: Object, default: () => ({}) },
+    criteria: { type: Object, default: () => ({}) },
+    rawCriteria: { type: Object, default: () => null },
+    applicants: { type: Array, default: () => [] },
     loading: Boolean,
   });
 
-  // Emits
   const emit = defineEmits(['close', 'update:modelValue', 'submit-ratings', 'save-draft']);
 
-  // Computed
   const isOpen = computed({
     get: () => props.modelValue,
     set: (value) => emit('update:modelValue', value),
   });
 
-  // Get PositionID from raw criteria
   const positionID = computed(() => {
     if (props.rawCriteria && props.rawCriteria.job_batch) {
       return props.rawCriteria.job_batch.PositionID;
     }
-    // Fallback to position data
     return props.position.tblStructureDetails_ID || null;
   });
 
-  // Transform criteria structure to include items array
   const education = computed(() => {
     const edu = props.criteria.education || {};
-    return {
-      Rate: edu.Rate || '20',
-      items: edu.items || [],
-    };
+    return { Rate: edu.Rate || '20', items: edu.items || [] };
   });
 
   const experience = computed(() => {
     const exp = props.criteria.experience || {};
-    return {
-      Rate: exp.Rate || '20',
-      items: exp.items || [],
-    };
+    return { Rate: exp.Rate || '20', items: exp.items || [] };
   });
 
   const training = computed(() => {
     const train = props.criteria.training || {};
-    return {
-      Rate: train.Rate || '15',
-      items: train.items || [],
-    };
+    return { Rate: train.Rate || '15', items: train.items || [] };
   });
 
   const performance = computed(() => {
     const perf = props.criteria.performance || {};
-    return {
-      Rate: perf.Rate || '15',
-      items: perf.items || [],
-    };
+    return { Rate: perf.Rate || '15', items: perf.items || [] };
   });
 
   const behavioral = computed(() => {
     const beh = props.criteria.behavioral || {};
+    return { Rate: beh.Rate || '0', items: beh.items || [] };
+  });
+
+  const exam = computed(() => {
+    const ex = props.rawCriteria?.exams || props.criteria?.exams || props.criteria?.exam || [];
+
+    if (Array.isArray(ex)) {
+      return {
+        Rate: ex[0]?.weight || ex[0]?.percentage || '0',
+        items: ex,
+      };
+    }
+
     return {
-      Rate: beh.Rate || '30',
-      items: beh.items || [],
+      Rate: ex?.Rate || ex?.weight || ex?.percentage || '0',
+      items: ex?.items || [],
     };
   });
 
@@ -524,35 +538,60 @@
   const trainingMaxRate = computed(() => parseFloat(training.value.Rate));
   const performanceMaxRate = computed(() => parseFloat(performance.value.Rate));
   const behavioralMaxRate = computed(() => parseFloat(behavioral.value.Rate));
+  const examMaxRate = computed(() => parseFloat(exam.value.Rate));
+
+  const hasBehavioral = computed(
+    () => behavioral.value.items.length > 0 && behavioralMaxRate.value > 0,
+  );
+  const hasExam = computed(() => exam.value.items.length > 0 && examMaxRate.value > 0);
 
   const qsMaxRate = computed(
     () =>
       educationMaxRate.value +
       experienceMaxRate.value +
       trainingMaxRate.value +
-      performanceMaxRate.value,
+      performanceMaxRate.value +
+      (hasExam.value ? examMaxRate.value : 0),
   );
 
-  const totalMaxRate = computed(() => qsMaxRate.value + behavioralMaxRate.value);
+  const totalMaxRate = computed(
+    () => qsMaxRate.value + (hasBehavioral.value ? behavioralMaxRate.value : 0),
+  );
 
-  // Helper function to check if a value is empty or just '-'
-  const isEmpty = (value) => {
-    return !value || value === '' || value === '-';
-  };
+  const detailsColspan = computed(
+    () => 1 + 4 + (hasExam.value ? 1 : 0) + (hasBehavioral.value ? 1 : 0) + 3,
+  );
 
-  // Helper function to format number
+  const isEmpty = (value) => !value || value === '' || value === '-';
+
   const formatNumber = (num) => {
     const number = parseFloat(num);
     if (isNaN(number)) return num;
-
-    if (number % 1 === 0) {
-      return String(Math.round(number));
-    } else {
-      return number.toFixed(2);
-    }
+    return number % 1 === 0 ? String(Math.round(number)) : number.toFixed(2);
   };
 
-  // Check if all applicants have been rated
+  const getExamRatio = (applicant) => {
+    if (!hasExam.value) return null;
+    const examScore = parseFloat(
+      applicant?.applicant_exam_score?.exam_score ?? applicant?.exam_score,
+    );
+    const examTotal = parseFloat(applicant?.applicant_exam_score?.exam_total_score);
+    if (isNaN(examScore) || isNaN(examTotal) || examTotal <= 0) return null;
+    return examScore / examTotal;
+  };
+
+  const getExamScore = (applicant) => {
+    const ratio = getExamRatio(applicant);
+    if (ratio === null) return null;
+    return ratio * examMaxRate.value;
+  };
+
+  const getExamPercentage = (applicant) => {
+    const ratio = getExamRatio(applicant);
+    if (ratio === null) return null;
+    return ratio * 100;
+  };
+
   const allApplicantsRated = computed(() => {
     if (!applicantsData.value || applicantsData.value.length === 0) {
       return false;
@@ -565,7 +604,9 @@
         isValidScore(applicant.trainingScore, false) &&
         isValidScore(applicant.performanceScore, false);
 
-      const behavioralValid = isValidScore(applicant.behavioralScore, true);
+      const behavioralValid = hasBehavioral.value
+        ? isValidScore(applicant.behavioralScore, true)
+        : true;
 
       return requiredFieldsValid && behavioralValid;
     });
@@ -583,7 +624,9 @@
         isValidScore(applicant.trainingScore, false) &&
         isValidScore(applicant.performanceScore, false);
 
-      const behavioralValid = isValidScore(applicant.behavioralScore, true);
+      const behavioralValid = hasBehavioral.value
+        ? isValidScore(applicant.behavioralScore, true)
+        : true;
 
       return requiredFieldsValid && behavioralValid;
     }).length;
@@ -598,14 +641,12 @@
     return !isNaN(numScore) && numScore >= 0;
   };
 
-  // State
   const expandedApplicant = ref(null);
   const filterText = ref('');
   const sortBy = ref({ label: 'Name', value: 'name' });
   const sortOrder = ref('asc');
   const applicantsData = ref([]);
 
-  // QS Modal State
   const showQSModal = ref(false);
   const selectedApplicantForQS = ref(null);
 
@@ -615,7 +656,8 @@
     { label: 'Experience Score', value: 'experienceScore' },
     { label: 'Training Score', value: 'trainingScore' },
     { label: 'Performance Score', value: 'performanceScore' },
-    { label: 'BEI Score', value: 'behavioralScore' },
+    ...(hasExam.value ? [{ label: 'Exam Score', value: 'examScore' }] : []),
+    ...(hasBehavioral.value ? [{ label: 'BEI Score', value: 'behavioralScore' }] : []),
     { label: 'Total QS', value: 'qsTotal' },
     { label: 'Grand Total', value: 'grandTotal' },
     { label: 'Ranking', value: 'ranking' },
@@ -663,11 +705,12 @@
     return result;
   });
 
-  // Methods
   const initializeApplicants = () => {
     if (props.applicants?.length > 0) {
       applicantsData.value = props.applicants.map((applicant) => {
         const draftScore = applicant.draft_score || {};
+        const computedExamScore = getExamScore(applicant);
+
         return {
           ...applicant,
           educationScore:
@@ -704,6 +747,10 @@
             draftScore.behavioral_score !== 0 &&
             draftScore.behavioral_score !== '-'
               ? formatNumber(draftScore.behavioral_score)
+              : '',
+          examScore:
+            computedExamScore !== null && computedExamScore !== undefined
+              ? formatNumber(computedExamScore)
               : '',
           name: `${applicant.firstname} ${applicant.lastname}`,
           ranking: draftScore.ranking || null,
@@ -742,16 +789,19 @@
       ? 0
       : parseFloat(applicant.performanceScore) || 0;
 
-    if (
+    const examScoreCalc = hasExam.value ? (getExamScore(applicant) ?? 0) : 0;
+
+    const noEditableScores =
       isEmpty(applicant.educationScore) &&
       isEmpty(applicant.experienceScore) &&
       isEmpty(applicant.trainingScore) &&
-      isEmpty(applicant.performanceScore)
-    ) {
+      isEmpty(applicant.performanceScore);
+
+    if (noEditableScores && (!hasExam.value || examScoreCalc === 0)) {
       return '-';
     }
 
-    const qsScore = eduScore + expScore + trainingScore + perfScore;
+    const qsScore = eduScore + expScore + trainingScore + perfScore + examScoreCalc;
     const result = Math.min(qsScore, qsMaxRate.value);
     return formatNumber(result);
   };
@@ -766,9 +816,11 @@
     }
 
     const qsScoreNum = parseFloat(qsScore);
-    const beiScore = isEmpty(applicant.behavioralScore)
-      ? 0
-      : parseFloat(applicant.behavioralScore) || 0;
+    const beiScore = hasBehavioral.value
+      ? isEmpty(applicant.behavioralScore)
+        ? 0
+        : parseFloat(applicant.behavioralScore) || 0
+      : 0;
 
     const result = Math.min(qsScoreNum + beiScore, totalMaxRate.value);
     return formatNumber(result);
@@ -790,10 +842,7 @@
     sortedApplicants.forEach((applicant, index) => {
       const totalScore = calculateTotal(applicant);
       if (!scoreMap[totalScore]) {
-        scoreMap[totalScore] = {
-          firstPosition: index,
-          count: 0,
-        };
+        scoreMap[totalScore] = { firstPosition: index, count: 0 };
       }
       scoreMap[totalScore].count++;
     });
@@ -885,7 +934,6 @@
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();
@@ -894,17 +942,11 @@
     }
   };
 
-  // QS Modal Methods
   const openQSModal = async (applicant) => {
     try {
-      console.log('Opening QS Modal');
-      console.log('Position ID:', positionID.value);
-      console.log('Applicant:', applicant);
-
-      // Prepare applicant data for the QS modal
       selectedApplicantForQS.value = {
-        submission_id: applicant.id, // This is the application/submission ID
-        PositionID: positionID.value, // Get from computed property
+        submission_id: applicant.id,
+        PositionID: positionID.value,
         name: `${applicant.firstname} ${applicant.lastname}`,
         firstname: applicant.firstname,
         lastname: applicant.lastname,
@@ -912,24 +954,16 @@
         office: props.position.office,
         appliedDate: formatDate(applicant.created_at),
         status: applicant.status || 'PENDING',
-
-        // Pass the PDS data directly from the applicant object
         education: applicant.education || [],
         work_experience: applicant.work_experience || [],
         training: applicant.training || [],
         eligibity: applicant.eligibity || [],
         eligibility: applicant.eligibity || [],
-
-        // Additional fields
         nPersonalInfo_id: applicant.nPersonalInfo_id,
         ControlNo: applicant.ControlNo,
       };
-
-      console.log('Selected Applicant for QS:', selectedApplicantForQS.value);
-
       showQSModal.value = true;
-    } catch (error) {
-      console.error('Error opening QS modal:', error);
+    } catch {
       $q.notify({
         color: 'negative',
         message: 'Failed to open qualification standards',
@@ -944,6 +978,8 @@
     const formattedData = applicantsData.value.map((applicant) => {
       const qsScore = calculateQS(applicant);
       const totalScore = calculateTotal(applicant);
+      const examScore = getExamScore(applicant);
+      const examPercentage = getExamPercentage(applicant);
 
       return {
         id: applicant.id,
@@ -957,19 +993,18 @@
         performance_score: isEmpty(applicant.performanceScore)
           ? '-'
           : Number(applicant.performanceScore),
-        behavioral_score: isEmpty(applicant.behavioralScore)
-          ? '-'
-          : Number(applicant.behavioralScore),
+        behavioral_score: hasBehavioral.value
+          ? isEmpty(applicant.behavioralScore)
+            ? '-'
+            : Number(applicant.behavioralScore)
+          : '-',
+        exam_score: examScore === null ? '-' : Number(examScore),
+        exam_percentage: examPercentage === null ? '-' : Number(formatNumber(examPercentage)),
         total_qs: qsScore === '-' ? 0 : Number(qsScore),
         grand_total: totalScore === '-' ? 0 : Number(totalScore),
         ranking: applicant.ranking || null,
       };
     });
-
-    console.log(
-      'Saving draft ratings with formatted data:',
-      JSON.stringify(formattedData, null, 2),
-    );
 
     emit('save-draft', {
       positionId: props.position.id,
@@ -1001,6 +1036,8 @@
     const formattedData = applicantsData.value.map((applicant) => {
       const qsScore = parseFloat(calculateQS(applicant));
       const totalScore = parseFloat(calculateTotal(applicant));
+      const examScore = getExamScore(applicant);
+      const examPercentage = getExamPercentage(applicant);
 
       return {
         id: applicant.id,
@@ -1010,16 +1047,18 @@
         experience_score: Number(applicant.experienceScore),
         training_score: Number(applicant.trainingScore),
         performance_score: Number(applicant.performanceScore),
-        behavioral_score: isEmpty(applicant.behavioralScore)
-          ? '-'
-          : Number(applicant.behavioralScore),
+        behavioral_score: hasBehavioral.value
+          ? isEmpty(applicant.behavioralScore)
+            ? '-'
+            : Number(applicant.behavioralScore)
+          : '-',
+        exam_score: examScore === null ? '-' : Number(examScore),
+        exam_percentage: examPercentage === null ? '-' : Number(formatNumber(examPercentage)),
         total_qs: Number(qsScore),
         grand_total: Number(totalScore),
         ranking: applicant.ranking || null,
       };
     });
-
-    console.log('Submitting ratings with formatted data:', JSON.stringify(formattedData, null, 2));
 
     emit('submit-ratings', {
       positionId: props.position.id,
@@ -1041,7 +1080,6 @@
     isOpen.value = false;
   };
 
-  // Watchers
   watch(
     () => props.applicants,
     () => initializeApplicants(),

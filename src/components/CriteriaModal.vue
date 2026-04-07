@@ -1279,12 +1279,19 @@
             const converted = convertApiCriteriaToModalFormat(existingResponse);
             editableCriteria.value = converted;
 
-            // Detect which optional sections exist in the saved data
+            // ----------------------------------------------------------------
+            // FIX: detect optional sections using both plural and singular keys
+            // ----------------------------------------------------------------
             const hasBei =
               existingResponse.behavioral?.length > 0 ||
               existingResponse.Behavioral?.length > 0 ||
-              existingResponse.bei?.length > 0;
-            const hasExam = existingResponse.exam?.length > 0 || existingResponse.Exam?.length > 0;
+              existingResponse.bei?.length > 0 ||
+              existingResponse.BEI?.length > 0;
+
+            const hasExam =
+              existingResponse.exams?.length > 0 || // <-- plural (actual API key)
+              existingResponse.exam?.length > 0 ||
+              existingResponse.Exam?.length > 0;
 
             optionalSections.value.bei = !!hasBei;
             optionalSections.value.exam = !!hasExam;
@@ -1384,9 +1391,10 @@
       }
     });
 
-    // BEI
+    // BEI — check all possible key variants
     let beiSection =
       apiCriteria.behavioral || apiCriteria.Behavioral || apiCriteria.bei || apiCriteria.BEI;
+
     if (beiSection && Array.isArray(beiSection) && beiSection.length > 0) {
       const firstItem = beiSection[0];
       result.bei.weight = parseInt(firstItem.weight || 0);
@@ -1398,8 +1406,12 @@
       }));
     }
 
-    // Exam
-    let examSection = apiCriteria.exam || apiCriteria.Exam;
+    // Exam — FIX: also check plural "exams" key returned by the API
+    let examSection =
+      apiCriteria.exams || // <-- plural (actual API key)
+      apiCriteria.exam ||
+      apiCriteria.Exam;
+
     if (examSection && Array.isArray(examSection) && examSection.length > 0) {
       const firstItem = examSection[0];
       result.exam.weight = parseInt(firstItem.weight || 0);

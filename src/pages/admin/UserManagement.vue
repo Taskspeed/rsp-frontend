@@ -15,119 +15,122 @@
       </div>
 
       <!-- User List -->
-      <q-table
-        :rows="authStore.users"
-        :columns="columns"
-        row-key="id"
-        :filter="filter"
-        v-bind="pagination"
-        :loading="authStore.loadUser"
-      >
-        <template #top-left>
-          <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
-            <template #append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
-        </template>
+      <div class="table-scroll-wrapper">
+        <q-table
+          :rows="authStore.users"
+          :columns="columns"
+          row-key="id"
+          :filter="filter"
+          v-bind="pagination"
+          :loading="authStore.loadUser"
+        >
+          <template #top-left>
+            <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
+              <template #append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </template>
 
-        <template #top-right>
-          <q-btn
-            rounded
-            color="primary"
-            label="Add New User"
-            icon="person_add"
-            @click="openAddDialog()"
-          />
-        </template>
-
-        <!-- Active status -->
-        <template #body-cell-active="props">
-          <q-td :props="props">
-            <q-badge rounded :color="props.row.active ? 'positive' : 'negative'">
-              {{ props.row.active ? 'Active' : 'Inactive' }}
-            </q-badge>
-          </q-td>
-        </template>
-
-        <!-- created_at -->
-        <template #body-cell-created_at="props">
-          <q-td :props="props" style="width: 230px; white-space: normal">
-            <q-badge rounded class="bg-blue" outline>
-              {{
-                new Date(props.value).toLocaleString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                })
-              }}
-            </q-badge>
-          </q-td>
-        </template>
-
-        <!-- updated_at -->
-        <template #body-cell-updated_at="props">
-          <q-td :props="props" style="width: 230px; white-space: normal">
-            <q-badge rounded class="bg-teal" outline>
-              {{
-                new Date(props.value).toLocaleString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true,
-                })
-              }}
-            </q-badge>
-          </q-td>
-        </template>
-
-        <!-- Actions -->
-        <template #body-cell-actions="props">
-          <q-td :props="props">
+          <template #top-right>
             <q-btn
-              v-if="authStore.user && props.row.id !== authStore.user.id"
-              flat
-              round
-              dense
-              color="orange"
-              class="bg-orange-2"
-              icon="edit"
-              @click="openEditDialog(props.row.id)"
-            >
-              <q-tooltip>Edit User</q-tooltip>
-            </q-btn>
-
-            <ButtonResetPassword
-              v-if="authStore.user && props.row.id !== authStore.user.id"
-              :user-id="props.row.id"
-            />
-
-            <ButtonDelete
-              v-if="authStore.user && props.row.id !== authStore.user.id"
-              :user-id="props.row.id"
-            />
-
-            <q-badge
-              v-if="authStore.user && props.row.id === authStore.user.id"
               rounded
-              color="blue"
-            >
-              You
-            </q-badge>
-          </q-td>
-        </template>
-      </q-table>
+              color="primary"
+              label="Add"
+              icon="person_add"
+              @click="openAddDialog()"
+              class="add-user-btn"
+            />
+          </template>
+
+          <!-- Active status -->
+          <template #body-cell-active="props">
+            <q-td :props="props">
+              <q-badge rounded :color="props.row.active ? 'positive' : 'negative'">
+                {{ props.row.active ? 'Active' : 'Inactive' }}
+              </q-badge>
+            </q-td>
+          </template>
+
+          <!-- created_at -->
+          <template #body-cell-created_at="props">
+            <q-td :props="props" style="width: 230px; white-space: normal">
+              <q-badge rounded class="bg-blue" outline>
+                {{
+                  new Date(props.value).toLocaleString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                  })
+                }}
+              </q-badge>
+            </q-td>
+          </template>
+
+          <!-- updated_at -->
+          <template #body-cell-updated_at="props">
+            <q-td :props="props" style="width: 230px; white-space: normal">
+              <q-badge rounded class="bg-teal" outline>
+                {{
+                  new Date(props.value).toLocaleString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                  })
+                }}
+              </q-badge>
+            </q-td>
+          </template>
+
+          <!-- Actions -->
+          <template #body-cell-actions="props">
+            <q-td :props="props">
+              <q-btn
+                v-if="authStore.user && props.row.id !== authStore.user.id"
+                flat
+                round
+                dense
+                color="orange"
+                class="bg-orange-2"
+                icon="edit"
+                @click="openEditDialog(props.row.id)"
+              >
+                <q-tooltip>Edit User</q-tooltip>
+              </q-btn>
+
+              <ButtonResetPassword
+                v-if="authStore.user && props.row.id !== authStore.user.id"
+                :user-id="props.row.id"
+              />
+
+              <ButtonDelete
+                v-if="authStore.user && props.row.id !== authStore.user.id"
+                :user-id="props.row.id"
+              />
+
+              <q-badge
+                v-if="authStore.user && props.row.id === authStore.user.id"
+                rounded
+                color="blue"
+              >
+                You
+              </q-badge>
+            </q-td>
+          </template>
+        </q-table>
+      </div>
     </div>
 
     <!-- ================================================================ -->
     <!-- Add / Edit User Dialog                                           -->
     <!-- ================================================================ -->
-    <q-dialog v-model="dialog" persistent maximized-mobile>
+    <q-dialog v-model="dialog" persistent :maximized="$q.screen.lt.sm">
       <q-card class="user-dialog-card">
         <!-- Header -->
         <q-card-section class="dialog-header" :class="isEditing ? 'header-edit' : 'header-add'">
@@ -156,7 +159,7 @@
         <!-- Body -->
         <q-card-section class="dialog-body q-pa-none">
           <q-form @submit="isEditing ? (confirmUpdateDialog = true) : submitForm()">
-            <div class="row no-wrap full-height">
+            <div class="dialog-panels">
               <!-- ── Left Panel: User Information ── -->
               <div class="left-panel q-pa-lg">
                 <div class="section-label q-mb-md">
@@ -233,7 +236,7 @@
                 </div>
               </div>
 
-              <q-separator vertical />
+              <q-separator :vertical="!$q.screen.lt.md" />
 
               <!-- ── Right Panel: Permissions ── -->
               <div class="right-panel q-pa-lg">
@@ -471,7 +474,7 @@
 
     <!-- Update Confirmation Dialog -->
     <q-dialog v-model="confirmUpdateDialog" persistent>
-      <q-card style="min-width: 340px">
+      <q-card style="min-width: 300px; max-width: 95vw">
         <q-card-section class="row items-center">
           <q-avatar icon="info" color="blue" text-color="white" />
           <span class="q-ml-sm">Are you sure you want to update this user?</span>
@@ -536,7 +539,6 @@
         { name: 'actions', align: 'center', label: 'Actions', field: 'actions', sortable: false },
       ];
 
-      // Single source of truth for default permissions
       const defaultPermissions = () => ({
         viewDashboardstat: '0',
         viewPlantillaAccess: '0',
@@ -656,13 +658,34 @@
 </script>
 
 <style scoped>
+  /* ── Table wrapper: horizontal scroll on small screens ── */
+  .table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── "Add New User" button: hide label on xs screens ── */
+  @media (max-width: 479px) {
+    .add-user-btn :deep(.q-btn__content span) {
+      display: none;
+    }
+  }
+
   /* ── Dialog Card ── */
   .user-dialog-card {
-    width: 90vw;
-    max-width: 860px;
+    width: 95vw;
+    max-width: 900px;
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    max-height: 95vh;
+  }
+
+  @media (min-width: 600px) {
+    .user-dialog-card {
+      width: 90vw;
+      max-height: 90vh;
+    }
   }
 
   /* ── Header ── */
@@ -693,22 +716,46 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    min-height: 0;
   }
   .dialog-body .q-form {
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0;
   }
-  .dialog-body .row.no-wrap {
+
+  /* ── Panels container: row on desktop, column on mobile ── */
+  .dialog-panels {
+    display: flex;
+    flex-direction: row;
     flex: 1;
     overflow: hidden;
+    min-height: 0;
+  }
+
+  @media (max-width: 767px) {
+    .dialog-panels {
+      flex-direction: column;
+      overflow-y: auto;
+    }
   }
 
   /* ── Left Panel ── */
   .left-panel {
-    width: 340px;
+    width: 320px;
+    min-width: 280px;
     flex-shrink: 0;
     overflow-y: auto;
+  }
+
+  @media (max-width: 767px) {
+    .left-panel {
+      width: 100%;
+      min-width: unset;
+      overflow-y: visible;
+      flex-shrink: unset;
+    }
   }
 
   /* ── Right Panel ── */
@@ -720,10 +767,24 @@
     min-width: 0;
   }
 
+  @media (max-width: 767px) {
+    .right-panel {
+      overflow: visible;
+      flex: unset;
+    }
+  }
+
   .permissions-scroll {
     flex: 1;
     overflow-y: auto;
     padding-right: 4px;
+  }
+
+  @media (max-width: 767px) {
+    .permissions-scroll {
+      overflow-y: visible;
+      flex: unset;
+    }
   }
 
   /* ── Section Labels ── */
@@ -781,6 +842,13 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0;
+  }
+
+  /* Collapse two-col to single column on very small screens */
+  @media (max-width: 479px) {
+    .perm-row.two-col {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* ── Footer ── */
