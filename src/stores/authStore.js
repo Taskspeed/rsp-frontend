@@ -70,10 +70,13 @@ export const useAuthStore = defineStore('auth', {
         const formattedData = {
           office: userData.Office,
           active: userData.active,
+          role_type: userData.role,
+          representative: userData.representative,
         };
 
         if (Array.isArray(userData.job_batches_rsp_id) && userData.job_batches_rsp_id.length > 0) {
           formattedData.job_batches_rsp_id = userData.job_batches_rsp_id;
+
         }
 
         const response = await adminApi.post(`rater/edit/${id}`, formattedData, {
@@ -357,7 +360,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-  
+
     async get_all_raters() {
       this.loadUser = true;
 
@@ -385,6 +388,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async Rater_register(userData) {
+      
       this.loading = true;
       this.errors = {};
       try {

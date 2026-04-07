@@ -174,7 +174,7 @@
     <span class="text-negative">*</span>
   </div>
   <q-select
-    ref="positionSelect" 
+    ref="positionSelect"
     v-model="selectedPositions"
     multiple
     :options="positionsWithAllOption"
@@ -286,19 +286,10 @@
                   </q-item>
                 </template>
                        <template v-slot:after-options>
-          <div class="q-pa-sm">
-            <q-btn
-              label="Confirm"
-              color="primary"
-              unelevated
-              dense
-              class="full-width"
-              @click.stop="closePositionSelect"
-            />
-          </div>
-        </template>
-              </q-select>
-            </div>
+
+            </template>
+                  </q-select>
+                </div>
 
             <!-- Representation (Add Mode) -->
             <div class="q-mb-md">
@@ -441,6 +432,7 @@
               </div>
               <q-input
                 v-model="representative"
+
                 label="Enter representation"
                 outlined
                 dense
@@ -733,6 +725,7 @@
   const isEditMode = ref(false);
   const currentRaterId = ref(null);
   const currentRaterName = ref('');
+
   const currentRaterOffice = ref('');
   const currentOfficeRaters = ref([]);
 
@@ -1121,7 +1114,9 @@ const cancelPositionSelect = () => {
   // ==================== EDIT RATER ====================
 
   const editRater = async (rater) => {
+      // console.log('rater data:', rater); // ← check what fields exist
     try {
+
       isEditMode.value = true;
       currentRaterId.value = rater.id;
       currentRaterName.value = rater.name;
@@ -1129,7 +1124,7 @@ const cancelPositionSelect = () => {
 
       // FIX: check both 'representative' and 'representation' from API response
       representative.value = rater.representative || rater.representation || '';
-      selectedRole.value = rater.role || null;
+      selectedRole.value =  rater.role_type || '';
 
       if (
         !offices.value.length &&

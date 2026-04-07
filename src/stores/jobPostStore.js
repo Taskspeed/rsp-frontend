@@ -261,30 +261,30 @@ export const useJobPostStore = defineStore('jobPost', {
     //   }
     // },
 
-async fetch_applicant_rating(id, { page = 1, perPage = 10, search = '' } = {}) {
-  this.loading = true;
-  try {
-    const { data } = await adminApi.get(`/rater/show/${id}`, {
-      params: { page, per_page: perPage, search },
-    });
+      async fetch_applicant_rating(id, { page = 1, perPage = 10, search = '' } = {}) {
+        this.loading = true;
+        try {
+          const { data } = await adminApi.get(`/rater/show/${id}`, {
+            params: { page, per_page: perPage, search },
+          });
 
-    this.applicant_rating = {
-      applicants: data.data || [],          // rows array
-      total_assigned: data.total_assigned,
-      total_completed: data.total_completed,
-    };
-    this.ratingMeta = data.meta || {};      // { current_page, per_page, total, last_page }
+          this.applicant_rating = {
+            applicants: data.data || [],          // rows array
+            total_assigned: data.total_assigned,
+            total_completed: data.total_completed,
+          };
+          this.ratingMeta = data.meta || {};      // { current_page, per_page, total, last_page }
 
-    this.error = null;
-    return data;
-  } catch (error) {
-    this.error = error;
-    toast.error('Failed to fetch applicant ratings.');
-    throw error;
-  } finally {
-    this.loading = false;
-  }
-},
+          this.error = null;
+          return data;
+        } catch (error) {
+          this.error = error;
+          toast.error('Failed to fetch applicant ratings.');
+          throw error;
+        } finally {
+          this.loading = false;
+        }
+      },
 
     async fetch_applicant_score(id) {
       this.loading = true;

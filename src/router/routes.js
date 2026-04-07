@@ -102,12 +102,6 @@ const routes = [
         meta: { auth: true, role: 'admin' },
       },
       {
-        path: '/dashboard/status/:title/:name',
-        name: 'Dashboard Status',
-        component: () => import('pages/admin/Dashboard/StatusPageView.vue'),
-        meta: { auth: true, role: 'admin' },
-      },
-      {
         path: '/job-post/view/:id',
         name: 'JobPost View',
         component: () => import('pages/admin/job_post/ViewJobDetails.vue'),
