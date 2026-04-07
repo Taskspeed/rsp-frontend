@@ -8,6 +8,7 @@ export const useJobPostStore = defineStore('jobPost', {
     jobPosts: [],
     applicant: [],
     applicant_rating: [],
+     jobPostListEdit: [],  // ✅ move it here, outside applicantMeta
     jobPostsrater: [],
     applicantScores: null,
     previousApplicants: [],
@@ -31,7 +32,6 @@ export const useJobPostStore = defineStore('jobPost', {
     unqualified_applicants: 0,
     current_page: 1,
     last_page: 1,
-
   },
 
   }),
@@ -214,36 +214,36 @@ export const useJobPostStore = defineStore('jobPost', {
     //   }
     // },
 
-  async fetch_applicant(id, { page = 1, perPage = 10, search = '' } = {}) {
-    this.loading = true;
-    try {
-      const { data } = await adminApi.get(`/job-batches-rsp/applicant/view/${id}`, {
-        params: {
-          page: perPage === 'all' ? 1 : page,
-          per_page: perPage,
-          search,
-        },
-      });
+      async fetch_applicant(id, { page = 1, perPage = 10, search = '' } = {}) {
+        this.loading = true;
+        try {
+          const { data } = await adminApi.get(`/job-batches-rsp/applicant/view/${id}`, {
+            params: {
+              page: perPage === 'all' ? 1 : page,
+              per_page: perPage,
+              search,
+            },
+          });
 
-    this.applicant = data.applicants?.data ?? [];
-    this.applicantMeta = {
-      total_applicants: data.total_applicants ?? 0,
-      internal_applicants: data.internal_applicants ?? 0,
-      external_applicants: data.external_applicants ?? 0,
-      assessed: data.assessed ?? '0/0',
-      qualified_applicants: data.qualified_applicants ?? 0,
-      unqualified_applicants: data.unqualified_applicants ?? 0,
-      current_page: data.applicants?.current_page ?? 1,
-      last_page: data.applicants?.last_page ?? 1,
-    };
-    this.error = null;
-  } catch (error) {
-    this.error = error;
-    toast.error('Failed to fetch applicants.');
-  } finally {
-    this.loading = false;
-  }
-},
+        this.applicant = data.applicants?.data ?? [];
+        this.applicantMeta = {
+          total_applicants: data.total_applicants ?? 0,
+          internal_applicants: data.internal_applicants ?? 0,
+          external_applicants: data.external_applicants ?? 0,
+          assessed: data.assessed ?? '0/0',
+          qualified_applicants: data.qualified_applicants ?? 0,
+          unqualified_applicants: data.unqualified_applicants ?? 0,
+          current_page: data.applicants?.current_page ?? 1,
+          last_page: data.applicants?.last_page ?? 1,
+        };
+        this.error = null;
+      } catch (error) {
+        this.error = error;
+        toast.error('Failed to fetch applicants.');
+      } finally {
+        this.loading = false;
+      }
+    },
 
     // async fetch_applicant_rating(id) {
     //   this.loading = true;
@@ -379,6 +379,20 @@ export const useJobPostStore = defineStore('jobPost', {
       try {
         const { data } = await adminApi.get('/rater/job/list');
         this.jobPosts = data;
+        this.error = null;
+      } catch (err) {
+        this.error = err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+
+     async fetchJobPostListEdit(raterId) {
+      this.loading = true;
+      try {
+          const { data } = await adminApi.get(`rater/job-post-list/${raterId}`);
+        this.jobPostListEdit = data.data;
         this.error = null;
       } catch (err) {
         this.error = err;

@@ -1039,11 +1039,23 @@ const cancelPositionSelect = () => {
     selectedRole.value = null;
   };
 
+  // const closeModal = () => {
+  //   showModal.value = false;
+  //   resetForm();
+  //   isEditMode.value = false;
+  // };
+
   const closeModal = () => {
     showModal.value = false;
     resetForm();
     isEditMode.value = false;
-  };
+
+    // ✅ Restore full positions list from jobPosts
+    positions.value = jobPostStore.jobPosts.map((post) => ({
+        id: post.id,
+        name: post.Position,
+    }));
+};
 
   const showAddModal = () => {
     isEditMode.value = false;
@@ -1113,63 +1125,101 @@ const cancelPositionSelect = () => {
 
   // ==================== EDIT RATER ====================
 
-  const editRater = async (rater) => {
-      // console.log('rater data:', rater); // ← check what fields exist
+  // const editRater = async (rater) => {
+  //     // console.log('rater data:', rater); // ← check what fields exist
+  //   try {
+
+  //     isEditMode.value = true;
+  //     currentRaterId.value = rater.id;
+  //     currentRaterName.value = rater.name;
+  //     activeStatus.value = !!rater.active;
+
+  //     // FIX: check both 'representative' and 'representation' from API response
+  //     representative.value = rater.representative || rater.representation || '';
+  //     selectedRole.value =  rater.role_type || '';
+
+  //     if (
+  //       !offices.value.length &&
+  //       Array.isArray(plantillaStore.office) &&
+  //       plantillaStore.office.length
+  //     ) {
+  //       const names = Array.from(
+  //         new Set(
+  //           plantillaStore.office
+  //             .map((row) =>
+  //               typeof row === 'string' ? row.id : row?.Office || row?.office || row?.name,
+  //             )
+  //             .filter(Boolean),
+  //         ),
+  //       );
+  //       offices.value = names.map((n) => ({ label: n, value: n }));
+  //     }
+
+  //     selectedOffice.value = rater.office || '';
+
+  //     if (selectedOffice.value) {
+  //       await fetchEmployeesByOffice(selectedOffice.value);
+  //       currentOfficeRaters.value = officeRatersRaw.value;
+  //     }
+
+
+  //     selectedPositions.value = [];
+
+  //     const jobBatchesArray = Array.isArray(rater.job_batches_rsp) ? rater.job_batches_rsp : [];
+
+  //     const matchedIds = [];
+  //     jobBatchesArray.forEach((jobBatch) => {
+  //       const id = jobBatch.id;
+  //       if (id && !matchedIds.includes(id)) {
+  //         matchedIds.push(id);
+  //       }
+  //     });
+
+  //     selectedPositions.value = matchedIds;
+  //     showModal.value = true;
+  //   } catch (error) {
+  //     console.error('Error setting up edit mode:', error);
+  //     toast.error('Failed to prepare edit form');
+  //   }
+  // };
+const editRater = async (rater) => {
+      console.log('Store object:', jobPostStore);
+    console.log('Available keys:', Object.keys(jobPostStore));
     try {
+        isEditMode.value = true;
+        currentRaterId.value = rater.id;
+        currentRaterName.value = rater.name;
+        activeStatus.value = !!rater.active;
+        representative.value = rater.representative || rater.representation || '';
+        selectedRole.value = rater.role_type || rater.role || '';
+        selectedOffice.value = rater.office || '';
 
-      isEditMode.value = true;
-      currentRaterId.value = rater.id;
-      currentRaterName.value = rater.name;
-      activeStatus.value = !!rater.active;
-
-      // FIX: check both 'representative' and 'representation' from API response
-      representative.value = rater.representative || rater.representation || '';
-      selectedRole.value =  rater.role_type || '';
-
-      if (
-        !offices.value.length &&
-        Array.isArray(plantillaStore.office) &&
-        plantillaStore.office.length
-      ) {
-        const names = Array.from(
-          new Set(
-            plantillaStore.office
-              .map((row) =>
-                typeof row === 'string' ? row.id : row?.Office || row?.office || row?.name,
-              )
-              .filter(Boolean),
-          ),
-        );
-        offices.value = names.map((n) => ({ label: n, value: n }));
-      }
-
-      selectedOffice.value = rater.office || '';
-
-      if (selectedOffice.value) {
-        await fetchEmployeesByOffice(selectedOffice.value);
-        currentOfficeRaters.value = officeRatersRaw.value;
-      }
-
-      selectedPositions.value = [];
-
-      const jobBatchesArray = Array.isArray(rater.job_batches_rsp) ? rater.job_batches_rsp : [];
-
-      const matchedIds = [];
-      jobBatchesArray.forEach((jobBatch) => {
-        const id = jobBatch.id;
-        if (id && !matchedIds.includes(id)) {
-          matchedIds.push(id);
+        if (selectedOffice.value) {
+            await fetchEmployeesByOffice(selectedOffice.value);
+            currentOfficeRaters.value = officeRatersRaw.value;
         }
-      });
 
-      selectedPositions.value = matchedIds;
-      showModal.value = true;
+        // ✅ Fetch job post list filtered for this rater
+        await jobPostStore.fetchJobPostListEdit(rater.id);
+
+        // ✅ Replace positions with the fetched list
+        positions.value = jobPostStore.jobPostListEdit.map((post) => ({
+            id: post.id,
+            name: post.Position,
+        }));
+
+        // ✅ Pre-select jobs already assigned to this rater
+        const jobBatchesArray = Array.isArray(rater.job_batches_rsp) ? rater.job_batches_rsp : [];
+        selectedPositions.value = jobBatchesArray
+            .map((job) => job.id)
+            .filter(Boolean);
+
+        showModal.value = true;
     } catch (error) {
-      console.error('Error setting up edit mode:', error);
-      toast.error('Failed to prepare edit form');
+        console.error('Error setting up edit mode:', error);
+        toast.error('Failed to prepare edit form');
     }
-  };
-
+};
   // ==================== UPDATE RATER ====================
 
   const updateRater = async () => {
