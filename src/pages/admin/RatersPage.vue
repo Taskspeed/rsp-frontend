@@ -373,24 +373,7 @@
                   <q-icon name="business" />
                 </template>
                       <template v-slot:after-options>
-                <div class="q-pa-sm row q-gutter-sm">
-                  <q-btn
-                    label="Cancel"
-                    color="negative"
-                    outlined
-                    dense
-                    class="col"
-                    @click.stop="cancelPositionSelect"
-                  />
-                  <q-btn
-                    label="Confirm"
-                    color="primary"
-                    unelevated
-                    dense
-                    class="col"
-                    @click.stop="closePositionSelect"
-                  />
-                </div>
+           
               </template>
               </q-select>
             </div>
