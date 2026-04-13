@@ -1358,7 +1358,7 @@
         },
       }).onOk(async () => {
         try {
-          await examStore.cancelInterview(scheduleId);
+          await interviewStore.cancelInterview(scheduleId);
           $q.notify({
             type: 'positive',
             message: 'Interview schedule cancelled successfully.',
@@ -1383,7 +1383,7 @@
       });
     };
 
- 
+
 
 
      // ─── Cancel Interview ─────────────────────────────────────────────────────────
