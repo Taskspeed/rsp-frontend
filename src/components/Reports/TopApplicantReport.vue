@@ -613,7 +613,7 @@
                       alignment: 'center',
                     },
                     {
-                      text: reportData.value.Date || '',
+                      text: reportData.value.Date?.toUpperCase() || '',
                       fontSize: 13,
                       bold: true,
                       alignment: 'center',
@@ -734,11 +734,11 @@
                           alignment: 'left',
                         },
                         {
-                          text: 'CITY HUMAN RESOURCE MANAGEMENT OFFICE',
-                          fontSize: 13,
+                          text: 'HUMAN RESOURCE MERIT PROMOTION AND SELECTION BOARD',
+                          fontSize: 11,
                           bold: true,
                           color: 'white',
-                          margin: [0, 5, 0, 0],
+                          margin: [0, 7, 0, 0],
                         },
                       ],
                     },

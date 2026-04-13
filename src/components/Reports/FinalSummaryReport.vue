@@ -15,7 +15,7 @@
         <q-spinner color="primary" size="32px" />
         <div>Loading report...</div>
       </div>
-      <!-- ✅ Error state - Show error message instead of PDF -->
+
       <div
         v-else-if="errorMessage"
         class="column items-center justify-center text-grey q-gutter-sm"
@@ -28,7 +28,6 @@
         </div>
       </div>
 
-      <!-- Generating PDF state -->
       <div
         v-else-if="!pdfUrl && !isLoading && !errorMessage"
         class="column items-center justify-center text-grey q-gutter-sm"
@@ -37,7 +36,7 @@
         <q-spinner color="primary" size="32px" />
         <div>Generating PDF preview...</div>
       </div>
-      <!-- PDF Viewer -->
+
       <iframe
         v-if="pdfUrl"
         :src="pdfUrl"
@@ -63,13 +62,11 @@
   const isLoading = ref(false);
   const summaryReportStore = useSummaryReportStore();
   const allReportsData = ref([]);
-  const errorMessage = ref(null); // ✅ Add this to store error message
+  const errorMessage = ref(null);
 
-  // Watch for changes in positions and regenerate report
   watch(
     () => props.positions,
     async (newVal, oldVal) => {
-      // Skip if positions haven't actually changed
       if (JSON.stringify(newVal) === JSON.stringify(oldVal)) return;
 
       if (newVal && newVal.length) {
@@ -79,57 +76,27 @@
     },
   );
 
-  // async function fetchApplicantDetail() {
-  //   // Prevent duplicate calls
-  //   if (isLoading.value) return;
-
-  //   allReportsData.value = [];
-  //   isLoading.value = true;
-
-  //   try {
-  //     // Fetch all applicants in parallel instead of sequentially
-  //     const promises = props.positions.map((positionId) =>
-  //       summaryReportStore.fetchApplicantDetail(positionId)
-  //     );
-
-  //     const results = await Promise.all(promises);
-
-  //     // Filter out any null/undefined results
-  //     allReportsData.value = results.filter((data) => data);
-  //   } catch (error) {
-  //     console.error("Error fetching applicants:", error);
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // }
-
   async function fetchApplicantDetail() {
-    // Prevent duplicate calls
     if (isLoading.value) return;
 
     allReportsData.value = [];
-    errorMessage.value = null; // ✅ Reset error message
+    errorMessage.value = null;
     isLoading.value = true;
 
     try {
-      // Fetch all applicants in parallel instead of sequentially
       const promises = props.positions.map((positionId) =>
         summaryReportStore.fetchApplicantDetail(positionId),
       );
 
       const results = await Promise.all(promises);
-
-      // ✅ Filter out null results and check for errors
       const validResults = results.filter((data) => data !== null);
 
-      // ✅ If all results are null, show error
       if (validResults.length === 0) {
         errorMessage.value = "Applicants don't have ratings yet";
         allReportsData.value = [];
         return;
       }
 
-      // ✅ If some results are null, show partial error
       if (validResults.length < results.length) {
         errorMessage.value = `Some positions don't have ratings yet (${validResults.length} of ${results.length} positions have ratings)`;
         allReportsData.value = [];
@@ -145,7 +112,6 @@
     }
   }
 
-  // Helper function to convert image to base64
   async function getImageBase64(url) {
     try {
       const response = await fetch(url);
@@ -162,28 +128,82 @@
     }
   }
 
-  // Function to get max number of raters for a single report
+  function formatNumber(value) {
+    if (value === null || value === undefined || value === '') return '-';
+    const num = parseFloat(value);
+    if (Number.isNaN(num)) return value;
+    return Number.isInteger(num) ? num.toString() : num.toFixed(2);
+  }
+
+  function getLastNameUpper(fullName = '') {
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    const last = parts.length ? parts[parts.length - 1] : fullName;
+    return last.toUpperCase();
+  }
+
+  function hasBehavioralCriteria(reportData) {
+    const criteria = reportData?.criteria || reportData?.jobPost?.criteria || [];
+    if (!Array.isArray(criteria)) return false;
+
+    return criteria.some((c) => {
+      if (Array.isArray(c.behaviorals) && c.behaviorals.length > 0) return true;
+      if (Array.isArray(c.behavioral) && c.behavioral.length > 0) return true;
+
+      const label = `${c.title || ''} ${c.description || ''}`.toLowerCase();
+      return label.includes('behavioral') || label.includes('bei');
+    });
+  }
+
+  function hasExamCriteria(reportData) {
+    const criteria = reportData?.criteria || reportData?.jobPost?.criteria || [];
+    if (!Array.isArray(criteria)) return false;
+
+    return criteria.some((c) => Array.isArray(c.exams) && c.exams.length > 0);
+  }
+
+  // Normalize applicants from API response
+  function getApplicants(reportData) {
+    if (Array.isArray(reportData?.applicants)) return reportData.applicants;
+
+    if (reportData?.data && typeof reportData.data === 'object') {
+      return Object.values(reportData.data).map((item) => ({
+        applicant: {
+          firstname: item.firstname,
+          lastname: item.lastname,
+        },
+        score: item.rater_scores,
+        total_rating: item.total_rating,
+        bei: item.bei,
+        exam_score: item.exam_score,
+        final_rating: item.final_rating,
+        grand_total: item.grand_total,
+        rank: item.rank,
+      }));
+    }
+
+    return [];
+  }
+
   function getMaxRatersCount(reportData) {
-    if (!reportData?.applicants) return 0;
+    const applicants = getApplicants(reportData);
+    if (!applicants.length) return 0;
 
     let maxRaters = 0;
-    reportData.applicants.forEach((item) => {
+    applicants.forEach((item) => {
       const ratersCount = item.score?.length || 0;
-      if (ratersCount > maxRaters) {
-        maxRaters = ratersCount;
-      }
+      if (ratersCount > maxRaters) maxRaters = ratersCount;
     });
     return maxRaters;
   }
 
-  // Function to get unique raters for a single report
   function getAllRaters(reportData) {
-    if (!reportData?.applicants) return [];
+    const applicants = getApplicants(reportData);
+    if (!applicants.length) return [];
 
     const ratersMap = new Map();
 
-    reportData.applicants.forEach((item) => {
-      if (item.score && Array.isArray(item.score)) {
+    applicants.forEach((item) => {
+      if (Array.isArray(item.score)) {
         item.score.forEach((scoreItem) => {
           if (!ratersMap.has(scoreItem.rater_id)) {
             ratersMap.set(scoreItem.rater_id, {
@@ -199,80 +219,86 @@
     return Array.from(ratersMap.values());
   }
 
-  // Generate footer with signatories (max 3 per row)
-  function generateSignatoryFooter(allRaters) {
-    if (!allRaters || allRaters.length === 0) return [];
+  // ✅ Use raters array for signatories, with Chairperson last
+  function getSignatories(reportData) {
+    const raters = Array.isArray(reportData?.raters) ? reportData.raters : [];
+
+    const members = raters.filter((r) => (r.role_type || '').toLowerCase() !== 'chairperson');
+    const chairpersons = raters.filter((r) => (r.role_type || '').toLowerCase() === 'chairperson');
+
+    return [...members, ...chairpersons];
+  }
+
+  function generateSignatoryFooter(reportData) {
+    const signatories = getSignatories(reportData);
+    if (!signatories.length) return [];
 
     const MAX_PER_ROW = 3;
     const footerContent = [];
 
-    // Split raters into chunks of MAX_PER_ROW
-    for (let i = 0; i < allRaters.length; i += MAX_PER_ROW) {
-      const ratersInRow = allRaters.slice(i, i + MAX_PER_ROW);
+    for (let i = 0; i < signatories.length; i += MAX_PER_ROW) {
+      const rowItems = signatories.slice(i, i + MAX_PER_ROW);
 
-      // Create columns for this row
-      const signatoryColumns = ratersInRow.map((rater) => {
-        return {
-          width: '*',
-          stack: [
-            {
-              text: rater.name.toUpperCase(),
-              fontSize: 10,
-              bold: true,
-              alignment: 'center',
-              margin: [0, 0, 0, 2],
-            },
-            {
-              canvas: [
-                {
-                  type: 'line',
-                  x1: 0,
-                  y1: 0,
-                  x2: 120,
-                  y2: 0,
-                  lineWidth: 1,
-                },
-              ],
-              alignment: 'center',
-              margin: [0, 0, 0, 4],
-            },
-            {
-              text: rater.position || 'Position',
-              fontSize: 9,
-              alignment: 'center',
-              italics: true,
-            },
-          ],
-        };
-      });
+      const columns = rowItems.map((r) => ({
+        width: '*',
+        stack: [
+          {
+            text: (r.rater_name || '').toUpperCase(),
+            fontSize: 10,
+            bold: true,
+            alignment: 'center',
+            margin: [0, 0, 0, 2],
+          },
+          {
+            canvas: [{ type: 'line', x1: 0, y1: 0, x2: 120, y2: 0, lineWidth: 1 }],
+            alignment: 'center',
+            margin: [0, 0, 0, 4],
+          },
+          { text: r.position || 'Position', fontSize: 9, alignment: 'center', italics: true },
+          { text: r.representative || '', fontSize: 9, alignment: 'center', italics: true },
+          { text: r.role_type || '', fontSize: 9, alignment: 'center', italics: true },
+        ],
+      }));
 
-      // Add empty columns if this row has fewer than MAX_PER_ROW raters
-      while (signatoryColumns.length < MAX_PER_ROW) {
-        signatoryColumns.push({ width: '*', text: '' });
-      }
+      const missing = MAX_PER_ROW - columns.length;
+      const leftPads = Math.floor(missing / 2);
+      const rightPads = missing - leftPads;
 
-      // Add this row to footer content
+      const paddedColumns = [
+        ...Array.from({ length: leftPads }, () => ({ width: '*', text: '' })),
+        ...columns,
+        ...Array.from({ length: rightPads }, () => ({ width: '*', text: '' })),
+      ];
+
       footerContent.push({
-        columns: signatoryColumns,
+        unbreakable: true, // ✅ keep entire row together
+        columns: paddedColumns,
         columnGap: 30,
-        margin: i === 0 ? [0, 30, 0, 0] : [0, 20, 0, 0], // First row has more top margin
+        margin: i === 0 ? [0, 30, 0, 0] : [0, 20, 0, 0],
       });
     }
 
     return footerContent;
   }
 
-  // Generate table for single position
   function generatePositionTable(reportData) {
+    const applicants = getApplicants(reportData);
     const maxRaters = getMaxRatersCount(reportData);
     const allRaters = getAllRaters(reportData);
+    const showBEI = hasBehavioralCriteria(reportData);
+    const showExam = hasExamCriteria(reportData);
 
-    // Build header row with dynamic raters
     const headerRow = [
-      { text: 'NAME OF APPLICANT', style: 'tableHeader', alignment: 'center', rowSpan: 2 },
+      {
+        text: 'NAME OF APPLICANT',
+        style: 'tableHeader',
+        alignment: 'center',
+        colSpan: 2,
+        rowSpan: 2,
+      },
+      {},
     ];
 
-    // Add "HRM PSB MEMBER RATINGS" header spanning all rater columns
     if (maxRaters > 0) {
       headerRow.push({
         text: 'HRM PSB MEMBER RATINGS',
@@ -280,13 +306,9 @@
         alignment: 'center',
         colSpan: maxRaters,
       });
-      // Add empty cells for the colspan
-      for (let i = 1; i < maxRaters; i++) {
-        headerRow.push({});
-      }
+      for (let i = 1; i < maxRaters; i++) headerRow.push({});
     }
 
-    // Add new column headers
     headerRow.push({
       text: 'TOTAL RATING\n(70%)',
       style: 'tableHeader',
@@ -294,12 +316,23 @@
       rowSpan: 2,
     });
 
-    headerRow.push({
-      text: 'BEI\n(30%)',
-      style: 'tableHeader',
-      alignment: 'center',
-      rowSpan: 2,
-    });
+    if (showBEI) {
+      headerRow.push({
+        text: 'BEI\n(30%)',
+        style: 'tableHeader',
+        alignment: 'center',
+        rowSpan: 2,
+      });
+    }
+
+    if (showExam) {
+      headerRow.push({
+        text: 'EXAM',
+        style: 'tableHeader',
+        alignment: 'center',
+        rowSpan: 2,
+      });
+    }
 
     headerRow.push({
       text: 'FINAL RATING',
@@ -315,115 +348,107 @@
       rowSpan: 2,
     });
 
-    // Build second header row with individual rater names
-    const subHeaderRow = [{}]; // Empty for "Name of Applicant" (rowSpan from above)
+    const subHeaderRow = [{}, {}];
 
     allRaters.forEach((rater) => {
       subHeaderRow.push({
-        text: `${rater.name}`,
+        text: getLastNameUpper(rater.name),
         style: 'tableHeader',
         alignment: 'center',
         fontSize: 9,
       });
     });
 
-    // Empty cells for new columns (they have rowSpan from headerRow)
-    subHeaderRow.push({}); // TOTAL RATING (70%)
-    subHeaderRow.push({}); // BEI (30%)
-    subHeaderRow.push({}); // FINAL RATING
-    subHeaderRow.push({}); // RANKING
+    subHeaderRow.push({});
+    if (showBEI) subHeaderRow.push({});
+    if (showExam) subHeaderRow.push({});
+    subHeaderRow.push({});
+    subHeaderRow.push({});
 
-    // Build data rows with calculations
-    const dataRowsWithScores = reportData.applicants.map((item) => {
+    const dataRowsWithScores = applicants.map((item, idx) => {
       const row = [];
 
-      // Applicant name
+      row.push({ text: (idx + 1).toString(), alignment: 'center' });
+
       const fullName = `${item.applicant?.firstname || ''} ${
         item.applicant?.lastname || ''
       }`.trim();
       row.push({ text: fullName, alignment: 'left' });
 
-      // Create a map of rater scores for this applicant
       const scoresMap = new Map();
       let beiScore = 0;
+      let examScore = 0;
 
-      if (item.score && Array.isArray(item.score)) {
+      if (Array.isArray(item.score)) {
         item.score.forEach((scoreItem) => {
           scoresMap.set(scoreItem.rater_id, scoreItem.grand_total || scoreItem.total_qs || '');
-          // Get BEI score (assuming it's the same across raters, take the first one)
-          if (!beiScore && scoreItem.bei) {
-            beiScore = parseFloat(scoreItem.bei) || 0;
-          }
+          if (!beiScore && scoreItem.bei) beiScore = parseFloat(scoreItem.bei) || 0;
+          if (!examScore && scoreItem.exam_score) examScore = parseFloat(scoreItem.exam_score) || 0;
         });
       }
 
-      // Add scores in order of raters
       allRaters.forEach((rater) => {
-        const score = scoresMap.get(rater.id) || '-';
-        row.push({ text: score, alignment: 'center' });
+        const score = scoresMap.get(rater.id);
+        row.push({ text: formatNumber(score), alignment: 'center' });
       });
 
-      // Calculate average rating from all raters
-      const scores = Array.from(scoresMap.values()).filter((s) => s !== '');
+      const scores = Array.from(scoresMap.values()).filter((s) => s !== '' && s !== '-');
       const averageRating =
         scores.length > 0
           ? scores.reduce((sum, score) => sum + parseFloat(score), 0) / scores.length
           : 0;
 
-      // TOTAL RATING (70%) = Average Rating * 0.70
-      const totalRating70 = (averageRating * 0.7).toFixed(2);
-      row.push({ text: totalRating70, alignment: 'center', bold: true });
+      const totalRating70 = averageRating * 0.7;
+      row.push({ text: formatNumber(totalRating70), alignment: 'center', bold: true });
 
-      const bei30 = beiScore.toFixed(2);
-      row.push({ text: bei30, alignment: 'center', bold: true });
+      let finalRating = totalRating70;
 
-      // FINAL RATING = TOTAL RATING (70%) + BEI (30%)
-      const finalRating = (parseFloat(totalRating70) + parseFloat(bei30)).toFixed(2);
-      row.push({ text: finalRating, alignment: 'center', bold: true });
+      if (showBEI) {
+        row.push({ text: formatNumber(beiScore), alignment: 'center', bold: true });
+        finalRating += beiScore;
+      }
 
-      // Ranking placeholder (will be filled after sorting)
+      if (showExam) {
+        row.push({ text: formatNumber(examScore), alignment: 'center', bold: true });
+        finalRating += examScore;
+      }
+
+      row.push({ text: formatNumber(finalRating), alignment: 'center', bold: true });
+
       row.push({ text: '', alignment: 'center', bold: true });
 
       return {
         row,
-        finalRating: parseFloat(finalRating),
+        finalRating: finalRating,
       };
     });
 
-    // Sort by final rating (descending) and assign rankings
     dataRowsWithScores.sort((a, b) => b.finalRating - a.finalRating);
     dataRowsWithScores.forEach((item, index) => {
-      // Set ranking (last column)
       item.row[item.row.length - 1].text = (index + 1).toString();
     });
 
-    // Extract just the rows
     const dataRows = dataRowsWithScores.map((item) => item.row);
-
-    // Combine all rows
     const rows = [headerRow, subHeaderRow, ...dataRows];
 
-    // Calculate column widths dynamically
     const raterColumnWidth = maxRaters > 0 ? 50 : 0;
-    const widths = ['*']; // Name column takes remaining space
-    for (let i = 0; i < maxRaters; i++) {
-      widths.push(raterColumnWidth);
-    }
-    widths.push(65); // TOTAL RATING (70%)
-    widths.push(55); // BEI (30%)
-    widths.push(65); // FINAL RATING
-    widths.push(50); // RANKING
+    const widths = [30, '*'];
+    for (let i = 0; i < maxRaters; i++) widths.push(raterColumnWidth);
+    widths.push(65);
+    if (showBEI) widths.push(55);
+    if (showExam) widths.push(55);
+    widths.push(65);
+    widths.push(50);
 
-    // Get position data from jobPost
-    const jobPost = reportData.jobPost || {};
-    const office = jobPost.Office || 'N/A';
-    const position = jobPost.Position || 'N/A';
-    const salaryGrade = jobPost.SalaryGrade || 'N/A';
-    const plantillaItemNo = jobPost['Plantilla Item No'] || 'N/A';
+    const jobPost = reportData.jobPost || reportData || {};
+    const office = jobPost.Office || reportData.office || 'N/A';
+    const position = jobPost.Position || reportData.position || 'N/A';
+    const salaryGrade = jobPost.SalaryGrade || reportData.Salary_Grade || 'N/A';
+    const plantillaItemNo = jobPost['Plantilla Item No'] || reportData.Plantilla_Item_No || 'N/A';
 
     return [
       {
-        text: 'FINAL SUMMARY OF RATING',
+        text: 'SUMMARY OF RATING',
         fontSize: 12,
         bold: true,
         margin: [0, 0, 0, 2],
@@ -436,47 +461,20 @@
         margin: [0, 0, 0, 16],
         alignment: 'center',
       },
-
-      // Borderless table for Office, Position, Salary Grade, Plantilla Item No
       {
         table: {
           widths: ['15%', '85%'],
           body: [
             [
-              {
-                text: 'Office:   ',
-                fontSize: 10,
-                bold: false,
-                border: [false, false, false, false],
-              },
-              {
-                text: office,
-                fontSize: 10,
-                bold: true,
-                border: [false, false, false, false],
-              },
+              { text: 'Office:   ', fontSize: 10, border: [false, false, false, false] },
+              { text: office, fontSize: 10, bold: true, border: [false, false, false, false] },
             ],
             [
-              {
-                text: 'Position:   ',
-                fontSize: 10,
-                bold: false,
-                border: [false, false, false, false],
-              },
-              {
-                text: position,
-                fontSize: 10,
-                bold: true,
-                border: [false, false, false, false],
-              },
+              { text: 'Position:   ', fontSize: 10, border: [false, false, false, false] },
+              { text: position, fontSize: 10, bold: true, border: [false, false, false, false] },
             ],
             [
-              {
-                text: 'Salary Grade:  ',
-                fontSize: 10,
-                bold: false,
-                border: [false, false, false, false],
-              },
+              { text: 'Salary Grade:  ', fontSize: 10, border: [false, false, false, false] },
               {
                 text: salaryGrade,
                 fontSize: 10,
@@ -488,7 +486,6 @@
               {
                 text: 'Plantilla Item No.:    ',
                 fontSize: 10,
-                bold: false,
                 border: [false, false, false, false],
               },
               {
@@ -502,8 +499,6 @@
         },
         margin: [0, 0, 0, 16],
       },
-
-      // Main applicants table
       {
         table: {
           headerRows: 2,
@@ -516,14 +511,11 @@
           },
         },
       },
-
-      // Add signatory footer
-      ...generateSignatoryFooter(allRaters),
+      ...generateSignatoryFooter(reportData),
     ];
   }
 
   async function generatePdfContent() {
-    // Revoke previous PDF URL to free memory
     if (pdfUrl.value) {
       URL.revokeObjectURL(pdfUrl.value);
       pdfUrl.value = null;
@@ -533,7 +525,6 @@
       return;
     }
 
-    // Load logo image
     const logoBase64 = await getImageBase64('/logo.png');
 
     import('pdfmake/build/pdfmake').then((pdfMakeModule) => {
@@ -541,16 +532,12 @@
       import('pdfmake/build/vfs_fonts').then((vfsFontsModule) => {
         pdfMake.vfs = vfsFontsModule?.pdfMake?.vfs || vfsFontsModule?.vfs || vfsFontsModule;
 
-        // Generate content for all positions
         const allContent = [];
 
         allReportsData.value.forEach((reportData, index) => {
           const positionContent = generatePositionTable(reportData);
-
-          // Add all content elements for this position
           allContent.push(...positionContent);
 
-          // Add page break between positions (except for the last one)
           if (index < allReportsData.value.length - 1) {
             allContent.push({ text: '', pageBreak: 'after' });
           }
@@ -559,24 +546,22 @@
         const docDefinition = {
           pageSize: 'LEGAL',
           pageOrientation: 'landscape',
-          pageMargins: [72, 120, 72, 40], // left, top, right, bottom
+          pageMargins: [72, 100, 72, 10],
           header: function () {
             return {
               stack: [
-                // Green banner (drawn first, so it's behind)
                 {
                   canvas: [
                     {
                       type: 'rect',
-                      x: (1008 - 936) / 2, // Legal landscape width is 1008 points
+                      x: (1008 - 936) / 2,
                       y: 60,
-                      w: 936, // Adjusted width for legal landscape
+                      w: 936,
                       h: 25,
                       color: '#008000',
                     },
                   ],
                 },
-
                 {
                   margin: [72, -65, 72, 0],
                   columns: [
@@ -595,7 +580,6 @@
                             },
                           ],
                         },
-
                         ...(logoBase64
                           ? [
                               {
@@ -634,7 +618,7 @@
                           alignment: 'left',
                         },
                         {
-                          text: 'CITY HUMAN RESOURCE MANAGEMENT OFFICE',
+                          text: 'HUMAN RESOURCE MERIT PROMOTION AND SELECTION BOARD',
                           fontSize: 13,
                           bold: true,
                           color: 'white',
@@ -655,9 +639,7 @@
             },
           },
           footer: function () {
-            return {
-              stack: [{}],
-            };
+            return { stack: [{}] };
           },
           defaultStyle: { fontSize: 9 },
         };
@@ -674,7 +656,6 @@
     if (pdfUrl.value) URL.revokeObjectURL(pdfUrl.value);
   });
 
-  // Initial fetch and render
   onMounted(async () => {
     if (props.positions && props.positions.length) {
       await fetchApplicantDetail();

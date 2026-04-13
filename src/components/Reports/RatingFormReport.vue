@@ -113,6 +113,14 @@
     }
   }
 
+  const formatNumber = (value) => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return value ?? '';
+    return num % 1 === 0 ? String(Math.round(num)) : num.toFixed(2);
+  };
+
+  const toUpper = (value) => (value || '').toUpperCase();
+
   const calculateQS = (applicant) => {
     if (!applicant) return '-';
     const edu = parseFloat(applicant.education) || 0;
@@ -120,7 +128,7 @@
     const train = parseFloat(applicant.training) || 0;
     const perf = parseFloat(applicant.performance) || 0;
     if (edu === 0 && exp === 0 && train === 0 && perf === 0) return '-';
-    return (edu + exp + train + perf).toFixed(2);
+    return formatNumber(edu + exp + train + perf);
   };
 
   const calculateTotal = (applicant) => {
@@ -128,7 +136,8 @@
     const qs = calculateQS(applicant);
     if (qs === '-') return '-';
     const bei = parseFloat(applicant.behavioral) || 0;
-    return (parseFloat(qs) + bei).toFixed(2);
+    const exam = parseFloat(applicant.exam) || 0;
+    return formatNumber(parseFloat(qs) + bei + exam);
   };
 
   async function getImageBase64(url) {
@@ -178,10 +187,16 @@
         'exams',
       ];
 
+      const hasBehavioral = Array.isArray(criteria.behavioral) && criteria.behavioral.length > 0;
+      const hasExam = Array.isArray(criteria.exams) && criteria.exams.length > 0;
+
       const criteriaColumns = criteriaOrder
         .filter((key) => Array.isArray(criteria[key]) && criteria[key].length > 0)
         .map((key) => {
-          const weight = criteria[key]?.[0]?.weight || '';
+          let weight = criteria[key]?.[0]?.weight || '';
+          if (key === 'behavioral' && hasBehavioral && hasExam) weight = '10';
+          if (key === 'exams' && hasBehavioral && hasExam) weight = '7';
+
           const label = key === 'exams' ? 'Exam' : key.charAt(0).toUpperCase() + key.slice(1);
           return {
             key: key === 'exams' ? 'exam' : key,
@@ -238,6 +253,7 @@
           text: c.qsText || '-',
           fontSize: 8,
           alignment: 'left',
+          border: [true, true, true, false],
         })),
         {},
         {},
@@ -251,6 +267,7 @@
           text: c.items.map((i) => `${i.percentage}% - ${i.description}`).join('\n'),
           fontSize: 7,
           alignment: 'left',
+          border: [true, true, true, false],
         })),
         {},
         {},
@@ -263,31 +280,30 @@
         headerRow3,
         ...applicants.map((a, index) => [
           { text: String(index + 1), alignment: 'center' },
-          `${a.firstname ?? ''} ${a.lastname ?? ''}`.trim(),
-          ...criteriaColumns.map((c) => a[c.key] ?? ''),
+          toUpper(`${a.firstname ?? ''} ${a.lastname ?? ''}`.trim()),
+          ...criteriaColumns.map((c) => formatNumber(a[c.key] ?? '')),
           calculateQS(a),
           calculateTotal(a),
-          a.ranking ?? '',
+          formatNumber(a.ranking ?? ''),
         ]),
       ];
 
-      const colWidths = [30, 140, ...criteriaColumns.map(() => '*'), 55, 55, 40];
+      const colWidths = ['3%', '15%', ...criteriaColumns.map(() => '*'), '5%', '5%', '5%'];
 
       const docDefinition = {
         pageSize: 'LEGAL',
         pageOrientation: 'landscape',
-        pageMargins: [72, 120, 72, 40], // left, top, right, bottom
+        pageMargins: [72, 120, 72, 40],
         header: function () {
           return {
             stack: [
-              // Green banner (drawn first, so it's behind)
               {
                 canvas: [
                   {
                     type: 'rect',
-                    x: (1008 - 936) / 2, // Legal landscape width is 1008 points
+                    x: (1008 - 936) / 2,
                     y: 60,
-                    w: 936, // Adjusted width for legal landscape
+                    w: 936,
                     h: 25,
                     color: '#008000',
                   },
@@ -436,17 +452,16 @@
               paddingTop: () => 2,
               paddingBottom: () => 2,
               fillColor: () => null,
+              hLineWhenSplit: false,
             },
           },
-
-          // Signatory (centered)
           {
+            unbreakable: true,
             margin: [0, 20, 0, 0],
             stack: [
               {
                 text: signatoryName.value || '',
                 alignment: 'center',
-                // decoration: 'underline',
                 bold: true,
                 fontSize: 9,
               },

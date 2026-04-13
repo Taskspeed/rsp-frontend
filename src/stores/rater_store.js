@@ -1,4 +1,3 @@
-// stores/rater_store.js
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { raterApi } from 'boot/axios_rater';
@@ -16,7 +15,7 @@ export const use_rater_store = defineStore('rater', () => {
   const dashboardStats = computed(() => {
     const stats = {
       totalAssignedJobs: assignedJobs.value.length,
-      ratedPositions: 0, // Only count completed (submitted) jobs
+      ratedPositions: 0,
     };
 
     console.log('Computing dashboard stats for jobs:', assignedJobs.value.length);
@@ -24,8 +23,6 @@ export const use_rater_store = defineStore('rater', () => {
     assignedJobs.value.forEach((job) => {
       console.log(`Job ${job.id}: status=${job.status}, submitted=${job.submitted}`);
 
-      // Count completed ratings - check if submitted is true (regardless of status)
-      // or if status indicates completion
       if (
         job.submitted === true ||
         job.status === 'rated' ||
@@ -40,6 +37,7 @@ export const use_rater_store = defineStore('rater', () => {
     console.log('Final dashboard stats:', stats);
     return stats;
   });
+
   const saveDraft = async (applicantsData, jobId) => {
     loading.value = true;
     error.value = null;
@@ -63,6 +61,11 @@ export const use_rater_store = defineStore('rater', () => {
         behavioral_score: parseFloat(
           applicant.behavioral_score || applicant.behavioralScore || null,
         ),
+
+        // ✅ added exam fields
+        exam_score: parseFloat(applicant.exam_score || applicant.examScore || null),
+        exam_percentage: parseFloat(applicant.exam_percentage || applicant.examPercentage || null),
+
         total_qs: parseFloat(applicant.total_qs || null),
         grand_total: parseFloat(applicant.grand_total || null),
         ranking: parseInt(applicant.ranking || null),
@@ -114,6 +117,11 @@ export const use_rater_store = defineStore('rater', () => {
         behavioral_score: parseFloat(
           applicant.behavioral_score || applicant.behavioralScore || null,
         ),
+
+        // ✅ added exam fields
+        exam_score: parseFloat(applicant.exam_score || applicant.examScore || null),
+        exam_percentage: parseFloat(applicant.exam_percentage || applicant.examPercentage || null),
+
         total_qs: parseFloat(applicant.total_qs || null),
         grand_total: parseFloat(applicant.grand_total || null),
         ranking: parseInt(applicant.ranking || null),

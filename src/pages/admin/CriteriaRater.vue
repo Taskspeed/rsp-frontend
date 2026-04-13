@@ -27,7 +27,7 @@
     <!-- Filters -->
     <div class="row justify-between items-center q-mb-md">
       <!-- Date Range Picker -->
-      <q-input
+      <!-- <q-input
         v-model="dateRangeText"
         outlined
         dense
@@ -43,10 +43,10 @@
         <template v-slot:append>
           <q-icon name="arrow_drop_down" color="primary" class="cursor-pointer" />
         </template>
-      </q-input>
+      </q-input> -->
 
       <!-- Date Picker Popup -->
-      <q-popup-proxy v-model="showDatePicker" cover transition-show="scale" transition-hide="scale">
+      <!-- <q-popup-proxy v-model="showDatePicker" cover transition-show="scale" transition-hide="scale">
         <q-date
           v-model="dateRange"
           range
@@ -69,7 +69,7 @@
             <q-btn label="Okay" class="bg-primary text-white" rounded flat dense v-close-popup />
           </div>
         </q-date>
-      </q-popup-proxy>
+      </q-popup-proxy> -->
 
       <!-- Search Input -->
       <div class="row items-center">
@@ -247,7 +247,7 @@
   const jobs = ref([]);
   const globalSearch = ref('');
   const dateRange = ref({ from: '', to: '' });
-  const showDatePicker = ref(false);
+  // const showDatePicker = ref(false);
 
   // Modal State
   const showCriteriaModal = ref(false);
@@ -323,13 +323,13 @@
   /**
    * Format date range for display
    */
-  const dateRangeText = computed(() => {
-    if (!dateRange.value.from && !dateRange.value.to) return '';
-    if (!dateRange.value.to) {
-      return formatDate(dateRange.value.from, 'MMM D, YYYY');
-    }
-    return `${formatDate(dateRange.value.from, 'MMM D, YYYY')} - ${formatDate(dateRange.value.to, 'MMM D, YYYY')}`;
-  });
+  // const dateRangeText = computed(() => {
+  //   if (!dateRange.value.from && !dateRange.value.to) return '';
+  //   if (!dateRange.value.to) {
+  //     return formatDate(dateRange.value.from, 'MMM D, YYYY');
+  //   }
+  //   return `${formatDate(dateRange.value.from, 'MMM D, YYYY')} - ${formatDate(dateRange.value.to, 'MMM D, YYYY')}`;
+  // });
 
   /**
    * Filter jobs by date range and search term
@@ -389,16 +389,16 @@
   /**
    * Clear date range
    */
-  function clearDateRange() {
-    dateRange.value = { from: '', to: '' };
-  }
+  // function clearDateRange() {
+  //   dateRange.value = { from: '', to: '' };
+  // }
 
   /**
    * Handle date range change
    */
-  function onDateRangeChange() {
-    showDatePicker.value = false;
-  }
+  // function onDateRangeChange() {
+  //   showDatePicker.value = false;
+  // }
 
   /**
    * Format status for display

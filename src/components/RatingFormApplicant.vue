@@ -1,20 +1,20 @@
 <template>
-  <q-dialog v-model="isOpen" persistent>
+  <q-dialog v-model="isOpen" persistent :maximized="$q.screen.lt.md" full-width full-height>
     <q-card class="rating-modal">
+      <!-- Header -->
       <q-card-section class="header">
         <div class="row items-center justify-between">
           <div>
             <h6 class="q-ma-none text-weight-bold">Rating Form for Qualification Standards</h6>
             <div class="text-subtitle1">{{ position.position }}</div>
-            <div class="text-caption">Office: {{ position.office }}</div>
-            <div class="text-caption">Position ID: {{ positionID }}</div>
+            <div class="text-caption">{{ position.office }}</div>
           </div>
           <q-btn flat round dense icon="close" @click="closeForm" />
         </div>
 
         <!-- Filter & Sort Controls -->
-        <div class="row q-mt-sm q-col-gutter-sm">
-          <div class="col-4">
+        <!-- <div class="row q-mt-sm q-col-gutter-sm">
+          <div class="col-12 col-md-4">
             <q-input
               v-model="filterText"
               dense
@@ -28,10 +28,10 @@
               </template>
             </q-input>
           </div>
-          <div class="col-4">
+          <div class="col-12 col-md-4">
             <q-select v-model="sortBy" :options="sortOptions" dense outlined label="Sort by" />
           </div>
-          <div class="col-4">
+          <div class="col-12 col-md-4">
             <q-btn-toggle
               v-model="sortOrder"
               toggle-color="primary"
@@ -46,7 +46,7 @@
               rounded
             />
           </div>
-        </div>
+        </div> -->
       </q-card-section>
 
       <!-- Scrollable Content -->
@@ -62,412 +62,427 @@
         </div>
 
         <div v-else>
-          <table class="rating-table">
-            <!-- Criteria Header (Sticky) -->
-            <thead class="sticky-criteria">
-              <tr>
-                <th style="width: 200px">Name of Applicant</th>
-                <th style="width: 110px">
-                  Education
-                  <span class="text-caption">{{ educationMaxRate }}%</span>
-                </th>
-                <th style="width: 110px">
-                  Experience
-                  <span class="text-caption">{{ experienceMaxRate }}%</span>
-                </th>
-                <th style="width: 110px">
-                  Training
-                  <span class="text-caption">{{ trainingMaxRate }}%</span>
-                </th>
-                <th style="width: 110px">
-                  Performance
-                  <span class="text-caption">{{ performanceMaxRate }}%</span>
-                </th>
+          <div class="table-wrapper">
+            <table class="rating-table">
+              <!-- Criteria Header (Sticky) -->
+              <thead class="sticky-criteria">
+                <tr>
+                  <th style="width: 200px">Name of Applicant</th>
+                  <th style="width: 110px">
+                    Education
+                    <span class="text-caption">{{ educationMaxRate }}%</span>
+                  </th>
+                  <th style="width: 110px">
+                    Experience
+                    <span class="text-caption">{{ experienceMaxRate }}%</span>
+                  </th>
+                  <th style="width: 110px">
+                    Training
+                    <span class="text-caption">{{ trainingMaxRate }}%</span>
+                  </th>
+                  <th style="width: 110px">
+                    Performance
+                    <span class="text-caption">{{ performanceMaxRate }}%</span>
+                  </th>
 
-                <th v-if="hasBehavioral" style="width: 110px">
-                  BEI
-                  <span class="text-caption">{{ behavioralMaxRate }}%</span>
-                </th>
+                  <th v-if="hasBehavioral" style="width: 110px">
+                    BEI
+                    <span class="text-caption">{{ behavioralMaxRate }}%</span>
+                  </th>
 
-                <!-- Exam always last before QS Total -->
-                <th v-if="hasExam" style="width: 110px">
-                  Exam
-                  <span class="text-caption">{{ examMaxRate }}%</span>
-                </th>
+                  <!-- Exam always last before QS Total -->
+                  <th v-if="hasExam" style="width: 110px">
+                    Exam
+                    <span class="text-caption">{{ examMaxRate }}%</span>
+                  </th>
 
-                <th style="width: 80px" class="text-center">
-                  QS Total
-                  <div class="text-caption">({{ qsMaxRate }}%)</div>
-                </th>
-                <th style="width: 80px" class="text-center">
-                  Grand Total
-                  <div class="text-caption">({{ totalMaxRate }}%)</div>
-                </th>
-                <th style="width: 80px" class="text-center">Rank</th>
-              </tr>
-              <tr class="bg-grey-2 criteria-description">
-                <td>
-                  <div class="text-weight-bold text-caption">Criteria</div>
-                </td>
-                <td>
-                  <div class="text-weight-bold text-caption q-mb-xs">EDUCATION CRITERIA:</div>
-                  <div
-                    v-for="(item, index) in education.items"
-                    :key="'edu-' + index"
-                    class="text-caption q-mb-xs criteria-item"
-                  >
-                    <span class="criteria-percentage">{{ item.percentage }}%</span>
-                    - {{ item.description }}
-                  </div>
-                </td>
-                <td>
-                  <div class="text-weight-bold text-caption q-mb-xs">EXPERIENCE CRITERIA:</div>
-                  <div
-                    v-for="(item, index) in experience.items"
-                    :key="'exp-' + index"
-                    class="text-caption q-mb-xs criteria-item"
-                  >
-                    <span class="criteria-percentage">{{ item.percentage }}%</span>
-                    - {{ item.description }}
-                  </div>
-                </td>
-                <td>
-                  <div class="text-weight-bold text-caption q-mb-xs">TRAINING CRITERIA:</div>
-                  <div
-                    v-for="(item, index) in training.items"
-                    :key="'train-' + index"
-                    class="text-caption q-mb-xs criteria-item"
-                  >
-                    <span class="criteria-percentage">{{ item.percentage }}%</span>
-                    - {{ item.description }}
-                  </div>
-                </td>
-                <td>
-                  <div class="text-weight-bold text-caption q-mb-xs">PERFORMANCE CRITERIA:</div>
-                  <div
-                    v-for="(item, index) in performance.items"
-                    :key="'perf-' + index"
-                    class="text-caption q-mb-xs criteria-item"
-                  >
-                    <span class="criteria-percentage">{{ item.percentage }}%</span>
-                    - {{ item.description }}
-                  </div>
-                </td>
-
-                <td v-if="hasBehavioral">
-                  <div class="text-weight-bold text-caption q-mb-xs">BEI CRITERIA:</div>
-                  <div
-                    v-for="(item, index) in behavioral.items"
-                    :key="'bei-' + index"
-                    class="text-caption q-mb-xs criteria-item"
-                  >
-                    <span class="criteria-percentage">{{ item.percentage }}%</span>
-                    - {{ item.description }}
-                  </div>
-                </td>
-
-                <td v-if="hasExam">
-                  <div class="text-weight-bold text-caption q-mb-xs">EXAM CRITERIA:</div>
-                  <div
-                    v-for="(item, index) in exam.items"
-                    :key="'exam-' + index"
-                    class="text-caption q-mb-xs criteria-item"
-                  >
-                    <span class="criteria-percentage">{{ item.percentage }}%</span>
-                    - {{ item.description || 'Exam' }}
-                  </div>
-                </td>
-
-                <td></td>
-                <td></td>
-                <td></td>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="applicant in filteredApplicants" :key="applicant.id">
-                <tr class="applicant-row" :class="{ expanded: expandedApplicant === applicant.id }">
-                  <td style="width: 200px" @click="toggleApplicant(applicant.id)">
-                    <div class="row items-center no-wrap">
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        size="xs"
-                        :icon="expandedApplicant === applicant.id ? 'expand_less' : 'expand_more'"
-                      />
-                      <span class="text-caption ellipsis">
-                        {{ applicant.firstname }} {{ applicant.lastname }}
-                      </span>
+                  <th style="width: 80px" class="text-center">
+                    QS Total
+                    <div class="text-caption">({{ qsMaxRate }}%)</div>
+                  </th>
+                  <th style="width: 80px" class="text-center">
+                    Grand Total
+                    <div class="text-caption">({{ totalMaxRate }}%)</div>
+                  </th>
+                  <th style="width: 80px" class="text-center">Rank</th>
+                </tr>
+                <tr class="bg-grey-2 criteria-description">
+                  <td>
+                    <div class="text-weight-bold text-caption">Criteria</div>
+                  </td>
+                  <td>
+                    <div class="text-weight-bold text-caption q-mb-xs">EDUCATION CRITERIA:</div>
+                    <div
+                      v-for="(item, index) in education.items"
+                      :key="'edu-' + index"
+                      class="text-caption q-mb-xs criteria-item"
+                    >
+                      <span class="criteria-percentage">{{ item.percentage }}%</span>
+                      - {{ item.description }}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="text-weight-bold text-caption q-mb-xs">EXPERIENCE CRITERIA:</div>
+                    <div
+                      v-for="(item, index) in experience.items"
+                      :key="'exp-' + index"
+                      class="text-caption q-mb-xs criteria-item"
+                    >
+                      <span class="criteria-percentage">{{ item.percentage }}%</span>
+                      - {{ item.description }}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="text-weight-bold text-caption q-mb-xs">TRAINING CRITERIA:</div>
+                    <div
+                      v-for="(item, index) in training.items"
+                      :key="'train-' + index"
+                      class="text-caption q-mb-xs criteria-item"
+                    >
+                      <span class="criteria-percentage">{{ item.percentage }}%</span>
+                      - {{ item.description }}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="text-weight-bold text-caption q-mb-xs">PERFORMANCE CRITERIA:</div>
+                    <div
+                      v-for="(item, index) in performance.items"
+                      :key="'perf-' + index"
+                      class="text-caption q-mb-xs criteria-item"
+                    >
+                      <span class="criteria-percentage">{{ item.percentage }}%</span>
+                      - {{ item.description }}
                     </div>
                   </td>
 
-                  <td style="width: 110px">
-                    <q-input
-                      v-model="applicant.educationScore"
-                      type="text"
-                      dense
-                      outlined
-                      class="score-input"
-                      placeholder="-"
-                      @input="handleInput(applicant, 'educationScore', $event)"
-                      @blur="
-                        validateScore(
-                          applicant,
-                          'educationScore',
-                          educationMaxRate,
-                          false,
-                          educationMinRate,
-                        )
-                      "
-                      @click.stop
-                    />
+                  <td v-if="hasBehavioral">
+                    <div class="text-weight-bold text-caption q-mb-xs">BEI CRITERIA:</div>
+                    <div
+                      v-for="(item, index) in behavioral.items"
+                      :key="'bei-' + index"
+                      class="text-caption q-mb-xs criteria-item"
+                    >
+                      <span class="criteria-percentage">{{ item.percentage }}%</span>
+                      - {{ item.description }}
+                    </div>
                   </td>
 
-                  <td style="width: 110px">
-                    <q-input
-                      v-model="applicant.experienceScore"
-                      type="text"
-                      dense
-                      outlined
-                      class="score-input"
-                      placeholder="-"
-                      @input="handleInput(applicant, 'experienceScore', $event)"
-                      @blur="
-                        validateScore(
-                          applicant,
-                          'experienceScore',
-                          experienceMaxRate,
-                          false,
-                          experienceMinRate,
-                        )
-                      "
-                      @click.stop
-                    />
+                  <td v-if="hasExam">
+                    <div class="text-weight-bold text-caption q-mb-xs">EXAM CRITERIA:</div>
+                    <div
+                      v-for="(item, index) in exam.items"
+                      :key="'exam-' + index"
+                      class="text-caption q-mb-xs criteria-item"
+                    >
+                      <span class="criteria-percentage">{{ item.percentage }}%</span>
+                      - {{ item.description || 'Exam' }}
+                    </div>
                   </td>
 
-                  <td style="width: 110px">
-                    <q-input
-                      v-model="applicant.trainingScore"
-                      type="text"
-                      dense
-                      outlined
-                      class="score-input"
-                      placeholder="-"
-                      @input="handleInput(applicant, 'trainingScore', $event)"
-                      @blur="
-                        validateScore(
-                          applicant,
-                          'trainingScore',
-                          trainingMaxRate,
-                          false,
-                          trainingMinRate,
-                        )
-                      "
-                      @click.stop
-                    />
-                  </td>
-
-                  <td style="width: 110px">
-                    <q-input
-                      v-model="applicant.performanceScore"
-                      type="text"
-                      dense
-                      outlined
-                      class="score-input"
-                      placeholder="-"
-                      @input="handleInput(applicant, 'performanceScore', $event)"
-                      @blur="
-                        validateScore(
-                          applicant,
-                          'performanceScore',
-                          performanceMaxRate,
-                          false,
-                          performanceMinRate,
-                        )
-                      "
-                      @click.stop
-                    />
-                  </td>
-
-                  <td v-if="hasBehavioral" style="width: 110px">
-                    <q-input
-                      v-model="applicant.behavioralScore"
-                      type="text"
-                      dense
-                      outlined
-                      class="score-input"
-                      placeholder="-"
-                      @input="handleInput(applicant, 'behavioralScore', $event)"
-                      @blur="
-                        validateScore(
-                          applicant,
-                          'behavioralScore',
-                          behavioralMaxRate,
-                          true,
-                          behavioralMinRate,
-                        )
-                      "
-                      @click.stop
-                    />
-                  </td>
-
-                  <td v-if="hasExam" style="width: 110px">
-                    <q-input
-                      v-model="applicant.examScore"
-                      type="text"
-                      dense
-                      outlined
-                      class="score-input"
-                      placeholder="-"
-                      readonly
-                      @click.stop
-                    />
-                  </td>
-
-                  <td style="width: 80px" class="text-center">
-                    <div class="result-value">{{ calculateQS(applicant) }}</div>
-                  </td>
-                  <td style="width: 80px" class="text-center total-score">
-                    <div class="result-value">{{ calculateTotal(applicant) }}</div>
-                  </td>
-                  <td style="width: 80px" class="text-center rank">
-                    <div class="result-value">{{ applicant.ranking || '-' }}</div>
-                  </td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
                 </tr>
-
-                <!-- Expandable Details -->
-                <tr v-if="expandedApplicant === applicant.id">
-                  <td :colspan="detailsColspan" class="applicant-details">
-                    <div class="row q-col-gutter-sm q-py-sm">
-                      <div class="col-12 q-mb-sm">
+              </thead>
+              <tbody>
+                <template v-for="applicant in filteredApplicants" :key="applicant.id">
+                  <tr
+                    class="applicant-row"
+                    :class="{ expanded: expandedApplicant === applicant.id }"
+                  >
+                    <td style="width: 200px" @click="toggleApplicant(applicant.id)">
+                      <div class="row items-center no-wrap">
                         <q-btn
-                          label="View Qualification Standards"
-                          icon="visibility"
-                          color="primary"
-                          outline
+                          flat
                           dense
-                          size="sm"
-                          @click="openQSModal(applicant)"
+                          round
+                          size="xs"
+                          :icon="expandedApplicant === applicant.id ? 'expand_less' : 'expand_more'"
+                        />
+                        <span class="text-caption ellipsis">
+                          {{ applicant.firstname }} {{ applicant.lastname }}
+                        </span>
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          size="xs"
+                          icon="visibility"
+                          class="q-ml-xs"
+                          @click.stop="openQSModal(applicant)"
                         />
                       </div>
-                      <div class="col-12">
-                        <div class="row q-col-gutter-sm">
-                          <!-- Education Details -->
-                          <div class="col-3">
-                            <div class="detail-panel">
-                              <div class="detail-title">Education</div>
-                              <div v-if="applicant.education && applicant.education.length > 0">
-                                <div
-                                  v-for="(edu, index) in applicant.education"
-                                  :key="index"
-                                  class="q-mb-xs"
-                                >
-                                  <div class="text-weight-bold">{{ edu.level }}</div>
-                                  <div>{{ edu.school_name || 'N/A' }}</div>
-                                  <div>{{ edu.degree || 'N/A' }}</div>
-                                  <div v-if="edu.year_graduated">
-                                    Graduated: {{ edu.year_graduated }}
-                                  </div>
-                                  <hr
-                                    v-if="index < applicant.education.length - 1"
-                                    class="q-my-xs"
-                                  />
-                                </div>
-                              </div>
-                              <div v-else class="text-grey-6">No education data</div>
-                            </div>
-                          </div>
+                    </td>
 
-                          <!-- Work Experience Details -->
-                          <div class="col-3">
-                            <div class="detail-panel">
-                              <div class="detail-title">Work Experience</div>
-                              <div
-                                v-if="
-                                  applicant.work_experience && applicant.work_experience.length > 0
-                                "
-                              >
-                                <div
-                                  v-for="(work, index) in applicant.work_experience"
-                                  :key="index"
-                                  class="q-mb-xs"
-                                >
-                                  <div class="text-weight-bold">{{ work.position_title }}</div>
-                                  <div>{{ work.department }}</div>
-                                  <div>
-                                    {{ formatDate(work.work_date_from) }} to
-                                    {{ formatDate(work.work_date_to) }}
-                                  </div>
-                                  <div>Salary: ₱{{ work.monthly_salary }}</div>
-                                  <div>{{ work.status_of_appointment }}</div>
-                                  <hr
-                                    v-if="index < applicant.work_experience.length - 1"
-                                    class="q-my-xs"
-                                  />
-                                </div>
-                              </div>
-                              <div v-else class="text-grey-6">No work experience</div>
-                            </div>
-                          </div>
+                    <td style="width: 110px">
+                      <q-input
+                        v-model="applicant.educationScore"
+                        type="text"
+                        dense
+                        outlined
+                        class="score-input"
+                        placeholder="-"
+                        @input="handleInput(applicant, 'educationScore', $event)"
+                        @blur="
+                          validateScore(
+                            applicant,
+                            'educationScore',
+                            educationMaxRate,
+                            false,
+                            educationMinRate,
+                          )
+                        "
+                        @click.stop
+                      />
+                    </td>
 
-                          <!-- Training Details -->
-                          <div class="col-3">
-                            <div class="detail-panel">
-                              <div class="detail-title">Training</div>
-                              <div v-if="applicant.training && applicant.training.length > 0">
-                                <div
-                                  v-for="(train, index) in applicant.training"
-                                  :key="index"
-                                  class="q-mb-xs"
-                                >
-                                  <div class="text-weight-bold">{{ train.training_title }}</div>
-                                  <div>
-                                    {{ formatDate(train.inclusive_date_from) }} to
-                                    {{ formatDate(train.inclusive_date_to) }}
-                                  </div>
-                                  <div>{{ train.number_of_hours }} hours</div>
-                                  <div>{{ train.conducted_by }}</div>
-                                  <hr
-                                    v-if="index < applicant.training.length - 1"
-                                    class="q-my-xs"
-                                  />
-                                </div>
-                              </div>
-                              <div v-else class="text-grey-6">No training data</div>
-                            </div>
-                          </div>
+                    <td style="width: 110px">
+                      <q-input
+                        v-model="applicant.experienceScore"
+                        type="text"
+                        dense
+                        outlined
+                        class="score-input"
+                        placeholder="-"
+                        @input="handleInput(applicant, 'experienceScore', $event)"
+                        @blur="
+                          validateScore(
+                            applicant,
+                            'experienceScore',
+                            experienceMaxRate,
+                            false,
+                            experienceMinRate,
+                          )
+                        "
+                        @click.stop
+                      />
+                    </td>
 
-                          <!-- Eligibility Details -->
-                          <div class="col-3">
-                            <div class="detail-panel">
-                              <div class="detail-title">Eligibility</div>
-                              <div v-if="applicant.eligibity && applicant.eligibity.length > 0">
-                                <div
-                                  v-for="(elig, index) in applicant.eligibity"
-                                  :key="index"
-                                  class="q-mb-xs"
-                                >
-                                  <div class="text-weight-bold">{{ elig.eligibility }}</div>
-                                  <div>Rating: {{ elig.rating }}%</div>
-                                  <div>Exam Date: {{ formatDate(elig.date_of_examination) }}</div>
-                                  <div>License: {{ elig.license_number }}</div>
-                                  <hr
-                                    v-if="index < applicant.eligibity.length - 1"
-                                    class="q-my-xs"
-                                  />
+                    <td style="width: 110px">
+                      <q-input
+                        v-model="applicant.trainingScore"
+                        type="text"
+                        dense
+                        outlined
+                        class="score-input"
+                        placeholder="-"
+                        @input="handleInput(applicant, 'trainingScore', $event)"
+                        @blur="
+                          validateScore(
+                            applicant,
+                            'trainingScore',
+                            trainingMaxRate,
+                            false,
+                            trainingMinRate,
+                          )
+                        "
+                        @click.stop
+                      />
+                    </td>
+
+                    <td style="width: 110px">
+                      <q-input
+                        v-model="applicant.performanceScore"
+                        type="text"
+                        dense
+                        outlined
+                        class="score-input"
+                        placeholder="-"
+                        @input="handleInput(applicant, 'performanceScore', $event)"
+                        @blur="
+                          validateScore(
+                            applicant,
+                            'performanceScore',
+                            performanceMaxRate,
+                            false,
+                            performanceMinRate,
+                          )
+                        "
+                        @click.stop
+                      />
+                    </td>
+
+                    <td v-if="hasBehavioral" style="width: 110px">
+                      <q-input
+                        v-model="applicant.behavioralScore"
+                        type="text"
+                        dense
+                        outlined
+                        class="score-input"
+                        placeholder="-"
+                        @input="handleInput(applicant, 'behavioralScore', $event)"
+                        @blur="
+                          validateScore(
+                            applicant,
+                            'behavioralScore',
+                            behavioralMaxRate,
+                            true,
+                            behavioralMinRate,
+                          )
+                        "
+                        @click.stop
+                      />
+                    </td>
+
+                    <td v-if="hasExam" style="width: 110px">
+                      <q-input
+                        v-model="applicant.examScore"
+                        type="text"
+                        dense
+                        outlined
+                        class="score-input"
+                        placeholder="-"
+                        readonly
+                        @click.stop
+                      />
+                    </td>
+
+                    <td style="width: 80px" class="text-center">
+                      <div class="result-value">{{ calculateQS(applicant) }}</div>
+                    </td>
+                    <td style="width: 80px" class="text-center total-score">
+                      <div class="result-value">{{ calculateTotal(applicant) }}</div>
+                    </td>
+                    <td style="width: 80px" class="text-center rank">
+                      <div class="result-value">{{ applicant.ranking || '-' }}</div>
+                    </td>
+                  </tr>
+
+                  <!-- Expandable Details -->
+                  <tr v-if="expandedApplicant === applicant.id">
+                    <td :colspan="detailsColspan" class="applicant-details">
+                      <div class="row q-col-gutter-sm q-py-sm">
+                        <div class="col-12 q-mb-sm">
+                          <q-btn
+                            label="View Qualification Standards"
+                            icon="visibility"
+                            color="primary"
+                            outline
+                            dense
+                            size="sm"
+                            @click="openQSModal(applicant)"
+                          />
+                        </div>
+                        <div class="col-12">
+                          <div class="row q-col-gutter-sm">
+                            <!-- Education Details -->
+                            <div class="col-12 col-md-3">
+                              <div class="detail-panel">
+                                <div class="detail-title">Education</div>
+                                <div v-if="applicant.education && applicant.education.length > 0">
+                                  <div
+                                    v-for="(edu, index) in applicant.education"
+                                    :key="index"
+                                    class="q-mb-xs"
+                                  >
+                                    <div class="text-weight-bold">{{ edu.level }}</div>
+                                    <div>{{ edu.school_name || 'N/A' }}</div>
+                                    <div>{{ edu.degree || 'N/A' }}</div>
+                                    <div v-if="edu.year_graduated">
+                                      Graduated: {{ edu.year_graduated }}
+                                    </div>
+                                    <hr
+                                      v-if="index < applicant.education.length - 1"
+                                      class="q-my-xs"
+                                    />
+                                  </div>
                                 </div>
+                                <div v-else class="text-grey-6">No education data</div>
                               </div>
-                              <div v-else class="text-grey-6">No eligibility data</div>
+                            </div>
+
+                            <!-- Work Experience Details -->
+                            <div class="col-12 col-md-3">
+                              <div class="detail-panel">
+                                <div class="detail-title">Work Experience</div>
+                                <div
+                                  v-if="
+                                    applicant.work_experience &&
+                                    applicant.work_experience.length > 0
+                                  "
+                                >
+                                  <div
+                                    v-for="(work, index) in applicant.work_experience"
+                                    :key="index"
+                                    class="q-mb-xs"
+                                  >
+                                    <div class="text-weight-bold">{{ work.position_title }}</div>
+                                    <div>{{ work.department }}</div>
+                                    <div>
+                                      {{ formatDate(work.work_date_from) }} to
+                                      {{ formatDate(work.work_date_to) }}
+                                    </div>
+                                    <div>Salary: ₱{{ work.monthly_salary }}</div>
+                                    <div>{{ work.status_of_appointment }}</div>
+                                    <hr
+                                      v-if="index < applicant.work_experience.length - 1"
+                                      class="q-my-xs"
+                                    />
+                                  </div>
+                                </div>
+                                <div v-else class="text-grey-6">No work experience</div>
+                              </div>
+                            </div>
+
+                            <!-- Training Details -->
+                            <div class="col-12 col-md-3">
+                              <div class="detail-panel">
+                                <div class="detail-title">Training</div>
+                                <div v-if="applicant.training && applicant.training.length > 0">
+                                  <div
+                                    v-for="(train, index) in applicant.training"
+                                    :key="index"
+                                    class="q-mb-xs"
+                                  >
+                                    <div class="text-weight-bold">{{ train.training_title }}</div>
+                                    <div>
+                                      {{ formatDate(train.inclusive_date_from) }} to
+                                      {{ formatDate(train.inclusive_date_to) }}
+                                    </div>
+                                    <div>{{ train.number_of_hours }} hours</div>
+                                    <div>{{ train.conducted_by }}</div>
+                                    <hr
+                                      v-if="index < applicant.training.length - 1"
+                                      class="q-my-xs"
+                                    />
+                                  </div>
+                                </div>
+                                <div v-else class="text-grey-6">No training data</div>
+                              </div>
+                            </div>
+
+                            <!-- Eligibility Details -->
+                            <div class="col-12 col-md-3">
+                              <div class="detail-panel">
+                                <div class="detail-title">Eligibility</div>
+                                <div v-if="applicant.eligibity && applicant.eligibity.length > 0">
+                                  <div
+                                    v-for="(elig, index) in applicant.eligibity"
+                                    :key="index"
+                                    class="q-mb-xs"
+                                  >
+                                    <div class="text-weight-bold">{{ elig.eligibility }}</div>
+                                    <div>Rating: {{ elig.rating }}%</div>
+                                    <div>Exam Date: {{ formatDate(elig.date_of_examination) }}</div>
+                                    <div>License: {{ elig.license_number }}</div>
+                                    <hr
+                                      v-if="index < applicant.eligibity.length - 1"
+                                      class="q-my-xs"
+                                    />
+                                  </div>
+                                </div>
+                                <div v-else class="text-grey-6">No eligibility data</div>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
         </div>
       </q-card-section>
 
@@ -518,6 +533,8 @@
     rawCriteria: { type: Object, default: () => null },
     applicants: { type: Array, default: () => [] },
     loading: Boolean,
+    // Optional filter to only show a specific submission (by applicant.id)
+    filterSubmissionId: { type: [Number, String], default: null },
   });
 
   // Emits
@@ -711,18 +728,18 @@
   const showQSModal = ref(false);
   const selectedApplicantForQS = ref(null);
 
-  const sortOptions = [
-    { label: 'Name', value: 'name' },
-    { label: 'Education Score', value: 'educationScore' },
-    { label: 'Experience Score', value: 'experienceScore' },
-    { label: 'Training Score', value: 'trainingScore' },
-    { label: 'Performance Score', value: 'performanceScore' },
-    ...(hasBehavioral.value ? [{ label: 'BEI Score', value: 'behavioralScore' }] : []),
-    ...(hasExam.value ? [{ label: 'Exam Score', value: 'examScore' }] : []),
-    { label: 'Total QS', value: 'qsTotal' },
-    { label: 'Grand Total', value: 'grandTotal' },
-    { label: 'Ranking', value: 'ranking' },
-  ];
+  // const sortOptions = [
+  //   { label: 'Name', value: 'name' },
+  //   { label: 'Education Score', value: 'educationScore' },
+  //   { label: 'Experience Score', value: 'experienceScore' },
+  //   { label: 'Training Score', value: 'trainingScore' },
+  //   { label: 'Performance Score', value: 'performanceScore' },
+  //   ...(hasBehavioral.value ? [{ label: 'BEI Score', value: 'behavioralScore' }] : []),
+  //   ...(hasExam.value ? [{ label: 'Exam Score', value: 'examScore' }] : []),
+  //   { label: 'Total QS', value: 'qsTotal' },
+  //   { label: 'Grand Total', value: 'grandTotal' },
+  //   { label: 'Ranking', value: 'ranking' },
+  // ];
 
   const filteredApplicants = computed(() => {
     let result = applicantsData.value;
@@ -769,7 +786,15 @@
   // Methods
   const initializeApplicants = () => {
     if (props.applicants?.length > 0) {
-      applicantsData.value = props.applicants.map((applicant) => {
+      // Filter by submission ID if provided
+      let sourceApplicants = props.applicants;
+      if (props.filterSubmissionId) {
+        sourceApplicants = props.applicants.filter(
+          (app) => String(app.id) === String(props.filterSubmissionId),
+        );
+      }
+
+      applicantsData.value = sourceApplicants.map((applicant) => {
         const draftScore = applicant.draft_score || {};
         const computedExamScore = getExamScore(applicant);
 
@@ -1170,6 +1195,11 @@
   );
 
   watch(
+    () => props.filterSubmissionId,
+    () => initializeApplicants(),
+  );
+
+  watch(
     () => props.modelValue,
     (newValue) => {
       if (newValue) {
@@ -1224,9 +1254,15 @@
     max-height: calc(90vh - 200px);
   }
 
+  .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
   .rating-table {
     width: 100%;
     border-collapse: collapse;
+    min-width: 1000px;
 
     th,
     td {
@@ -1308,6 +1344,7 @@
 
   .applicant-details {
     background-color: #f8f9fa;
+    padding: 12px;
   }
 
   .detail-panel {
@@ -1350,5 +1387,24 @@
   .text-caption {
     font-size: 0.85rem;
     line-height: 1.2;
+  }
+
+  @media (max-width: 768px) {
+    .rating-modal {
+      width: 100vw;
+      max-width: 100vw;
+      height: 100vh;
+      max-height: 100vh;
+    }
+
+    .scrollable-content {
+      max-height: calc(100vh - 160px);
+    }
+
+    .rating-table th,
+    .rating-table td {
+      font-size: 12px;
+      padding: 6px;
+    }
   }
 </style>

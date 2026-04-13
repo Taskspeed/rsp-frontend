@@ -35,7 +35,7 @@
           <q-card class="col-2 q-mr-md">
             <q-card-section class="column justify-between items-center q-pa-md">
               <q-img
-                :src="applicantData?.image_url || 'https://placehold.co/100'"
+                :src="imageSrc"
                 class="bg-grey-4 q-mb-md"
                 style="width: 100px; height: 100px; border-radius: 10px"
                 alt="Applicant Photo"
@@ -1067,6 +1067,19 @@
 
     return personalInfo;
   };
+
+  const imageSrc = computed(() => {
+    const pds = jobPostStore.applicantPDS;
+    const base = props.applicantData;
+
+    return (
+      pds?.image_url ||
+      pds?.image_path ||
+      base?.image_url ||
+      base?.image_path ||
+      'https://placehold.co/100'
+    );
+  });
 
   const getStatusClass = (status) => {
     if (!status) return 'grey';

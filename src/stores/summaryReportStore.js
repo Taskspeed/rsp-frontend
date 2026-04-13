@@ -49,7 +49,7 @@ export const useSummaryReportStore = defineStore('summaryReport', {
     async fetchApplicantDetail(jobpostId) {
       try {
         this.loading = true;
-        const response = await adminApi.get(`/report/applicant-final-score/${jobpostId}`);
+        const response = await adminApi.get(`/report/final-summary-rating/${jobpostId}`);
 
         // ✅ Check if response contains an error message
         if (response.data.message && !response.data.applicants) {

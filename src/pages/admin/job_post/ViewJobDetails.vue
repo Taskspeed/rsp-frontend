@@ -26,7 +26,7 @@
               label="History"
               option-label="label"
               option-value="value"
-              style="width: 250px"
+              style="width: 150px"
               @update:model-value="onHistoryChange"
               emit-value
               map-options
@@ -217,14 +217,6 @@
             <div class="row items-center justify-between q-mb-sm q-gutter-sm">
               <div>
                 <div class="text-h6 text-primary text-bold">Applicants</div>
-                <!-- <q-input
-          v-model="applicantSearch"
-          outlined
-          dense
-          placeholder="Search Applicant..."
-          clearable
-          style="width: 220px"
-        > -->
                 <q-input
                   v-model="globalSearch"
                   outlined
@@ -357,7 +349,7 @@
               <div>
                 <div class="text-h6 text-primary text-bold">Rating Results</div>
                 <q-input
-                   v-model="ratingApplicantSearch"
+                  v-model="ratingApplicantSearch"
                   outlined
                   dense
                   placeholder="Search Applicant..."
@@ -379,7 +371,7 @@
                   class="q-pa-xs"
                   dense
                   no-caps
-                  style="font-size: 8pt"
+                  style="font-size: 9pt"
                   @click="unoccupiedConfirmDialog = true"
                 />
 
@@ -393,7 +385,7 @@
             <q-table
               v-if="filteredApplicantsRate.length > 0"
               :rows="filteredApplicantsRate"
-              :columns="ratingColumns"
+              :columns="dynamicRatingColumns"
               row-key="nPersonalInfo_id"
               flat
               bordered
@@ -401,47 +393,67 @@
               dense
               separator="cell"
               color="primary"
-                v-model:pagination="ratingPagination"
-
+              v-model:pagination="ratingPagination"
               :rows-per-page-options="[2, 10, 20, 50, 100, 0]"
-            @request="onApplicantRatingRequest"
+              @request="onApplicantRatingRequest"
             >
+              <!-- Dynamic cell template for criteria columns -->
+              <template
+                v-for="criteria in ratingCriteriaTypes"
+                :key="`template-${criteria.type}`"
+                v-slot:[`body-cell-${criteria.type}`]="props"
+              >
+                <q-td :props="props">
+                  <div class="text-center">
+                    <span class="text-weight-medium">{{ props.row[criteria.type] }}</span>
+                    <!-- <div class="text-caption text-grey-6">
+                      ({{ getCriteriaWeight(criteria.type) }}%)
+                    </div> -->
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Name column template -->
               <template #body-cell-name="props">
-                <q-td :props="props">{{ props.row.firstname }} {{ props.row.lastname }}</q-td>
+                <q-td :props="props">
+                  <div class="text-weight-medium">
+                    {{ props.row.firstname }} {{ props.row.lastname }}
+                  </div>
+                </q-td>
               </template>
-              <template #body-cell-education="props">
-                <q-td :props="props">{{ props.row.education }}</q-td>
-              </template>
-              <template #body-cell-experience="props">
-                <q-td :props="props">{{ props.row.experience }}</q-td>
-              </template>
-              <template #body-cell-training="props">
-                <q-td :props="props">{{ props.row.training }}</q-td>
-              </template>
-              <template #body-cell-performance="props">
-                <q-td :props="props">{{ props.row.performance }}</q-td>
-              </template>
-              <template #body-cell-bei="props">
-                <q-td :props="props">{{ props.row.bei }}</q-td>
-              </template>
+
+              <!-- Total QS column template -->
               <template #body-cell-total_qs="props">
                 <q-td :props="props">
-                  <q-badge color="blue" class="text-caption q-px-sm" rounded>
+                  <q-badge color="info" class="text-caption q-px-sm" rounded>
                     {{ props.row.total_qs }}
                   </q-badge>
                 </q-td>
               </template>
+
+              <!-- Exam column template (if exists) -->
+              <template v-if="hasExamScore" #body-cell-exam_score="props">
+                <q-td :props="props">
+                  <div class="text-center">
+                    {{ props.row.exam_score }}
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Grand Total column template -->
               <template #body-cell-grand_total="props">
                 <q-td :props="props">
-                  <q-badge color="green" class="text-caption q-px-sm" rounded>
+                  <q-badge color="positive" class="text-caption q-px-sm" rounded>
                     {{ props.row.grand_total }}
                   </q-badge>
                 </q-td>
               </template>
+
+              <!-- Rank column template -->
               <template #body-cell-rank="props">
                 <q-td :props="props">
                   <q-badge
-                    :color="props.row.rank <= 5 ? 'purple' : 'grey'"
+                    :color="props.row.rank <= 3 ? 'purple' : props.row.rank <= 5 ? 'info' : 'grey'"
                     class="text-caption q-px-sm"
                     rounded
                   >
@@ -449,6 +461,8 @@
                   </q-badge>
                 </q-td>
               </template>
+
+              <!-- Action column template -->
               <template #body-cell-action="props">
                 <q-td :props="props">
                   <q-btn
@@ -725,7 +739,6 @@
   const authStore = useAuthStore();
 
   const applicantSearch = ref('');
-  // const applicantSearchRate = ref('');
   const isLoading = ref(false);
   const sendEvalConfirmDialog = ref(false);
 
@@ -739,14 +752,12 @@
   const lastLoadedId = ref(null);
 
   const ratingPagination = ref({
-  page: 1,
-  rowsPerPage: 10,
-  rowsNumber: 0,      // ← total from meta.total
-  sortBy: null,
-  descending: false,
-});
-
-
+    page: 1,
+    rowsPerPage: 10,
+    rowsNumber: 0,
+    sortBy: null,
+    descending: false,
+  });
 
   const selectedJob = ref({
     Position: '',
@@ -773,6 +784,17 @@
     Eligibility: '',
   });
 
+  // Store criteria weights from API response
+  const criteriaWeights = ref({
+    education: 0,
+    experience: 0,
+    training: 0,
+    performance: 0,
+    exam: 0,
+  });
+
+  const hasExamScore = ref(false);
+
   const { formatDate } = date;
   const activeTab = ref('applicants');
 
@@ -787,38 +809,26 @@
   const pdfErrorMessage = ref('');
   const unoccupiedConfirmDialog = ref(false);
 
-  // ===== Applicant Source Counts =====
-  // const internalCount = computed(
-  //   () => formattedApplicants.value.filter((a) => a.source === 'Internal').length,
-  // );
-  // const externalCount = computed(
-  //   () => formattedApplicants.value.filter((a) => a.source === 'External').length,
-  // );
-
-  // --- ADD these instead, reading from the store meta ---
   const internalCount = computed(() => jobPostStore.applicantMeta.internal_applicants);
   const externalCount = computed(() => jobPostStore.applicantMeta.external_applicants);
   const totalApplicants = computed(() => jobPostStore.applicantMeta.total_applicants);
 
-  // assessed comes as "6/6" string — parse the left side for the count
   const assessedCount = computed(() => {
     const raw = jobPostStore.applicantMeta.assessed ?? '0/0';
     return parseInt(raw.split('/')[0]) || 0;
   });
 
-  // Pagination — Quasar server-side style
   const applicantPagination = ref({
     page: 1,
     rowsPerPage: 10,
-    rowsNumber: 0, // total from server, kept in sync below
+    rowsNumber: 0,
   });
 
   const globalSearch = ref('');
   const ratingApplicantSearch = ref('');
   let searchTimeout = null;
-    let ratingSearchTimeout = null;   // ← separate timeout
+  let ratingSearchTimeout = null;
 
-  // Pagination/sort changes — no debounce needed here
   const onApplicantRequest = async (props) => {
     const { page, rowsPerPage } = props.pagination;
     const perPage = rowsPerPage === 0 ? 'all' : rowsPerPage;
@@ -834,8 +844,6 @@
     applicantPagination.value.rowsNumber = totalApplicants.value;
   };
 
-  // Watch for search changes — reset to page 1
-  // ✅ Debounced watch — only fires 500ms after user stops typing
   watch(globalSearch, (newValue) => {
     if (searchTimeout) clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
@@ -849,11 +857,9 @@
         search: newValue,
       });
       applicantPagination.value.rowsNumber = totalApplicants.value;
-    }, 500); // ✅ 500ms debounce
+    }, 500);
   });
 
-
-  // Pagination/sort changes — no debounce needed here
   const onApplicantRatingRequest = async (props) => {
     const { page, rowsPerPage } = props.pagination;
     const perPage = rowsPerPage === 0 ? 'all' : rowsPerPage;
@@ -869,10 +875,6 @@
     ratingPagination.value.rowsNumber = jobPostStore.ratingMeta?.total || 0;
   };
 
-  // Watch for search changes — reset to page 1
-  // ✅ Debounced watch — only fires 500ms after user stops typing
-
-
   watch(ratingApplicantSearch, (newValue) => {
     if (ratingSearchTimeout) clearTimeout(ratingSearchTimeout);
     ratingSearchTimeout = setTimeout(async () => {
@@ -880,49 +882,13 @@
       await jobPostStore.fetch_applicant_rating(selectedJob.value.id, {
         page: 1,
         perPage:
-          ratingPagination.value.rowsPerPage === 0
-            ? 'all'
-            : ratingPagination.value.rowsPerPage,
+          ratingPagination.value.rowsPerPage === 0 ? 'all' : ratingPagination.value.rowsPerPage,
         search: newValue,
       });
       ratingPagination.value.rowsNumber = jobPostStore.ratingMeta?.total || 0;
-    }, 500); // ✅ 500ms debounce
+    }, 500);
   });
-  // onMounted — also pass id
-  // onMounted(async () => {
-  //   await jobPostStore.fetch_applicant(selectedJob.value.id, { // ✅ pass id
-  //     page: 1,
-  //     perPage: applicantPagination.value.rowsPerPage,
-  //     search: '',
-  //   });
-  //   applicantPagination.value.rowsNumber = totalApplicants.value;
-  // });
 
-  // Pagination
-  // const applicantPage = ref(1);
-  // const applicantLastPage = computed(() => jobPostStore.applicantMeta.last_page);
-
-  // // Updated to pass perPage
-  // const onApplicantPageChange = async (page) => {
-  //   applicantPage.value = page;
-  //   await jobPostStore.fetch_applicant(selectedJob.value.id, page, applicantPerPage.value);
-  // };
-
-  // const applicantPerPage = ref(10);
-  // const perPageOptions = [
-  //   { label: '15',  value: 15  },
-  //   { label: '20',  value: 20  },
-  //   { label: '50',  value: 50  },
-  //   { label: '100', value: 100 },
-  //   { label: 'All', value: 'all' },
-  // ];
-
-  // const onPerPageChange = async () => {
-  //   applicantPage.value = 1; // reset to first page on per-page change
-  //   await jobPostStore.fetch_applicant(selectedJob.value.id, 1, applicantPerPage.value);
-  // };
-
-  // ===== Unqualified list for modal =====
   const unqualifiedApplicants = computed(() =>
     formattedApplicants.value.filter(
       (a) => a.status === 'Unqualified' || a.status === 'unqualified',
@@ -933,7 +899,6 @@
     sendEvalConfirmDialog.value = true;
   };
 
-  // ===== Filtered Applicants =====
   const filteredApplicants = computed(() => {
     if (!applicantSearch.value) return formattedApplicants.value;
     const search = applicantSearch.value.toLowerCase();
@@ -946,32 +911,158 @@
     });
   });
 
-  // ===== Filtered Ratings =====
-  const filteredApplicantsRate = computed(() => {
-    if (!ratingApplicantSearch.value) return formattedApplicantRatings.value;
-    const search = ratingApplicantSearch.value.toLowerCase();
-    return formattedApplicantRatings.value.filter((applicant) => {
-      const fullName = `${applicant.firstname} ${applicant.lastname}`.toLowerCase();
-      return (
-        fullName.includes(search) ||
-        String(applicant.education).includes(search) ||
-        String(applicant.experience).includes(search) ||
-        String(applicant.training).includes(search) ||
-        String(applicant.performance).includes(search) ||
-        String(applicant.bei).includes(search) ||
-        String(applicant.total_qs).includes(search) ||
-        String(applicant.grand_total).includes(search) ||
-        String(applicant.rank).includes(search)
-      );
-    });
+  // Get criteria types from the rating data
+  const ratingCriteriaTypes = computed(() => {
+    const types = [];
+    if (criteriaWeights.value.education > 0)
+      types.push({
+        type: 'education',
+        label: 'Education',
+        weight: criteriaWeights.value.education,
+      });
+    if (criteriaWeights.value.experience > 0)
+      types.push({
+        type: 'experience',
+        label: 'Experience',
+        weight: criteriaWeights.value.experience,
+      });
+    if (criteriaWeights.value.training > 0)
+      types.push({ type: 'training', label: 'Training', weight: criteriaWeights.value.training });
+    if (criteriaWeights.value.performance > 0)
+      types.push({
+        type: 'performance',
+        label: 'Performance',
+        weight: criteriaWeights.value.performance,
+      });
+    return types;
   });
-// const filteredApplicantsRate = computed(() => jobPostStore.applicant_rating || []);
+
+  // Get weight for a criteria type
+  // const getCriteriaWeight = (type) => {
+  //   return criteriaWeights.value[type] || 0;
+  // };
+
+  // Dynamic rating columns based on criteria
+  const dynamicRatingColumns = computed(() => {
+    const columns = [];
+
+    // Name column (static)
+    columns.push({
+      name: 'name',
+      label: 'Name',
+      field: 'name',
+      align: 'left',
+      sortable: true,
+      style: 'min-width: 180px',
+    });
+
+    // Dynamic criteria columns from the response
+    if (criteriaWeights.value.education > 0) {
+      columns.push({
+        name: 'education',
+        label: `Education (${criteriaWeights.value.education}%)`,
+        field: 'education',
+        align: 'center',
+        sortable: true,
+        style: 'min-width: 120px',
+      });
+    }
+
+    if (criteriaWeights.value.experience > 0) {
+      columns.push({
+        name: 'experience',
+        label: `Experience (${criteriaWeights.value.experience}%)`,
+        field: 'experience',
+        align: 'center',
+        sortable: true,
+        style: 'min-width: 120px',
+      });
+    }
+
+    if (criteriaWeights.value.training > 0) {
+      columns.push({
+        name: 'training',
+        label: `Training (${criteriaWeights.value.training}%)`,
+        field: 'training',
+        align: 'center',
+        sortable: true,
+        style: 'min-width: 120px',
+      });
+    }
+
+    if (criteriaWeights.value.performance > 0) {
+      columns.push({
+        name: 'performance',
+        label: `Performance (${criteriaWeights.value.performance}%)`,
+        field: 'performance',
+        align: 'center',
+        sortable: true,
+        style: 'min-width: 120px',
+      });
+    }
+
+    // Total QS column (static)
+    columns.push({
+      name: 'total_qs',
+      label: 'Total QS',
+      field: 'total_qs',
+      align: 'center',
+      sortable: true,
+      style: 'min-width: 100px',
+    });
+
+    // Exam column if exists
+    if (hasExamScore.value && criteriaWeights.value.exam > 0) {
+      columns.push({
+        name: 'exam_score',
+        label: `Exam (${criteriaWeights.value.exam}%)`,
+        field: 'exam_score',
+        align: 'center',
+        sortable: true,
+        style: 'min-width: 100px',
+      });
+    }
+
+    // Grand Total column (static)
+    columns.push({
+      name: 'grand_total',
+      label: 'Grand Total',
+      field: 'grand_total',
+      align: 'center',
+      sortable: true,
+      style: 'min-width: 100px',
+    });
+
+    // Rank column (static)
+    columns.push({
+      name: 'rank',
+      label: 'Rank',
+      field: 'rank',
+      align: 'center',
+      sortable: true,
+      style: 'min-width: 80px',
+    });
+
+    // Action column (static)
+    columns.push({
+      name: 'action',
+      label: 'Action',
+      field: 'action',
+      align: 'center',
+      sortable: false,
+      style: 'min-width: 80px',
+    });
+
+    return columns;
+  });
+
   const historyOptions = computed(() => {
     if (!selectedJob.value?.history?.length) return [];
     return [...selectedJob.value.history]
       .sort((a, b) => new Date(b.post_date) - new Date(a.post_date))
       .map((h) => ({
-        label: `${formatDate(h.post_date, 'MMM D, YYYY')} - ${formatDate(h.end_date, 'MMM D, YYYY')}`,
+        // label: `${formatDate(h.post_date, 'MMM D, YYYY')} - ${formatDate(h.end_date, 'MMM D, YYYY')}`,
+        label: `${formatDate(h.post_date, 'MMM D, YYYY')}`,
         value: h.id,
         historyData: h,
       }));
@@ -982,27 +1073,56 @@
     viewJobDetails(historyId);
   };
 
+  // Extract criteria weights from the rating API response
+  const extractCriteriaWeights = (ratingResponse) => {
+    if (ratingResponse?.criteria && ratingResponse.criteria.length > 0) {
+      const criteriaData = ratingResponse.criteria[0];
+
+      // Get education weight
+      if (criteriaData.educations && criteriaData.educations.length > 0) {
+        criteriaWeights.value.education = parseInt(criteriaData.educations[0].weight) || 0;
+      }
+
+      // Get experience weight
+      if (criteriaData.experiences && criteriaData.experiences.length > 0) {
+        criteriaWeights.value.experience = parseInt(criteriaData.experiences[0].weight) || 0;
+      }
+
+      // Get training weight
+      if (criteriaData.trainings && criteriaData.trainings.length > 0) {
+        criteriaWeights.value.training = parseInt(criteriaData.trainings[0].weight) || 0;
+      }
+
+      // Get performance weight
+      if (criteriaData.performances && criteriaData.performances.length > 0) {
+        criteriaWeights.value.performance = parseInt(criteriaData.performances[0].weight) || 0;
+      }
+
+      // Get exam weight
+      if (criteriaData.exams && criteriaData.exams.length > 0) {
+        criteriaWeights.value.exam = parseInt(criteriaData.exams[0].weight) || 0;
+        hasExamScore.value = criteriaWeights.value.exam > 0;
+      }
+    }
+  };
+
   const loadAllData = async (id) => {
     isLoading.value = true;
     try {
-      const [jobDetails] = await Promise.allSettled([
+      const [jobDetails, ratingResponse] = await Promise.allSettled([
         jobPostStore.fetchJobDetails(id),
-        // jobPostStore.fetch_applicant(id),
+        jobPostStore.fetch_applicant_rating(id, {
+          page: 1,
+          perPage: ratingPagination.value.rowsPerPage,
+          search: '',
+        }),
         jobPostStore.fetch_applicant(id, {
-          // ✅ pass id directly, not selectedJob.value.id
           page: 1,
           perPage: applicantPagination.value.rowsPerPage,
           search: '',
         }),
-
-        jobPostStore.fetch_applicant_rating(id,{
-          // ✅ pass id directly, not selectedJob.value.id
-          page: 1,
-          perPage: ratingPagination.value.rowsPerPage,
-          search: '',
-        }
-        ),
       ]);
+
       if (jobDetails.status === 'rejected') throw new Error('Failed to fetch job details');
       const details = jobDetails.value;
       selectedJob.value = {
@@ -1025,6 +1145,7 @@
         history: details.history || [],
         ...details,
       };
+
       if (details.criteria && typeof details.criteria === 'object') {
         selectedCriteria.value = {
           id: details.criteria.id || null,
@@ -1034,11 +1155,16 @@
           Eligibility: details.criteria.Eligibility || 'Not specified',
         };
       }
+
+      // Extract criteria weights from rating response
+      if (ratingResponse.status === 'fulfilled' && ratingResponse.value) {
+        extractCriteriaWeights(ratingResponse.value);
+      }
+
       displayHistoryId.value = details.id;
       lastLoadedId.value = details.id;
-      applicantPagination.value.rowsNumber = totalApplicants.value; // ✅ sync pagination here
-      ratingPagination.value.rowsNumber = jobPostStore.ratingMeta?.total || 0; // ✅ add this
-
+      applicantPagination.value.rowsNumber = totalApplicants.value;
+      ratingPagination.value.rowsNumber = jobPostStore.ratingMeta?.total || 0;
 
       return details;
     } catch (error) {
@@ -1150,15 +1276,6 @@
     };
   });
 
-  // const totalApplicants = computed(() => formattedApplicants.value.length);
-
-  // const assessedCount = computed(
-  //   () =>
-  //     formattedApplicants.value.filter(
-  //       (a) => a.status === 'Qualified' || a.status === 'Unqualified',
-  //     ).length,
-  // );
-
   const goBack = () => router.push('/job-post');
 
   const onApplicantHired = async () => {
@@ -1249,71 +1366,6 @@
     { name: 'action', label: 'Action', field: 'action', align: 'center', sortable: false },
   ]);
 
-  const ratingColumns = ref([
-    // {
-    //   name: 'personal_id',
-    //   label: 'Personal ID',
-    //   field: 'personal_id',
-    //   align: 'center',
-    //   sortable: true,
-    // },
-    { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
-    { name: 'education', label: 'Education', field: 'education', align: 'center', sortable: true },
-    {
-      name: 'experience',
-      label: 'Experience',
-      field: 'experience',
-      align: 'center',
-      sortable: true,
-    },
-    { name: 'training', label: 'Training', field: 'training', align: 'center', sortable: true },
-    {
-      name: 'performance',
-      label: 'Performance',
-      field: 'performance',
-      align: 'center',
-      sortable: true,
-    },
-    { name: 'bei', label: 'BEI', field: 'bei', align: 'center', sortable: true },
-    { name: 'total_qs', label: 'Total QS', field: 'total_qs', align: 'center', sortable: true },
-    {
-      name: 'grand_total',
-      label: 'Grand Total',
-      field: 'grand_total',
-      align: 'center',
-      sortable: true,
-    },
-    { name: 'rank', label: 'Rank', field: 'rank', align: 'center', sortable: true },
-    { name: 'action', label: 'Action', field: 'action', align: 'center', sortable: false },
-  ]);
-
-  // const formattedApplicants = computed(() => {
-  //   if (!jobPostStore.applicant) return [];
-  //   return jobPostStore.applicant.map((a) => {
-  //     const fullName = `${a.firstname || ''} ${a.lastname || ''} ${a.name_extension || ''}`.trim();
-  //     return {
-  //       id: a.id,
-  //       submission_id: a.submission_id || a.id,
-  //       name: fullName,
-  //       firstname: a.firstname || '',
-  //       lastname: a.lastname || '',
-  //       name_extension: a.name_extension || '',
-  //       image_url: a.image_url || 'https://placehold.co/100',
-  //       appliedDate:
-  //         a.appliedDate ||
-  //         (a.application_date ? formatDate(a.application_date, 'MMM D, YYYY') : '-'),
-  //       source: a.ControlNo || a.controlno ? 'Internal' : 'External',
-  //       status: a.status || '-',
-  //       ranking: a.ranking,
-  //       education: a.education || [],
-  //       raw: a,
-  //       education_remark: a.education_remark,
-  //       experience_remark: a.experience_remark,
-  //       training_remark: a.training_remark,
-  //       eligibility_remark: a.eligibility_remark,
-  //     };
-  //   });
-  // });
   const formattedApplicants = computed(() => {
     if (!jobPostStore.applicant) return [];
     return jobPostStore.applicant.map((a) => {
@@ -1327,7 +1379,6 @@
         name_extension: a.name_extension || '',
         image_url: a.image_url || 'https://placehold.co/100',
         appliedDate: a.application_date ? formatDate(a.application_date, 'MMM D, YYYY') : '-',
-        // Use applicant_type directly instead of deriving from ControlNo
         source: a.applicant_type === 'internal' ? 'Internal' : 'External',
         status: a.status || '-',
         education: a.education || [],
@@ -1399,6 +1450,7 @@
           training: rating.training || '0.00',
           performance: rating.performance || '0.00',
           bei: rating.bei || '0.00',
+          exam_score: rating.exam_score || '0.00',
           total_qs: rating.total_qs || '0.00',
           grand_total: rating.grand_total || '0.00',
           rank: rating.rank || '-',
@@ -1410,6 +1462,24 @@
         };
       })
       .sort((a, b) => parseInt(a.rank) - parseInt(b.rank));
+  });
+
+  const filteredApplicantsRate = computed(() => {
+    if (!ratingApplicantSearch.value) return formattedApplicantRatings.value;
+    const search = ratingApplicantSearch.value.toLowerCase();
+    return formattedApplicantRatings.value.filter((applicant) => {
+      const fullName = `${applicant.firstname} ${applicant.lastname}`.toLowerCase();
+      return (
+        fullName.includes(search) ||
+        String(applicant.education).includes(search) ||
+        String(applicant.experience).includes(search) ||
+        String(applicant.training).includes(search) ||
+        String(applicant.performance).includes(search) ||
+        String(applicant.total_qs).includes(search) ||
+        String(applicant.grand_total).includes(search) ||
+        String(applicant.rank).includes(search)
+      );
+    });
   });
 
   function viewApplicantDetails(row) {
@@ -1448,15 +1518,6 @@
   }
 
   function viewApplicantScore(applicantRow) {
-    // const jobpostId = selectedJob.value?.id; // current job post id
-    // const applicantId =
-    //   applicantRow.submission_id || applicantRow.nPersonalInfo_id || applicantRow.id;
-
-    // if (jobpostId && applicantId) {
-    //   jobPostStore.fetchApplicantScoreDetails(applicantId, jobpostId);
-    // }
-
-    // keep your existing modal setup
     const historyData =
       applicantRow.originalData?.history || applicantRow.history || applicantRow.raw?.history || [];
     scoreModal.value = {
@@ -1478,6 +1539,7 @@
         training: applicantRow.training,
         performance: applicantRow.performance,
         bei: applicantRow.bei,
+        exam_score: applicantRow.exam_score,
         total_qs: applicantRow.total_qs,
         grand_total: applicantRow.grand_total,
         rank: applicantRow.rank,
@@ -1526,6 +1588,7 @@
       if (error.response?.status === 404) setTimeout(() => router.push('/job-post'), 2000);
     }
   });
+
   watch(totalApplicants, (val) => {
     applicantPagination.value.rowsNumber = val;
   });

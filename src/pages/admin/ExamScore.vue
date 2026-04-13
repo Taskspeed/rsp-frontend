@@ -50,8 +50,8 @@
         :columns="columns"
         row-key="submission_id"
         v-model:pagination="pagination"
-       @request="onRequest"
-      :rows-per-page-options="[10, 20, 50, 100, 200]"
+        @request="onRequest"
+        :rows-per-page-options="[10, 20, 50, 100, 200]"
         flat
         wrap-cells
       >
@@ -87,7 +87,7 @@
               <q-tooltip>View Details</q-tooltip>
             </q-btn>
 
-                <q-btn
+            <q-btn
               flat
               round
               dense
@@ -105,14 +105,12 @@
               color="red"
               class="bg-red-1"
               icon="delete"
-             @click="deleteScore(p.row.exam_score_id)"
+              @click="deleteScore(p.row.exam_score_id)"
             >
               <q-tooltip>Delete</q-tooltip>
             </q-btn>
           </q-td>
         </template>
-
-
 
         <template #no-data>
           <div class="full-width row flex-center q-pa-md text-grey">No Exam Scores Found</div>
@@ -591,170 +589,173 @@
       </q-card>
     </q-dialog>
 
-
-   <q-dialog
-  v-model="editDetailDialog"
-  persistent
-  :maximized="$q.screen.lt.sm"
-  transition-show="slide-up"
-  transition-hide="slide-down"
->
-  <q-card style="width: 680px; max-width: 95vw; border-radius: 12px;">
-
-    <!-- Header -->
-    <q-card-section class="row items-center q-pb-none q-pt-md q-px-lg">
-      <div class="row items-center q-gutter-sm">
-        <q-icon name="grading" color="primary" size="22px" />
-        <div>
-          <div class="text-subtitle1 text-bold text-grey-9">Edit exam score</div>
-          <div class="text-caption text-grey-5">
-            Submission ID: {{ selectedScore?.submission_id || 'N/A' }}
+    <q-dialog
+      v-model="editDetailDialog"
+      persistent
+      :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card style="width: 680px; max-width: 95vw; border-radius: 12px">
+        <!-- Header -->
+        <q-card-section class="row items-center q-pb-none q-pt-md q-px-lg">
+          <div class="row items-center q-gutter-sm">
+            <q-icon name="grading" color="primary" size="22px" />
+            <div>
+              <div class="text-subtitle1 text-bold text-grey-9">Edit exam score</div>
+              <div class="text-caption text-grey-5">
+                Submission ID: {{ selectedScore?.submission_id || 'N/A' }}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <q-space />
-      <q-btn flat round dense icon="close" color="grey-5" v-close-popup />
-    </q-card-section>
+          <q-space />
+          <q-btn flat round dense icon="close" color="grey-5" v-close-popup />
+        </q-card-section>
 
-    <q-separator class="q-mt-sm" />
+        <q-separator class="q-mt-sm" />
 
-    <q-card-section class="q-pa-lg" style="max-height: 70vh; overflow-y: auto;">
-
-      <!-- Applicant Info (read-only) -->
-      <div class="text-caption text-uppercase text-grey-5 text-bold q-mb-sm"
-           style="letter-spacing: 0.06em;">
-        <q-icon name="person" size="13px" class="q-mr-xs" />Applicant information
-      </div>
-
-      <div class="row q-col-gutter-sm q-mb-lg">
-        <div class="col-6 col-sm-4" v-for="(item, i) in [
-          { label: 'First name',       val: selectedScore?.firstname },
-          { label: 'Last name',        val: selectedScore?.lastname },
-          { label: 'Position applied', val: selectedScore?.position },
-          { label: 'Applicant type',   val: selectedScore?.applicant_type },
-          { label: 'Control no.',      val: selectedScore?.ControlNo },
-        ]" :key="i">
-          <div class="bg-grey-1 rounded-borders q-pa-sm">
-            <div class="text-caption text-grey-5">{{ item.label }}</div>
-            <div class="text-body2 text-grey-9 text-bold">{{ item.val || 'N/A' }}</div>
-          </div>
-        </div>
-      </div>
-
-      <q-separator class="q-mb-lg" />
-
-      <!-- Editable Score Fields -->
-      <div class="text-caption text-uppercase text-grey-5 text-bold q-mb-md"
-           style="letter-spacing: 0.06em;">
-        <q-icon name="edit" size="13px" class="q-mr-xs" />Edit score details
-      </div>
-
-      <div class="row q-col-gutter-md q-mb-md">
-        <!-- Exam Type -->
-        <div class="col-12 col-sm-6">
-          <q-select
-            v-model="editForm.exam_type"
-            :options="['Civil Service Exam', 'Written Exam', 'Practical Exam']"
-            label="Exam type"
-            outlined
-            dense
-            emit-value
-            map-options
-          />
-        </div>
-
-        <!-- Exam Date -->
-        <div class="col-12 col-sm-6">
-          <q-input
-            v-model="editForm.exam_date"
-            label="Exam date"
-            outlined
-            dense
+        <q-card-section class="q-pa-lg" style="max-height: 70vh; overflow-y: auto">
+          <!-- Applicant Info (read-only) -->
+          <div
+            class="text-caption text-uppercase text-grey-5 text-bold q-mb-sm"
+            style="letter-spacing: 0.06em"
           >
-            <template #append>
-              <q-icon name="event" class="cursor-pointer" color="grey-6">
-                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                  <q-date v-model="editForm.exam_date" mask="YYYY-MM-DD">
-                    <div class="row items-center justify-end">
-                      <q-btn v-close-popup label="Close" color="primary" flat />
-                    </div>
-                  </q-date>
-                </q-popup-proxy>
-              </q-icon>
-            </template>
-          </q-input>
-        </div>
-      </div>
-
-      <!-- Score Cards -->
-      <div class="row q-col-gutter-md q-mb-md">
-        <div class="col-12 col-sm-6">
-          <div class="bg-grey-1 rounded-borders q-pa-md">
-            <div class="text-caption text-grey-5 q-mb-sm">Raw score</div>
-            <q-input
-              v-model.number="editForm.exam_score"
-              type="number"
-              outlined
-              dense
-              min="0"
-              :max="editForm.exam_total_score"
-              suffix="pts"
-              :rules="[v => v >= 0 || 'Must be 0 or above', v => v <= editForm.exam_total_score || 'Cannot exceed total']"
-            />    <!-- Dynamic passing badge -->
-            <q-badge
-              class="q-mt-sm"
-              :color="passingStatus.color"
-              :label="passingStatus.label"
-              style="font-size: 11px; padding: 4px 8px;"
-            />
+            <q-icon name="person" size="13px" class="q-mr-xs" />
+            Applicant information
           </div>
-        </div>
 
-        <div class="col-12 col-sm-6">
-          <div class="bg-grey-1 rounded-borders q-pa-md">
-            <div class="text-caption text-grey-5 q-mb-sm">Total score (out of)</div>
-            <q-input
-              v-model.number="editForm.exam_total_score"
-              type="number"
-              outlined
-              dense
-              min="1"
-              suffix="pts"
-            />
-        
+          <div class="row q-col-gutter-sm q-mb-lg">
+            <div
+              class="col-6 col-sm-4"
+              v-for="(item, i) in [
+                { label: 'First name', val: selectedScore?.firstname },
+                { label: 'Last name', val: selectedScore?.lastname },
+                { label: 'Position applied', val: selectedScore?.position },
+                { label: 'Applicant type', val: selectedScore?.applicant_type },
+                { label: 'Control no.', val: selectedScore?.ControlNo },
+              ]"
+              :key="i"
+            >
+              <div class="bg-grey-1 rounded-borders q-pa-sm">
+                <div class="text-caption text-grey-5">{{ item.label }}</div>
+                <div class="text-body2 text-grey-9 text-bold">{{ item.val || 'N/A' }}</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Remarks -->
-      <q-input
-        v-model="editForm.exam_remarks"
-        label="Remarks"
-        outlined
-        dense
-        type="textarea"
-        autogrow
-        :input-style="{ minHeight: '72px' }"
-      />
+          <q-separator class="q-mb-lg" />
 
-    </q-card-section>
+          <!-- Editable Score Fields -->
+          <div
+            class="text-caption text-uppercase text-grey-5 text-bold q-mb-md"
+            style="letter-spacing: 0.06em"
+          >
+            <q-icon name="edit" size="13px" class="q-mr-xs" />
+            Edit score details
+          </div>
 
-    <q-separator />
+          <div class="row q-col-gutter-md q-mb-md">
+            <!-- Exam Type -->
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="editForm.exam_type"
+                :options="['Civil Service Exam', 'Written Exam', 'Practical Exam']"
+                label="Exam type"
+                outlined
+                dense
+                emit-value
+                map-options
+              />
+            </div>
 
-    <q-card-actions align="right" class="q-px-lg q-py-sm bg-grey-1">
-      <q-btn flat label="Cancel" color="grey-7" v-close-popup />
-      <q-btn
-        unelevated
-        label="Save changes"
-        color="primary"
-        icon="save"
-        :loading="savingScore"
-        @click="submitEditScore"
-      />
-    </q-card-actions>
+            <!-- Exam Date -->
+            <div class="col-12 col-sm-6">
+              <q-input v-model="editForm.exam_date" label="Exam date" outlined dense>
+                <template #append>
+                  <q-icon name="event" class="cursor-pointer" color="grey-6">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="editForm.exam_date" mask="YYYY-MM-DD">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Close" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
 
-  </q-card>
-</q-dialog>
+          <!-- Score Cards -->
+          <div class="row q-col-gutter-md q-mb-md">
+            <div class="col-12 col-sm-6">
+              <div class="bg-grey-1 rounded-borders q-pa-md">
+                <div class="text-caption text-grey-5 q-mb-sm">Raw score</div>
+                <q-input
+                  v-model.number="editForm.exam_score"
+                  type="number"
+                  outlined
+                  dense
+                  min="0"
+                  :max="editForm.exam_total_score"
+                  suffix="pts"
+                  :rules="[
+                    (v) => v >= 0 || 'Must be 0 or above',
+                    (v) => v <= editForm.exam_total_score || 'Cannot exceed total',
+                  ]"
+                />
+                <!-- Dynamic passing badge -->
+                <q-badge
+                  class="q-mt-sm"
+                  :color="passingStatus.color"
+                  :label="passingStatus.label"
+                  style="font-size: 11px; padding: 4px 8px"
+                />
+              </div>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <div class="bg-grey-1 rounded-borders q-pa-md">
+                <div class="text-caption text-grey-5 q-mb-sm">Total score (out of)</div>
+                <q-input
+                  v-model.number="editForm.exam_total_score"
+                  type="number"
+                  outlined
+                  dense
+                  min="1"
+                  suffix="pts"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Remarks -->
+          <q-input
+            v-model="editForm.exam_remarks"
+            label="Remarks"
+            outlined
+            dense
+            type="textarea"
+            autogrow
+            :input-style="{ minHeight: '72px' }"
+          />
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right" class="q-px-lg q-py-sm bg-grey-1">
+          <q-btn flat label="Cancel" color="grey-7" v-close-popup />
+          <q-btn
+            unelevated
+            label="Save changes"
+            color="primary"
+            icon="save"
+            :loading="savingScore"
+            @click="submitEditScore"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -771,14 +772,14 @@
 
     data() {
       return {
-            savingScore: false,
-            editForm: {
-            exam_type: '',
-            exam_date: '',
-            exam_score: null,
-            exam_total_score: null,
-            exam_remarks: '',
-          },
+        savingScore: false,
+        editForm: {
+          exam_type: '',
+          exam_date: '',
+          exam_score: null,
+          exam_total_score: null,
+          exam_remarks: '',
+        },
         globalSearch: '',
         pagination: {
           sortBy: 'lastname',
@@ -848,7 +849,7 @@
     },
 
     computed: {
-        passingStatus() {
+      passingStatus() {
         const score = Number(this.editForm.exam_score);
         const total = Number(this.editForm.exam_total_score);
         if (!total || isNaN(score)) return { color: 'grey', label: 'N/A' };
@@ -1042,15 +1043,15 @@
     },
 
     methods: {
-       // ✅ Fixed — populate editForm when opening the dialog
-       editScore(row) {
+      // ✅ Fixed — populate editForm when opening the dialog
+      editScore(row) {
         this.selectedScore = row;
         this.editForm = {
-          exam_type:        row.exam_type        || '',
-          exam_date:        row.exam_date        || '',
-          exam_score:       row.exam_score       ?? null,
+          exam_type: row.exam_type || '',
+          exam_date: row.exam_date || '',
+          exam_score: row.exam_score ?? null,
           exam_total_score: row.exam_total_score ?? null,
-          exam_remarks:     row.exam_remarks     || '',
+          exam_remarks: row.exam_remarks || '',
         };
         this.editDetailDialog = true;
       },
@@ -1059,10 +1060,7 @@
       async submitEditScore() {
         this.savingScore = true;
         try {
-          await this.store.updateScore(
-            this.selectedScore.submission_id,
-            this.editForm
-          );
+          await this.store.updateScore(this.selectedScore.submission_id, this.editForm);
           this.$q.notify({
             type: 'positive',
             message: 'Score updated successfully.',
@@ -1084,28 +1082,29 @@
       },
       // ── Utilities ────────────────────────────────────────────────────
       async deleteScore(applicantExamScoreId) {
-
-        this.$q.dialog({
-          title: 'Confirm Delete',
-          message: 'Are you sure you want to delete this exam score?',
-          cancel: true,
-          persistent: true,
-        }).onOk(async () => {
-          try {
-            await this.store.deleteScore(applicantExamScoreId);
-            this.$q.notify({
-              type: 'positive',
-              message: 'Exam score deleted successfully',
-              position: 'top',
-            });
-          } catch (error) {
-            this.$q.notify({
-              type: 'negative',
-              message: error.response?.data?.message || 'Failed to delete exam score',
-              position: 'top',
-            });
-          }
-        });
+        this.$q
+          .dialog({
+            title: 'Confirm Delete',
+            message: 'Are you sure you want to delete this exam score?',
+            cancel: true,
+            persistent: true,
+          })
+          .onOk(async () => {
+            try {
+              await this.store.deleteScore(applicantExamScoreId);
+              this.$q.notify({
+                type: 'positive',
+                message: 'Exam score deleted successfully',
+                position: 'top',
+              });
+            } catch (error) {
+              this.$q.notify({
+                type: 'negative',
+                message: error.response?.data?.message || 'Failed to delete exam score',
+                position: 'top',
+              });
+            }
+          });
       },
       formatScore(value) {
         if (value === null || value === undefined) return 'N/A';
@@ -1178,23 +1177,23 @@
       //     });
       // },
       onRequest(props) {
-  const { page, rowsPerPage} = props.pagination; // ✅ add rowsPerPage
-  this.pagination.page = page;
-  this.pagination.rowsPerPage = rowsPerPage; // ✅ save it
-  // this.pagination.sortBy = sortBy;
-  // this.pagination.descending = descending;
-  this.store
-    .fetchScores({
-      ...this.buildMainFilters(),
-      page,
-      perPage: rowsPerPage, // ✅ send it to the store
-      // sortBy,
-      // descending,
-    })
-    .then(() => {
-      this.pagination.rowsNumber = this.store.pagination.total;
-    });
-},
+        const { page, rowsPerPage } = props.pagination; // ✅ add rowsPerPage
+        this.pagination.page = page;
+        this.pagination.rowsPerPage = rowsPerPage; // ✅ save it
+        // this.pagination.sortBy = sortBy;
+        // this.pagination.descending = descending;
+        this.store
+          .fetchScores({
+            ...this.buildMainFilters(),
+            page,
+            perPage: rowsPerPage, // ✅ send it to the store
+            // sortBy,
+            // descending,
+          })
+          .then(() => {
+            this.pagination.rowsNumber = this.store.pagination.total;
+          });
+      },
 
       // ── Modal table ──────────────────────────────────────────────────
 
@@ -1428,13 +1427,8 @@
         }
       },
     },
-     // ── update ─────────────────────────────────────────────────────────
-     // ─── Edit Score state ─────────────────────────────────────────────────────────
-
-
-
-  
-  
+    // ── update ─────────────────────────────────────────────────────────
+    // ─── Edit Score state ─────────────────────────────────────────────────────────
 
     mounted() {
       this.store.fetchScores({ page: 1 }).then(() => {
@@ -1588,3 +1582,4 @@
     overflow-y: auto;
   }
 </style>
+yy

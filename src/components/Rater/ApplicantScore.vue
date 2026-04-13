@@ -39,7 +39,7 @@
           <q-card flat class="modern-table-card">
             <q-table
               :rows="raterScores"
-              :columns="columns"
+              :columns="dynamicColumns"
               row-key="id"
               flat
               dense
@@ -115,7 +115,7 @@
           <q-card flat class="modern-table-card">
             <q-table
               :rows="[finalScores]"
-              :columns="finalScoreColumns"
+              :columns="dynamicFinalScoreColumns"
               row-key="nPersonalInfo_id"
               flat
               dense
@@ -372,11 +372,19 @@
       const hiringLoading = ref(false);
       const hireConfirmationDialog = ref(false);
       const dataLoading = ref(false);
+      const criteriaWeights = ref({
+        education: 0,
+        experience: 0,
+        training: 0,
+        performance: 0,
+        exam: 0,
+      });
+      const hasExamScore = ref(false);
+      const hasBei = ref(false);
 
       const jobPostStore = useJobPostStore();
       const authStore = useAuthStore();
 
-      // ✅ Use nPersonalInfo_id if present, otherwise ControlNo
       const applicantLookupKey = computed(() => {
         const nPersonal = props.applicant?.nPersonalInfo_id;
         const controlNo = props.applicant?.ControlNo || props.applicant?.controlno;
@@ -437,28 +445,230 @@
         return allRatingsCompleted && isTopFive && !isJobOccupied.value;
       });
 
-      const columns = ref([
-        { name: 'rater', label: 'Rater', field: 'rater_name', align: 'left' },
-        { name: 'education', label: 'Education', field: 'education', align: 'center' },
-        { name: 'experience', label: 'Experience', field: 'experience', align: 'center' },
-        { name: 'training', label: 'Training', field: 'training', align: 'center' },
-        { name: 'performance', label: 'Performance', field: 'performance', align: 'center' },
-        { name: 'bei', label: 'BEI', field: 'bei', align: 'center' },
-        { name: 'totalQs', label: 'Total QS', field: 'total_qs', align: 'center' },
-        { name: 'rank', label: 'Rank', field: 'ranking', align: 'center' },
-        { name: 'grandTotal', label: 'Grand Total', field: 'grand_total', align: 'center' },
-      ]);
+      // Extract criteria weights from the criteria array
+      const extractCriteriaWeights = (criteriaArray) => {
+        if (criteriaArray && criteriaArray.length > 0) {
+          const criteriaData = criteriaArray[0];
 
-      const finalScoreColumns = ref([
-        { name: 'education', label: 'Education', field: 'education', align: 'center' },
-        { name: 'experience', label: 'Experience', field: 'experience', align: 'center' },
-        { name: 'training', label: 'Training', field: 'training', align: 'center' },
-        { name: 'performance', label: 'Performance', field: 'performance', align: 'center' },
-        { name: 'bei', label: 'BEI', field: 'bei', align: 'center' },
-        { name: 'totalQs', label: 'Total QS', field: 'total_qs', align: 'center' },
-        { name: 'rank', label: 'Final Rank', field: 'rank', align: 'center' },
-        { name: 'grandTotal', label: 'Final Total', field: 'grand_total', align: 'center' },
-      ]);
+          if (criteriaData.educations && criteriaData.educations.length > 0) {
+            criteriaWeights.value.education = parseInt(criteriaData.educations[0].weight) || 0;
+          }
+
+          if (criteriaData.experiences && criteriaData.experiences.length > 0) {
+            criteriaWeights.value.experience = parseInt(criteriaData.experiences[0].weight) || 0;
+          }
+
+          if (criteriaData.trainings && criteriaData.trainings.length > 0) {
+            criteriaWeights.value.training = parseInt(criteriaData.trainings[0].weight) || 0;
+          }
+
+          if (criteriaData.performances && criteriaData.performances.length > 0) {
+            criteriaWeights.value.performance = parseInt(criteriaData.performances[0].weight) || 0;
+          }
+
+          if (criteriaData.exams && criteriaData.exams.length > 0) {
+            criteriaWeights.value.exam = parseInt(criteriaData.exams[0].weight) || 0;
+            hasExamScore.value = criteriaWeights.value.exam > 0;
+          }
+
+          // Check if BEI exists in the criteria
+          // BEI is typically part of the criteria structure - check if there's a bei property
+          if (criteriaData.bei !== undefined || criteriaData.bei_questions !== undefined) {
+            hasBei.value = true;
+          } else {
+            // Check if any rater has BEI score that's not null/undefined
+            hasBei.value = false;
+          }
+        }
+      };
+
+      // Check if BEI exists in the score data
+      const checkBeiInScores = (scores) => {
+        if (scores && scores.length > 0) {
+          hasBei.value = scores.some(
+            (score) => score.bei !== null && score.bei !== undefined && score.bei !== '',
+          );
+        }
+      };
+
+      // Dynamic columns for individual rater scores
+      const dynamicColumns = computed(() => {
+        const columns = [];
+
+        // Rater column (static)
+        columns.push({
+          name: 'rater',
+          label: 'Rater',
+          field: 'rater_name',
+          align: 'left',
+        });
+
+        // Dynamic criteria columns
+        if (criteriaWeights.value.education > 0) {
+          columns.push({
+            name: 'education',
+            label: `Education (${criteriaWeights.value.education}%)`,
+            field: 'education',
+            align: 'center',
+          });
+        }
+
+        if (criteriaWeights.value.experience > 0) {
+          columns.push({
+            name: 'experience',
+            label: `Experience (${criteriaWeights.value.experience}%)`,
+            field: 'experience',
+            align: 'center',
+          });
+        }
+
+        if (criteriaWeights.value.training > 0) {
+          columns.push({
+            name: 'training',
+            label: `Training (${criteriaWeights.value.training}%)`,
+            field: 'training',
+            align: 'center',
+          });
+        }
+
+        if (criteriaWeights.value.performance > 0) {
+          columns.push({
+            name: 'performance',
+            label: `Performance (${criteriaWeights.value.performance}%)`,
+            field: 'performance',
+            align: 'center',
+          });
+        }
+
+        // BEI column - only show if BEI exists in criteria or scores
+        if (hasBei.value) {
+          columns.push({
+            name: 'bei',
+            label: 'BEI',
+            field: 'bei',
+            align: 'center',
+          });
+        }
+
+        // Total QS column
+        columns.push({
+          name: 'totalQs',
+          label: 'Total QS',
+          field: 'total_qs',
+          align: 'center',
+        });
+
+        // Exam column if exists
+        if (hasExamScore.value && criteriaWeights.value.exam > 0) {
+          columns.push({
+            name: 'exam',
+            label: `Exam (${criteriaWeights.value.exam}%)`,
+            field: 'exam',
+            align: 'center',
+          });
+        }
+
+        // Rank column
+        columns.push({
+          name: 'rank',
+          label: 'Rank',
+          field: 'ranking',
+          align: 'center',
+        });
+
+        // Grand Total column
+        columns.push({
+          name: 'grandTotal',
+          label: 'Grand Total',
+          field: 'grand_total',
+          align: 'center',
+        });
+
+        return columns;
+      });
+
+      // Dynamic columns for final scores
+      const dynamicFinalScoreColumns = computed(() => {
+        const columns = [];
+
+        if (criteriaWeights.value.education > 0) {
+          columns.push({
+            name: 'education',
+            label: `Education (${criteriaWeights.value.education}%)`,
+            field: 'education',
+            align: 'center',
+          });
+        }
+
+        if (criteriaWeights.value.experience > 0) {
+          columns.push({
+            name: 'experience',
+            label: `Experience (${criteriaWeights.value.experience}%)`,
+            field: 'experience',
+            align: 'center',
+          });
+        }
+
+        if (criteriaWeights.value.training > 0) {
+          columns.push({
+            name: 'training',
+            label: `Training (${criteriaWeights.value.training}%)`,
+            field: 'training',
+            align: 'center',
+          });
+        }
+
+        if (criteriaWeights.value.performance > 0) {
+          columns.push({
+            name: 'performance',
+            label: `Performance (${criteriaWeights.value.performance}%)`,
+            field: 'performance',
+            align: 'center',
+          });
+        }
+
+        // BEI column - only show if BEI exists in criteria or scores
+        if (hasBei.value) {
+          columns.push({
+            name: 'bei',
+            label: 'BEI',
+            field: 'bei',
+            align: 'center',
+          });
+        }
+
+        columns.push({
+          name: 'totalQs',
+          label: 'Total QS',
+          field: 'total_qs',
+          align: 'center',
+        });
+
+        if (hasExamScore.value && criteriaWeights.value.exam > 0) {
+          columns.push({
+            name: 'exam',
+            label: `Exam (${criteriaWeights.value.exam}%)`,
+            field: 'exam_score',
+            align: 'center',
+          });
+        }
+
+        columns.push({
+          name: 'rank',
+          label: 'Final Rank',
+          field: 'rank',
+          align: 'center',
+        });
+
+        columns.push({
+          name: 'grandTotal',
+          label: 'Final Total',
+          field: 'grand_total',
+          align: 'center',
+        });
+
+        return columns;
+      });
 
       const closeModal = () => {
         localShow.value = false;
@@ -499,7 +709,6 @@
           return;
         }
 
-        // ✅ IMPORTANT: Use submission_id from fetched score details if available
         const submissionId = finalScores.value?.submission_id || props.applicant?.submission_id;
 
         if (!submissionId) {
@@ -548,7 +757,7 @@
         console.log('Loading score data for applicant:', props.applicant);
 
         const lookupKey = applicantLookupKey.value;
-        const jobpostId = props.jobDetails?.id; // ✅ job post id
+        const jobpostId = props.jobDetails?.id;
 
         if (!props.applicant || !lookupKey || !jobpostId) {
           console.warn('Missing applicant lookup key or jobpostId');
@@ -563,23 +772,31 @@
         try {
           dataLoading.value = true;
 
-          // ✅ API returns: { applicant: {...}, history: [...] }
           const scoreData = await jobPostStore.fetchApplicantScoreDetails(lookupKey, jobpostId);
           console.log('Fetched score details:', scoreData);
 
           const apiApplicant = scoreData?.applicant || {};
 
-          // ✅ Keep displayed scores from props (already averaged), but hydrate IDs from API response
+          // Extract criteria weights from the response
+          if (scoreData?.criteria) {
+            extractCriteriaWeights(scoreData.criteria);
+          }
+
+          // Check if BEI exists in the history scores
+          if (Array.isArray(scoreData?.history)) {
+            checkBeiInScores(scoreData.history);
+          }
+
           finalScores.value = {
             education: props.applicant.education,
             experience: props.applicant.experience,
             training: props.applicant.training,
             performance: props.applicant.performance,
             bei: props.applicant.bei,
+            exam_score: props.applicant.exam_score || props.applicant.exam,
             total_qs: props.applicant.total_qs,
             grand_total: props.applicant.grand_total,
             rank: props.applicant.rank,
-
             submission_id: apiApplicant.submission_id ?? props.applicant.submission_id ?? null,
             nPersonalInfo_id:
               apiApplicant.nPersonalInfo_id ?? props.applicant.nPersonalInfo_id ?? null,
@@ -644,8 +861,8 @@
         applicantImageUrl,
         showControlNo,
         applicantName,
-        columns,
-        finalScoreColumns,
+        dynamicColumns,
+        dynamicFinalScoreColumns,
         closeModal,
         getRankColor,
         formatScore,
