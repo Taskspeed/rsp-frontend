@@ -321,6 +321,40 @@ onMounted(async () => {
   await dashboardStore.status();
   await useJobPost.job_post();
 });
+
+// onMounted(async () => {
+//   const [statusResult, jobPostResult] = await Promise.allSettled([
+//     dashboardStore.status(),
+//     useJobPost.job_post(),
+//   ]);
+
+//   if (statusResult.status === 'rejected') {
+//     console.error('Dashboard status failed:', statusResult.reason);
+//   }
+
+//   if (jobPostResult.status === 'rejected') {
+//     console.error('Job posts failed:', jobPostResult.reason);
+//   }
+// });
+// onMounted(async () => {
+//   const [statusResult, jobPostResult] = await Promise.allSettled([
+//     dashboardStore.status(),
+//     useJobPost.job_post(),
+//   ]);
+
+//   // ✅ Check fulfilled
+//   if (statusResult.status === 'fulfilled') {
+//     console.log('Status data:', statusResult.value); // .value on success
+//   } else {
+//     console.error('Status failed:', statusResult.reason); // .reason on error
+//   }
+
+//   if (jobPostResult.status === 'fulfilled') {
+//     console.log('Job post data:', jobPostResult.value);
+//   } else {
+//     console.error('Job post failed:', jobPostResult.reason);
+//   }
+// });
 </script>
 
 <style scoped>

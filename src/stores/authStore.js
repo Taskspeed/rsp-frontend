@@ -336,6 +336,11 @@ export const useAuthStore = defineStore('auth', {
               viewCriteria: userData.permissions?.viewCriteria || '0',
               modifyCriteria: userData.permissions?.modifyCriteria || '0',
               viewReport: userData.permissions?.viewReport || '0',
+
+              viewSchedule:userData.permissions?.viewSchedule || '0',
+              modifySchedule:userData.permissions?.modifySchedule || '0',
+              viewExam: userData.permissions?.viewExam || '0',
+              modifyExam: userData.permissions?.modifyExam || '0',
             },
           }),
         };
@@ -388,7 +393,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async Rater_register(userData) {
-      
+
       this.loading = true;
       this.errors = {};
       try {
