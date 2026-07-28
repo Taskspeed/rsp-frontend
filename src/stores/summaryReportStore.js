@@ -430,6 +430,25 @@ export const useSummaryReportStore = defineStore('summaryReport', {
         this.loading = false;
       }
     },
+    async generateQualifiedRecommendedApplicantExcel(publicationDate) {
+      try {
+        this.loading = true;
+        const formattedDate = this.formatDateToYYYYMMDD(publicationDate);
+        const response = await adminApi.post(
+          '/generate/list/qualified/recommend/applicant',
+          { publication_date: formattedDate },
+          { responseType: 'blob' },
+        );
+        this.error = null;
+        return response.data;
+      } catch (err) {
+        this.error = err.response?.data?.message || err.message;
+        console.error('Error generating Qualified and Recommended Applicant Excel:', err);
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
 
     async deleteApplication({ id }) {
       this.loading = true;

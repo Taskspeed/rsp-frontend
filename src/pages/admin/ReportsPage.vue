@@ -733,6 +733,15 @@
             apiEndpoint: '/generate/top/applicant',
             needsDateOnly: true,
           },
+          {
+            id: 17,
+            name: 'List of Qualified and Recommended Applicants',
+            category: 'Applicant',
+            type: 'Excel',
+            description: 'List of Qualified and Recommended Applicants - Excel Format',
+            apiEndpoint: '/api/generate/applicant/qualified-recommended',
+            needsDateOnly: true,
+          },
         ],
 
         pagination: { rowsPerPage: 10 },
@@ -1179,8 +1188,13 @@
                 this.selectedPublicationDate,
               );
               break;
-            case 16: // Top 5 Ranking Applicants (Excel)  <-- NEW
+            case 16: // Top 5 Ranking Applicants (Excel)
               response = await summaryReportStore.generateTopApplicant(
+                this.selectedPublicationDate,
+              );
+              break;
+            case 17: // NEW: List of Qualified and Recommended Applicants
+              response = await summaryReportStore.generateQualifiedRecommendedApplicantExcel(
                 this.selectedPublicationDate,
               );
               break;
