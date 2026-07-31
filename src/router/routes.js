@@ -84,6 +84,16 @@ const routes = [
         },
       },
       {
+        path: '/placement',
+        name: 'Placement Page',
+        component: () => import('pages/admin/PersonnelPlacement.vue'),
+        meta: {
+          auth: true,
+          role: 'admin',
+          permissions: ['viewPlacementAccess'],
+        },
+      },
+      {
         path: '/plantilla',
         name: 'Admin Plantilla',
         component: () => import('pages/admin/PlantillaPage.vue'),

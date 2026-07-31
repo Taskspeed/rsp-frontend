@@ -444,7 +444,7 @@
                     </div>
                   </div>
 
-                  <!-- Advance Appointment (NEW) -->
+                  <!-- Advance Appointment -->
                   <div class="perm-group">
                     <div class="perm-group-title">
                       <q-icon name="event_note" size="14px" class="q-mr-xs" />
@@ -480,6 +480,46 @@
                         dense
                         color="primary"
                         @update:model-value="() => onChildToggle('reportAdvanceAppointmentAccess')"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Placement (NEW) -->
+                  <div class="perm-group">
+                    <div class="perm-group-title">
+                      <q-icon name="assignment" size="14px" class="q-mr-xs" />
+                      Placement
+                    </div>
+                    <div class="perm-row two-col">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.viewPlacementAccess"
+                        label="View"
+                        dense
+                        color="primary"
+                        :disable="!canToggleView('viewPlacementAccess')"
+                        @update:model-value="() => onViewToggle('viewPlacementAccess')"
+                      />
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.modifyPlacementAccess"
+                        label="Modify"
+                        dense
+                        color="primary"
+                        @update:model-value="() => onChildToggle('modifyPlacementAccess')"
+                      />
+                    </div>
+                    <div class="perm-row">
+                      <q-toggle
+                        true-value="1"
+                        false-value="0"
+                        v-model="form.permissions.reportPlacementAccess"
+                        label="Report"
+                        dense
+                        color="primary"
+                        @update:model-value="() => onChildToggle('reportPlacementAccess')"
                       />
                     </div>
                   </div>
@@ -743,10 +783,13 @@
     'viewApplicantAccess',
     'modifyApplicantAccess',
     'reportApplicantAccess',
-    // Advance Appointment permissions
     'viewAdvanceAppointmentAccess',
     'modifyAdvanceAppointmentAccess',
     'reportAdvanceAppointmentAccess',
+    // Placement permissions
+    'viewPlacementAccess',
+    'modifyPlacementAccess',
+    'reportPlacementAccess',
     'viewLibraryAccess',
     'modifyLibraryAccess',
     'viewSchedule',
@@ -771,9 +814,11 @@
     modifyJobpostAccess: 'viewJobpostAccess',
     modifyApplicantAccess: 'viewApplicantAccess',
     reportApplicantAccess: 'viewApplicantAccess',
-    // Advance Appointment child permissions
     modifyAdvanceAppointmentAccess: 'viewAdvanceAppointmentAccess',
     reportAdvanceAppointmentAccess: 'viewAdvanceAppointmentAccess',
+    // Placement child permissions
+    modifyPlacementAccess: 'viewPlacementAccess',
+    reportPlacementAccess: 'viewPlacementAccess',
     modifyLibraryAccess: 'viewLibraryAccess',
     modifySchedule: 'viewSchedule',
     modifyExam: 'viewExam',
@@ -976,10 +1021,13 @@
           viewApplicantAccess: p.viewApplicantAccess || '0',
           modifyApplicantAccess: p.modifyApplicantAccess || '0',
           reportApplicantAccess: p.reportApplicantAccess || '0',
-          // Advance Appointment permissions
           viewAdvanceAppointmentAccess: p.viewAdvanceAppointmentAccess || '0',
           modifyAdvanceAppointmentAccess: p.modifyAdvanceAppointmentAccess || '0',
           reportAdvanceAppointmentAccess: p.reportAdvanceAppointmentAccess || '0',
+          // Placement permissions
+          viewPlacementAccess: p.viewPlacementAccess || '0',
+          modifyPlacementAccess: p.modifyPlacementAccess || '0',
+          reportPlacementAccess: p.reportPlacementAccess || '0',
           viewLibraryAccess: p.viewLibraryAccess || '0',
           modifyLibraryAccess: p.modifyLibraryAccess || '0',
           viewSchedule: p.viewSchedule || '0',

@@ -143,6 +143,25 @@
       </q-item>
 
       <!-- ================================================================ -->
+      <!-- Personnel Placement                                              -->
+      <!-- ================================================================ -->
+      <q-item
+        v-if="hasPlacementAccess"
+        dense
+        class="q-mx-xs q-my-xs"
+        style="border-radius: 17px; padding: 8px 11px"
+        clickable
+        v-ripple
+        to="/placement"
+        active-class="active-menu"
+      >
+        <q-item-section avatar>
+          <q-icon name="badge" size="sm" />
+        </q-item-section>
+        <q-item-section>Personnel Placement</q-item-section>
+      </q-item>
+
+      <!-- ================================================================ -->
       <!-- USER MANAGEMENT — guarded by userManagement permission           -->
       <!-- ================================================================ -->
       <q-item
@@ -223,6 +242,13 @@
       authStore.user?.permissions?.viewApplicantAccess == '1' ||
       authStore.user?.permissions?.modifyApplicantAccess == '1' ||
       authStore.user?.permissions?.reportApplicantAccess === '1',
+  );
+
+  const hasPlacementAccess = computed(
+    () =>
+      authStore.user?.permissions?.viewPlacementAccess == '1' ||
+      authStore.user?.permissions?.modifyPlacementAccess == '1' ||
+      authStore.user?.permissions?.reportPlacementAccess === '1',
   );
 
   // ============================================================================

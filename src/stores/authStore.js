@@ -378,6 +378,9 @@ export const useAuthStore = defineStore('auth', {
               userManagement: userData.permissions?.userManagement || '0',
               viewActivityLogs: userData.permissions?.viewActivityLogs || '0',
               reportRaterManagementAccess: userData.permissions?.reportRaterManagementAccess || '0',
+              viewPlacementAccess: userData.permissions?.reportApplicantAccess || '0',
+              modifyPlacementAccess: userData.permissions?.reportApplicantAccess || '0',
+              reportPlacementAccess: userData.permissions?.reportApplicantAccess || '0',
             },
           }),
         };
