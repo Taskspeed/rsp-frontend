@@ -878,6 +878,7 @@
         },
         layout: outerBorderLayout,
         margin: [0, 0, 0, 16],
+        unbreakable: true,
       });
 
       // Build each applicant for this position
