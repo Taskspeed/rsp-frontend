@@ -798,7 +798,15 @@
     // Loop through each position group
     // let positionIndex = 0;
 
-    for (const [posId, group] of Object.entries(positionGroups)) {
+    // Sort position groups by office alphabetically
+    const sortedPositions = Object.entries(positionGroups).sort(([, groupA], [, groupB]) => {
+      const officeA = (groupA.positionData?.office || '').toLowerCase();
+      const officeB = (groupB.positionData?.office || '').toLowerCase();
+      return officeA.localeCompare(officeB);
+    });
+
+    // Loop through each position group
+    for (const [posId, group] of sortedPositions) {
       const positionData = group.positionData || {};
       const posApplicants = group.applicants || [];
       const posLabel = group.positionLabel || positionData.position || rd.position || '';
@@ -1042,7 +1050,7 @@
               return 4;
             },
           },
-          margin: [0, 0, 0, 6],
+          margin: [0, 0, 0, 0],
           unbreakable: true,
         };
 
