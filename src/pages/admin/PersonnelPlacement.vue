@@ -236,19 +236,6 @@
                               <q-tooltip>Edit Reassignment</q-tooltip>
                             </q-btn>
                           </template>
-
-                          <!-- Regular employees: no actions -->
-                          <span
-                            v-else-if="props.row.Status?.toUpperCase() === 'REGULAR'"
-                            class="text-caption text-grey-6 q-ml-xs"
-                          >
-                            Regular
-                          </span>
-
-                          <!-- Fallback: show whatever status exists (also covers view-only users) -->
-                          <span v-else class="text-caption text-grey-6 q-ml-xs">
-                            {{ props.row.Status || '—' }}
-                          </span>
                         </div>
                       </template>
                       <template v-else>

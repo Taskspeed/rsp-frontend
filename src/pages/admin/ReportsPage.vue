@@ -570,6 +570,11 @@
     <q-dialog v-model="showListPositionReportViewer" maximized>
       <ListPositionReport :publicationDate="selectedListPositionPublicationDate" />
     </q-dialog>
+
+    <!-- ==================== SELECTED APPLICANT PER POSITION MODAL ==================== -->
+    <q-dialog v-model="showSelectedApplicantModal" persistent>
+      <SelectApplicantPositionModal @close="closeSelectedApplicantModal" />
+    </q-dialog>
   </q-page>
 </template>
 
@@ -580,6 +585,7 @@
   import TopApplicantReport from 'components/reports/TopApplicantReport.vue';
   import ApplicantPosition from 'components/reports/ApplicantPositionReport.vue';
   import ListPositionReport from 'components/reports/ListPositionReport.vue';
+  import SelectApplicantPositionModal from 'components/SelectApplicantPositionModal.vue';
 
   export default {
     name: 'ReportManagementPage',
@@ -590,6 +596,7 @@
       TopApplicantReport,
       ApplicantPosition,
       ListPositionReport,
+      SelectApplicantPositionModal,
     },
 
     data() {
@@ -742,6 +749,14 @@
             apiEndpoint: '/api/generate/applicant/qualified-recommended',
             needsDateOnly: true,
           },
+          {
+            id: 18,
+            name: 'Selected Applicant per Position',
+            category: 'Applicant',
+            type: 'PDF',
+            description: 'By Publication Date and Position',
+            apiEndpoint: null,
+          },
         ],
 
         pagination: { rowsPerPage: 10 },
@@ -804,6 +819,9 @@
         filteredPublicationDateOptions: [],
         selectedPublicationDate: null,
         loadingPublicationDatesForExcel: false,
+
+        // ==================== SELECTED APPLICANT PER POSITION ====================
+        showSelectedApplicantModal: false,
       };
     },
 
@@ -1107,6 +1125,10 @@
 
           case 5: // List of Position (PDF)
             this.openListPositionModal();
+            break;
+
+          case 18: // Selected Applicant per Position
+            this.openSelectedApplicantModal();
             break;
 
           case 11: // List of Position (Excel) - should be handled above
@@ -1428,6 +1450,16 @@
           message: 'Opening PDF report...',
           position: 'top',
         });
+      },
+
+      // ==================== SELECTED APPLICANT PER POSITION METHODS ====================
+
+      openSelectedApplicantModal() {
+        this.showSelectedApplicantModal = true;
+      },
+
+      closeSelectedApplicantModal() {
+        this.showSelectedApplicantModal = false;
       },
 
       // ==================== UTILITY METHODS ====================
