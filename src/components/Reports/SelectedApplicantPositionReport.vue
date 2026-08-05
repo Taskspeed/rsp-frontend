@@ -796,7 +796,7 @@
     console.log(`Generated ${Object.keys(positionGroups).length} position groups`);
 
     // Loop through each position group
-    let positionIndex = 0;
+    // let positionIndex = 0;
 
     for (const [posId, group] of Object.entries(positionGroups)) {
       const positionData = group.positionData || {};
@@ -808,9 +808,9 @@
       console.log(`Position ${posId}: ${posApplicants.length} applicants`);
 
       // Add page break between positions
-      if (positionIndex > 0) {
-        allContent.push({ text: '', pageBreak: 'before' });
-      }
+      // if (positionIndex > 0) {
+      //   allContent.push({ text: '', pageBreak: 'before' });
+      // }
 
       // Info table with outer borders (using position-specific data)
       const divisionOrSection = positionData.section || positionData.division || '';
@@ -1048,7 +1048,7 @@
         allContent.push(applicantTable);
       }
 
-      positionIndex++;
+      // positionIndex++;
     }
 
     const docDefinition = {
