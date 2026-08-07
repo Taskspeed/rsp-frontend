@@ -227,6 +227,9 @@
         vicename: editedData.value.vicename || '',
         vicecause: editedData.value.vicecause || '',
 
+        // NEW: Add deliberation_date
+        deliberation_date: editedData.value.deliberation_date || '',
+
         // Appropriation fields (required)
         PresAppro: editedData.value.PresAppro || 'N/A',
         PrevAppro: editedData.value.PrevAppro || 'N/A',

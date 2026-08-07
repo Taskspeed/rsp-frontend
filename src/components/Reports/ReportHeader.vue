@@ -18,6 +18,7 @@
 
 <style scoped>
   .header-wrapper {
+    margin-top: -40px;
     display: flex;
     align-items: center;
   }

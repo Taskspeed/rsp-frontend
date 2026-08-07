@@ -34,11 +34,7 @@
           <p>
             {{ data.Sex === 'MALE' ? 'MR.' : 'MS.' }}:
             <strong class="underline">
-              {{
-                data.Name ||
-                data.Surname + ', ' + data.Firstname + ' ' + (data.MIddlename || '') ||
-                '(Name)'
-              }}
+              {{ formattedName }}
             </strong>
           </p>
 
@@ -58,13 +54,51 @@
               </rt>
             </ruby>
             (SG/Step
-            <strong class="underline">
-              <span style="color: white">*</span>
-              {{ data.SG || '(SG)' }}
-              <span style="color: white">*</span>
-              /
-              <span style="color: white">*</span>
-              {{ data.Step || '(Step)' }}
+            <strong>
+              <span
+                style="
+                  color: white;
+                  text-decoration: underline;
+                  text-decoration-color: black;
+                  text-underline-offset: 2px;
+                "
+              >
+                *
+              </span>
+              <span style="text-decoration: underline">{{ data.SG || '(SG)' }}</span>
+              <span
+                style="
+                  color: white;
+                  text-decoration: underline;
+                  text-decoration-color: black;
+                  text-underline-offset: 2px;
+                "
+              >
+                *
+              </span>
+              <span style="text-decoration: underline">/</span>
+
+              <span
+                style="
+                  color: white;
+                  text-decoration: underline;
+                  text-decoration-color: black;
+                  text-underline-offset: 2px;
+                "
+              >
+                *
+              </span>
+              <span style="text-decoration: underline">{{ data.Step || '(Step)' }}</span>
+              <span
+                style="
+                  color: white;
+                  text-decoration: underline;
+                  text-decoration-color: black;
+                  text-underline-offset: 2px;
+                "
+              >
+                *
+              </span>
             </strong>
             )
             <span style="color: white">*</span>
@@ -157,11 +191,10 @@
         </div>
 
         <div class="signature-block">
-          <p class="signature-salutation">Very truly yours,</p>
-          <br />
-          <br />
-
           <div class="signature-section">
+            <p class="signature-salutation">Very truly yours,</p>
+            <br />
+            <br />
             <div class="signature-name-container">
               <strong class="signature-name">{{ signatoryName }}</strong>
             </div>
@@ -394,6 +427,18 @@
     },
   });
 
+  const formattedName = computed(() => {
+    const firstName = props.data.Firstname || '';
+    const middleInitial = props.data.MIddlename
+      ? props.data.MIddlename.charAt(0).toUpperCase() + '. '
+      : '';
+    const surname = props.data.Surname || '';
+
+    if (!firstName && !surname) return '(Name)';
+
+    return `${firstName} ${middleInitial}${surname}`.trim();
+  });
+
   const officeTitle = computed(() => {
     if (
       props.data.NewOffice?.includes('VICE MAYOR') ||
@@ -459,14 +504,44 @@
   });
 
   // Utility Functions
+  // const formatDate = (dateStr) => {
+  //   if (!dateStr) return '';
+  //   const date = new Date(dateStr);
+  //   return date.toLocaleDateString('en-US', {
+  //     year: 'numeric',
+  //     month: 'long',
+  //     day: 'numeric',
+  //   });
+  // };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+
+    // Get day with leading zero
+    const day = String(date.getDate()).padStart(2, '0');
+
+    // Get month name
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    const month = monthNames[date.getMonth()];
+
+    // Get full year
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
   };
 
   const formatSalaryWords = (amount) => {
@@ -744,7 +819,7 @@
   }
 
   .signature-salutation {
-    text-align: center;
+    text-align: left;
     margin-bottom: 2em;
   }
 

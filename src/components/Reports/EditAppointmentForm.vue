@@ -195,6 +195,17 @@
 
       <div class="form-row">
         <q-input
+          v-model="formData.deliberation_date"
+          label="HRMPSB Deliberation Date"
+          type="date"
+          outlined
+          dense
+          class="form-field"
+          hint="Date when HRMPSB deliberated on this appointment"
+          @update:model-value="emitUpdate"
+        />
+
+        <q-input
           v-model="formData.signingDate"
           label="Date of Signing"
           type="date"

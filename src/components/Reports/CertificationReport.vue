@@ -25,12 +25,16 @@
             </div>
           </div>
 
-          <div class="left-signature-container">
+          <div class="stamp" style="padding-top: 35px; padding-bottom: 40px">
+            Date: {{ formatDateEnglish(data.sepdate) }}
+          </div>
+
+          <!-- <div class="left-signature-container">
             <div class="stamp">
               Date:
               <span class="underlined">{{ formatDateEnglish(data.sepdate) }}</span>
             </div>
-          </div>
+          </div> -->
         </div>
 
         <div class="certification-title">
@@ -52,12 +56,16 @@
             </div>
           </div>
 
-          <div class="left-signature-container">
+          <div class="stamp" style="padding-top: 35px; padding-bottom: 40px">
+            Date: {{ formatDateEnglish(data.sepdate) }}
+          </div>
+
+          <!-- <div class="left-signature-container">
             <div class="stamp">
               Date:
               <span class="underlined">{{ formatDateEnglish(data.sepdate) }}</span>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
       <ReportFooter :phone="footerPhone" :email="footerEmail" />
@@ -66,9 +74,13 @@
     <div class="certification-report-container">
       <div class="report-content">
         <ReportHeader />
+        <div>
+          <div>CSC Form No. 4</div>
+          <div>Revised 2025</div>
+        </div>
 
         <div class="certification-title">
-          <h1>CERTIFICATION OF ASSUMPTION TO DUTY</h1>
+          <div class="assumption-title">CERTIFICATION OF ASSUMPTION TO DUTY</div>
         </div>
         <div class="certification-body">
           <p class="main-text indented" :style="mainTextStyle">
@@ -434,7 +446,6 @@
 </script>
 
 <style scoped>
-  /* ... (all existing styles remain the same) ... */
   .certification-report-container {
     width: 8.5in;
     min-height: 11in;
@@ -462,6 +473,11 @@
   .report-content {
     padding: 0.75in 1in 0 1in;
     flex: 1;
+  }
+
+  .assumption-title {
+    font-size: large;
+    font-weight: bold;
   }
 
   .certification-title {

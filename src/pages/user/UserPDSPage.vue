@@ -15,7 +15,7 @@
             <q-tooltip>Go Back</q-tooltip>
           </q-btn>
           <div>
-            <div class="text-subtitle1 text-bold">Personal Data Sheet</div>
+            <div class="text-subtitle1 text-bold">Personal Information</div>
             <div class="text-caption text-blue-1">CS Form No. 212 &middot; Revised 2017</div>
           </div>
         </div>
@@ -3056,16 +3056,8 @@
               >
                 <q-card-section class="row items-center q-gutter-x-md q-py-sm">
                   <div class="text-grey-7 text-caption col-auto">#{{ idx + 1 }}</div>
-                  <div class="col">
-                    <q-input
-                      v-model="row.document_name"
-                      label="Document Name/Description"
-                      outlined
-                      dense
-                      placeholder="e.g., Application Letter, Certificates, etc."
-                    />
-                  </div>
-                  <div class="col-12 col-sm-6">
+
+                  <div class="col-12 col-sm-10">
                     <q-file
                       v-model="row.file"
                       label="Upload Document (PDF, JPG, PNG)"
@@ -3238,33 +3230,21 @@
     row.work_date_to = val ? 'PRESENT' : '';
   }
 
-  // ── Attachment helpers (existing-file handling / viewer) ────────────
-  // Default fallback base — actual base is derived from the loaded record when available.
-  const storageBaseUrl = ref('http://192.168.8.182:8000/storage/');
-
-  function deriveStorageBaseUrl(data) {
-    const candidates = [
-      data?.image_url,
-      data?.file?.pds_file?.[0],
-      data?.file?.other_document?.[0],
-    ].filter(Boolean);
-
-    for (const candidate of candidates) {
-      const idx = candidate.indexOf('/storage/');
-      if (idx !== -1) {
-        return candidate.substring(0, idx + '/storage/'.length);
-      }
-    }
-    return 'http://192.168.8.182:8000/storage/';
-  }
-
   function stripStorageUrl(url) {
     if (!url) return '';
-    if (storageBaseUrl.value && url.startsWith(storageBaseUrl.value)) {
-      return url.substring(storageBaseUrl.value.length);
+
+    // Handle full URLs
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      // Extract the path after '/storage/'
+      const match = url.match(/\/storage\/(.+)$/);
+      if (match) {
+        return match[1];
+      }
+      return url;
     }
-    // Fallback: strip a generic "<origin>/storage/" pattern
-    return url.replace(/^https?:\/\/[^/]+\/storage\//, '');
+
+    // If it's already a relative path, return as is
+    return url;
   }
 
   function getFileNameFromPath(path) {
@@ -3276,7 +3256,7 @@
   function buildViewUrl(relativePath) {
     if (!relativePath) return '';
     if (/^https?:\/\//i.test(relativePath)) return relativePath;
-    return `${storageBaseUrl.value}${relativePath}`;
+    return `${relativePath}`;
   }
 
   // Existing "on record" attachments loaded from the API
@@ -4036,9 +4016,6 @@
   // ── Populate Form with Data ──────────────────────────────────────
   function populateFormWithData(data) {
     try {
-      // Derive the storage base URL from the loaded record (falls back to default).
-      storageBaseUrl.value = deriveStorageBaseUrl(data);
-
       form.personal.firstname = data.firstname || '';
       form.personal.lastname = data.lastname || '';
       form.personal.middlename = data.middlename || '';
@@ -4484,27 +4461,27 @@
       ? '1'
       : '0';
 
-    // ── Handle Photo ──────────────────────────────────────────────
     if (photoFile.value && photoFile.value instanceof File) {
       payload['image_path'] = photoFile.value;
     } else if (photoPreview.value) {
-      payload['image_path'] = stripStorageUrl(photoPreview.value) || photoPreview.value;
+      // If it's a full URL, strip to relative path
+      payload['image_path'] = photoPreview.value;
     }
 
     // ── PDS File(s) ──────────────────────────────────────────────
     if (form.pdsFile && form.pdsFile instanceof File) {
       payload['pds[0][pds_file]'] = form.pdsFile;
     } else if (existingPdsFiles.value.length > 0 && !replacePds.value) {
-      // Unchanged — resend each existing PDS file path (prefix stripped) as-is.
+      // Send the relative path (without storage URL)
       existingPdsFiles.value.forEach((item, idx) => {
-        payload[`pds[${idx}][pds_file]`] = item.path;
+        payload[`pds[${idx}][pds_file]`] = item.url;
       });
     }
 
     // ── Other Documents ────────────────────────────────────────
-    // Previously uploaded documents that were not modified — resend path (prefix stripped).
+    // Previously uploaded documents that were not modified
     existingOtherDocuments.value.forEach((item, idx) => {
-      payload[`other_document[${idx}][document]`] = item.path;
+      payload[`other_document[${idx}][document]`] = item.url;
     });
 
     // Newly added documents by the user (multiple allowed, never disabled).
