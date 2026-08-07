@@ -15,10 +15,8 @@
             <q-tooltip>Go Back</q-tooltip>
           </q-btn>
           <div>
-            <div class="text-subtitle1 text-bold">Personal Information</div>
-            <div class="text-caption text-blue-1">
-              Please fill out the applicable information accurately and completely
-            </div>
+            <div class="text-subtitle1 text-bold">Personal Data Sheet</div>
+            <div class="text-caption text-blue-1">CS Form No. 212 &middot; Revised 2017</div>
           </div>
         </div>
         <q-btn
@@ -849,7 +847,7 @@
                       (val) => {
                         if (!val) return true;
                         const size = val.size || 0;
-                        return size <= 5242880 || 'File size must be less than 5MB';
+                        return size <= 10485760 || 'File size must be less than 10MB';
                       },
                     ]"
                     lazy-rules
@@ -3240,30 +3238,8 @@
     row.work_date_to = val ? 'PRESENT' : '';
   }
 
-  // ── File fetching and conversion ──────────────────────────────────
-  async function fetchFileAsFile(url, filename) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch file');
-      const blob = await response.blob();
-      const ext = filename.split('.').pop().toLowerCase();
-      const mimeTypes = {
-        pdf: 'application/pdf',
-        jpg: 'image/jpeg',
-        jpeg: 'image/jpeg',
-        png: 'image/png',
-        doc: 'application/msword',
-        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      };
-      const mimeType = mimeTypes[ext] || blob.type || 'application/octet-stream';
-      return new File([blob], filename, { type: mimeType });
-    } catch (error) {
-      console.error('Error fetching file:', error);
-      return null;
-    }
-  }
-
-  // ── Attachment helpers ──────────────────────────────────────────
+  // ── Attachment helpers (existing-file handling / viewer) ────────────
+  // Default fallback base — actual base is derived from the loaded record when available.
   const storageBaseUrl = ref('http://192.168.8.182:8000/storage/');
 
   function deriveStorageBaseUrl(data) {
@@ -3287,6 +3263,7 @@
     if (storageBaseUrl.value && url.startsWith(storageBaseUrl.value)) {
       return url.substring(storageBaseUrl.value.length);
     }
+    // Fallback: strip a generic "<origin>/storage/" pattern
     return url.replace(/^https?:\/\/[^/]+\/storage\//, '');
   }
 
@@ -3302,10 +3279,10 @@
     return `${storageBaseUrl.value}${relativePath}`;
   }
 
-  // Existing files stored as File objects
-  const existingPdsFiles = ref([]);
+  // Existing "on record" attachments loaded from the API
+  const existingPdsFiles = ref([]); // [{ url, path, name }]
   const replacePds = ref(false);
-  const existingOtherDocuments = ref([]);
+  const existingOtherDocuments = ref([]); // [{ url, path, name }]
 
   function cancelReplacePds() {
     replacePds.value = false;
@@ -3317,7 +3294,7 @@
     show: false,
     url: '',
     name: '',
-    type: 'other',
+    type: 'other', // 'pdf' | 'image' | 'other'
   });
 
   function getFileExt(url) {
@@ -4027,7 +4004,7 @@
 
       if (result.success && result.data) {
         hasExistingPDS.value = true;
-        await populateFormWithData(result.data);
+        populateFormWithData(result.data);
         $q.notify({
           type: 'positive',
           message: 'PDS data loaded successfully. You can update your information.',
@@ -4057,8 +4034,9 @@
   }
 
   // ── Populate Form with Data ──────────────────────────────────────
-  async function populateFormWithData(data) {
+  function populateFormWithData(data) {
     try {
+      // Derive the storage base URL from the loaded record (falls back to default).
       storageBaseUrl.value = deriveStorageBaseUrl(data);
 
       form.personal.firstname = data.firstname || '';
@@ -4129,159 +4107,91 @@
         }));
       }
 
-      // ── Education with files converted to File objects ──
       if (data.education && data.education.length > 0) {
-        const educationPromises = data.education.map(async (edu) => {
-          let file = null;
-          if (edu.attachment_path) {
-            const url = buildViewUrl(edu.attachment_path);
-            const filename = getFileNameFromPath(edu.attachment_path);
-            file = await fetchFileAsFile(url, filename);
-          }
-          return {
-            level: edu.level || '',
-            school_name: edu.school_name || '',
-            degree: edu.degree || '',
-            attendance_from: edu.attendance_from || '',
-            attendance_to: edu.attendance_to || '',
-            highest_units: edu.highest_units || '',
-            year_graduated: edu.year_graduated || '',
-            scholarship: edu.scholarship || '',
-            graduated: edu.graduated || '',
-            file: file,
-            existingAttachment: edu.attachment_path || null,
-            existingAttachmentUrl: edu.attachment_path ? buildViewUrl(edu.attachment_path) : null,
-            replaceFile: false,
-          };
-        });
-        form.education = await Promise.all(educationPromises);
+        form.education = data.education.map((edu) => ({
+          level: edu.level || '',
+          school_name: edu.school_name || '',
+          degree: edu.degree || '',
+          attendance_from: edu.attendance_from || '',
+          attendance_to: edu.attendance_to || '',
+          highest_units: edu.highest_units || '',
+          year_graduated: edu.year_graduated || '',
+          scholarship: edu.scholarship || '',
+          graduated: edu.graduated || '',
+          file: null,
+          existingAttachment: edu.attachment_path || null,
+          existingAttachmentUrl: edu.attachment_path ? buildViewUrl(edu.attachment_path) : null,
+          replaceFile: false,
+        }));
       }
 
-      // ── Work Experience with files ──
       if (data.work_experience && data.work_experience.length > 0) {
-        const workPromises = data.work_experience.map(async (work) => {
-          let file = null;
-          if (work.attachment_path) {
-            const url = buildViewUrl(work.attachment_path);
-            const filename = getFileNameFromPath(work.attachment_path);
-            file = await fetchFileAsFile(url, filename);
-          }
-          return {
-            work_date_from: work.work_date_from || '',
-            work_date_to: work.work_date_to || '',
-            position_title: work.position_title || '',
-            department: work.department || '',
-            monthly_salary: work.monthly_salary || '',
-            salary_grade: work.salary_grade || '',
-            status_of_appointment: work.status_of_appointment || '',
-            government_service: work.government_service || '',
-            currently_working: (work.work_date_to || '').toUpperCase() === 'PRESENT',
-            file: file,
-            existingAttachment: work.attachment_path || null,
-            existingAttachmentUrl: work.attachment_path ? buildViewUrl(work.attachment_path) : null,
-            replaceFile: false,
-          };
-        });
-        form.workExperience = await Promise.all(workPromises);
+        form.workExperience = data.work_experience.map((work) => ({
+          work_date_from: work.work_date_from || '',
+          work_date_to: work.work_date_to || '',
+          position_title: work.position_title || '',
+          department: work.department || '',
+          monthly_salary: work.monthly_salary || '',
+          salary_grade: work.salary_grade || '',
+          status_of_appointment: work.status_of_appointment || '',
+          government_service: work.government_service || '',
+          currently_working: (work.work_date_to || '').toUpperCase() === 'PRESENT',
+          file: null,
+          existingAttachment: work.attachment_path || null,
+          existingAttachmentUrl: work.attachment_path ? buildViewUrl(work.attachment_path) : null,
+          replaceFile: false,
+        }));
       }
 
-      // ── Training with files ──
       if (data.training && data.training.length > 0) {
-        const trainingPromises = data.training.map(async (train) => {
-          let file = null;
-          if (train.attachment_path) {
-            const url = buildViewUrl(train.attachment_path);
-            const filename = getFileNameFromPath(train.attachment_path);
-            file = await fetchFileAsFile(url, filename);
-          }
-          return {
-            training_title: train.training_title || '',
-            inclusive_date_from: train.inclusive_date_from || '',
-            inclusive_date_to: train.inclusive_date_to || '',
-            number_of_hours: train.number_of_hours || '',
-            type: train.type || '',
-            conducted_by: train.conducted_by || '',
-            file: file,
-            existingAttachment: train.attachment_path || null,
-            existingAttachmentUrl: train.attachment_path
-              ? buildViewUrl(train.attachment_path)
-              : null,
-            replaceFile: false,
-          };
-        });
-        form.training = await Promise.all(trainingPromises);
+        form.training = data.training.map((train) => ({
+          training_title: train.training_title || '',
+          inclusive_date_from: train.inclusive_date_from || '',
+          inclusive_date_to: train.inclusive_date_to || '',
+          number_of_hours: train.number_of_hours || '',
+          type: train.type || '',
+          conducted_by: train.conducted_by || '',
+          file: null,
+          existingAttachment: train.attachment_path || null,
+          existingAttachmentUrl: train.attachment_path ? buildViewUrl(train.attachment_path) : null,
+          replaceFile: false,
+        }));
       }
 
-      // ── Eligibility with files ──
       if (data.eligibity && data.eligibity.length > 0) {
-        const eligibilityPromises = data.eligibity.map(async (elig) => {
-          let file = null;
-          if (elig.attachment_path) {
-            const url = buildViewUrl(elig.attachment_path);
-            const filename = getFileNameFromPath(elig.attachment_path);
-            file = await fetchFileAsFile(url, filename);
-          }
-          return {
-            eligibility: elig.eligibility || '',
-            rating: elig.rating || '',
-            date_of_examination: elig.date_of_examination || '',
-            place_of_examination: elig.place_of_examination || '',
-            license_number: elig.license_number || '',
-            date_of_validity: elig.date_of_validity || '',
-            file: file,
-            existingAttachment: elig.attachment_path || null,
-            existingAttachmentUrl: elig.attachment_path ? buildViewUrl(elig.attachment_path) : null,
-            replaceFile: false,
-          };
-        });
-        form.eligibility = await Promise.all(eligibilityPromises);
+        form.eligibility = data.eligibity.map((elig) => ({
+          eligibility: elig.eligibility || '',
+          rating: elig.rating || '',
+          date_of_examination: elig.date_of_examination || '',
+          place_of_examination: elig.place_of_examination || '',
+          license_number: elig.license_number || '',
+          date_of_validity: elig.date_of_validity || '',
+          file: null,
+          existingAttachment: elig.attachment_path || null,
+          existingAttachmentUrl: elig.attachment_path ? buildViewUrl(elig.attachment_path) : null,
+          replaceFile: false,
+        }));
       }
 
-      // ── PDS Files ──
-      if (data.file?.pds_file && data.file.pds_file.length > 0) {
-        const pdsPromises = data.file.pds_file.map(async (url) => {
-          const filename = getFileNameFromPath(url);
-          const file = await fetchFileAsFile(url, filename);
-          return {
-            url,
-            path: stripStorageUrl(url),
-            name: filename,
-            file: file,
-          };
-        });
-        existingPdsFiles.value = await Promise.all(pdsPromises);
+      // ── Fetch/populate previously uploaded files (PDS & Other Documents) ──
+      existingPdsFiles.value = (data.file?.pds_file || []).map((url) => ({
+        url,
+        path: stripStorageUrl(url),
+        name: getFileNameFromPath(url),
+      }));
+      replacePds.value = false;
 
-        if (existingPdsFiles.value.length > 0 && existingPdsFiles.value[0].file) {
-          form.pdsFile = existingPdsFiles.value[0].file;
-        }
-      }
+      existingOtherDocuments.value = (data.file?.other_document || []).map((url) => ({
+        url,
+        path: stripStorageUrl(url),
+        name: getFileNameFromPath(url),
+      }));
 
-      // ── Other Documents ──
-      if (data.file?.other_document && data.file.other_document.length > 0) {
-        const otherPromises = data.file.other_document.map(async (url) => {
-          const filename = getFileNameFromPath(url);
-          const file = await fetchFileAsFile(url, filename);
-          return {
-            url,
-            path: stripStorageUrl(url),
-            name: filename,
-            file: file,
-          };
-        });
-        existingOtherDocuments.value = await Promise.all(otherPromises);
-      }
-
-      // ── Photo ──
+      // Set photo from existing data
       if (data.image_url) {
-        const filename = getFileNameFromPath(data.image_url);
-        const file = await fetchFileAsFile(data.image_url, filename);
-        if (file) {
-          photoFile.value = file;
-          photoPreview.value = URL.createObjectURL(file);
-          photoChanged.value = true;
-        } else {
-          photoPreview.value = data.image_url;
-        }
+        photoPreview.value = data.image_url;
+        photoFile.value = null;
+        photoChanged.value = false;
       }
 
       const residentialStr = `${form.residential.house}${form.residential.street}${form.residential.subdivision}${form.residential.barangay}${form.residential.city}${form.residential.province}${form.residential.zip}`;
@@ -4404,7 +4314,7 @@
       payload[`children[${index}][birth_date]`] = child.birth_date || '';
     });
 
-    // ── Education ──────────────────────────────────────────────
+    // ── Education (School) ────────────────────────────────────
     form.education.forEach((edu, index) => {
       payload[`school[${index}][degree]`] = edu.degree || '';
       payload[`school[${index}][attendance_from]`] = edu.attendance_from || '';
@@ -4415,9 +4325,14 @@
       payload[`school[${index}][level]`] = edu.level || '';
       payload[`school[${index}][school_name]`] = edu.school_name || '';
 
-      // Always send the file if it exists (whether existing or new)
-      if (edu.file instanceof File) {
-        payload[`school[${index}][attachment_path]`] = edu.file;
+      if (edu.file && edu.file.length > 0) {
+        const file = edu.file[0] || edu.file;
+        if (file instanceof File) {
+          payload[`school[${index}][attachment_path]`] = file;
+        }
+      } else if (edu.existingAttachment && !edu.replaceFile) {
+        // Unchanged — resend the existing (relative) attachment path as-is.
+        payload[`school[${index}][attachment_path]`] = edu.existingAttachment;
       }
     });
 
@@ -4430,8 +4345,13 @@
       payload[`training[${index}][type]`] = train.type || '';
       payload[`training[${index}][conducted_by]`] = train.conducted_by || '';
 
-      if (train.file instanceof File) {
-        payload[`training[${index}][attachment_path]`] = train.file;
+      if (train.file && train.file.length > 0) {
+        const file = train.file[0] || train.file;
+        if (file instanceof File) {
+          payload[`training[${index}][attachment_path]`] = file;
+        }
+      } else if (train.existingAttachment && !train.replaceFile) {
+        payload[`training[${index}][attachment_path]`] = train.existingAttachment;
       }
     });
 
@@ -4448,8 +4368,13 @@
       payload[`experience[${index}][status_of_appointment]`] = work.status_of_appointment || '';
       payload[`experience[${index}][government_service]`] = work.government_service || '';
 
-      if (work.file instanceof File) {
-        payload[`experience[${index}][attachment_path]`] = work.file;
+      if (work.file && work.file.length > 0) {
+        const file = work.file[0] || work.file;
+        if (file instanceof File) {
+          payload[`experience[${index}][attachment_path]`] = file;
+        }
+      } else if (work.existingAttachment && !work.replaceFile) {
+        payload[`experience[${index}][attachment_path]`] = work.existingAttachment;
       }
     });
 
@@ -4471,8 +4396,13 @@
       payload[`eligibility[${index}][license_number]`] = elig.license_number || '';
       payload[`eligibility[${index}][date_of_validity]`] = elig.date_of_validity || '';
 
-      if (elig.file instanceof File) {
-        payload[`eligibility[${index}][attachment_path]`] = elig.file;
+      if (elig.file && elig.file.length > 0) {
+        const file = elig.file[0] || elig.file;
+        if (file instanceof File) {
+          payload[`eligibility[${index}][attachment_path]`] = file;
+        }
+      } else if (elig.existingAttachment && !elig.replaceFile) {
+        payload[`eligibility[${index}][attachment_path]`] = elig.existingAttachment;
       }
     });
 
@@ -4555,25 +4485,33 @@
       : '0';
 
     // ── Handle Photo ──────────────────────────────────────────────
-    if (photoFile.value instanceof File) {
+    if (photoFile.value && photoFile.value instanceof File) {
       payload['image_path'] = photoFile.value;
+    } else if (photoPreview.value) {
+      payload['image_path'] = stripStorageUrl(photoPreview.value) || photoPreview.value;
     }
 
-    // ── PDS File ──────────────────────────────────────────────
-    if (form.pdsFile instanceof File) {
+    // ── PDS File(s) ──────────────────────────────────────────────
+    if (form.pdsFile && form.pdsFile instanceof File) {
       payload['pds[0][pds_file]'] = form.pdsFile;
+    } else if (existingPdsFiles.value.length > 0 && !replacePds.value) {
+      // Unchanged — resend each existing PDS file path (prefix stripped) as-is.
+      existingPdsFiles.value.forEach((item, idx) => {
+        payload[`pds[${idx}][pds_file]`] = item.path;
+      });
     }
 
     // ── Other Documents ────────────────────────────────────────
-    // Combine existing and new other documents
-    const allOtherDocuments = [
-      ...existingOtherDocuments.value.map((doc) => doc.file).filter((f) => f instanceof File),
-      ...form.otherDocuments.map((doc) => doc.file).filter((f) => f instanceof File),
-    ];
+    // Previously uploaded documents that were not modified — resend path (prefix stripped).
+    existingOtherDocuments.value.forEach((item, idx) => {
+      payload[`other_document[${idx}][document]`] = item.path;
+    });
 
-    allOtherDocuments.forEach((file, index) => {
-      if (file instanceof File) {
-        payload[`other_document[${index}][document]`] = file;
+    // Newly added documents by the user (multiple allowed, never disabled).
+    const existingOtherDocsCount = existingOtherDocuments.value.length;
+    form.otherDocuments.forEach((doc, index) => {
+      if (doc.file && doc.file instanceof File) {
+        payload[`other_document[${existingOtherDocsCount + index}][document]`] = doc.file;
       }
     });
 
@@ -4612,19 +4550,27 @@
       errors.push('Email Address is required.');
     }
 
-    // PDS File validation
-    if (!form.pdsFile) {
+    // PDS File validation — required only if there's no existing PDS on record
+    // (or the user chose to replace it but hasn't picked a new file yet).
+    if (existingPdsFiles.value.length === 0 && !form.pdsFile) {
       errors.push('PDS file is required. Please upload your Personal Data Sheet.');
+    } else if (replacePds.value && !form.pdsFile) {
+      errors.push('Please upload the replacement PDS file, or click "Cancel Replace".');
     }
 
     // Check if photo is present
-    if (!photoFile.value && !photoPreview.value) {
+    if (!photoPreview.value) {
       errors.push('2x2 ID picture is required. Please upload a photo.');
     }
 
     form.education.forEach((edu, idx) => {
       if (edu.highest_units && !isFiniteNumber(edu.highest_units)) {
         errors.push(`Education Row #${idx + 1}: Highest Units Earned must be a number.`);
+      }
+      if (edu.replaceFile && !edu.file) {
+        errors.push(
+          `Education Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
       }
     });
 
@@ -4642,6 +4588,19 @@
       }
       if (!work.currently_working && work.work_date_to && !isValidDate(work.work_date_to)) {
         errors.push(`Work Experience Row #${idx + 1}: "To" date is invalid.`);
+      }
+      if (work.replaceFile && !work.file) {
+        errors.push(
+          `Work Experience Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
+      }
+    });
+
+    form.training.forEach((train, idx) => {
+      if (train.replaceFile && !train.file) {
+        errors.push(
+          `L&D Intervention Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
       }
     });
 
@@ -4665,25 +4624,12 @@
     isSubmitting.value = true;
 
     try {
-      // Build the payload
+      // Build the payload (includes all files including photo)
       const payload = buildPayload();
 
-      // Create FormData for multipart upload
-      const formData = new FormData();
-
-      // Add all fields to FormData
-      for (const [key, value] of Object.entries(payload)) {
-        if (value instanceof File) {
-          // Add file with the appropriate field name
-          formData.append(key, value);
-        } else if (value !== null && value !== undefined) {
-          // Add regular fields
-          formData.append(key, value);
-        }
-      }
-
-      // Submit using the store with FormData
-      const result = await pdsStore.submitApplication(formData);
+      // Use the store's submitApplication method
+      // Pass null for photo since it's already in the payload
+      const result = await pdsStore.submitApplication(payload, null);
 
       if (result.success) {
         const successMessage = result.message || 'Application submitted successfully!';
@@ -4694,6 +4640,7 @@
           timeout: 3000,
         });
 
+        console.log('Response data:', result.data);
         emit('submit', payload);
 
         setTimeout(() => {
@@ -4883,6 +4830,7 @@
     line-height: 1.6;
   }
 
+  /* ── Existing attachment display ───────────────────────────── */
   .existing-attachment-box {
     display: flex;
     align-items: center;

@@ -9,9 +9,15 @@
     <!-- ═══════════════════════ Sticky Top Bar ═══════════════════════ -->
     <q-card ref="stickyBarRef" flat bordered class="sticky-header-card">
       <q-card-section class="bg-primary text-white row items-center justify-between q-py-sm">
-        <div>
-          <div class="text-subtitle1 text-bold">Personal Data Sheet</div>
-          <div class="text-caption text-blue-1">CS Form No. 212 &middot; Revised 2017</div>
+        <div class="row items-center">
+          <!-- Back Button -->
+          <q-btn flat round dense icon="arrow_back" color="white" @click="goBack" class="q-mr-sm">
+            <q-tooltip>Go Back</q-tooltip>
+          </q-btn>
+          <div>
+            <div class="text-subtitle1 text-bold">Personal Data Sheet</div>
+            <div class="text-caption text-blue-1">CS Form No. 212 &middot; Revised 2017</div>
+          </div>
         </div>
         <q-btn
           unelevated
@@ -116,8 +122,11 @@
                         label="First Name *"
                         outlined
                         dense
+                        :disable="hasExistingPDS"
                         :rules="[
                           (val) => (!!val && val.trim().length > 0) || 'First Name is required',
+                          (val) =>
+                            onlyLettersAndSpaces(val) || 'First Name must contain letters only',
                         ]"
                         lazy-rules
                       />
@@ -128,6 +137,14 @@
                         label="Middle Name"
                         outlined
                         dense
+                        :disable="hasExistingPDS"
+                        :rules="[
+                          (val) =>
+                            !val ||
+                            onlyLettersAndSpaces(val) ||
+                            'Middle Name must contain letters only',
+                        ]"
+                        lazy-rules
                       />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
@@ -136,8 +153,11 @@
                         label="Last Name *"
                         outlined
                         dense
+                        :disable="hasExistingPDS"
                         :rules="[
                           (val) => (!!val && val.trim().length > 0) || 'Last Name is required',
+                          (val) =>
+                            onlyLettersAndSpaces(val) || 'Last Name must contain letters only',
                         ]"
                         lazy-rules
                       />
@@ -148,6 +168,7 @@
                         label="Name Extension (Jr., Sr., etc.)"
                         outlined
                         dense
+                        :disable="hasExistingPDS"
                       />
                     </div>
                   </div>
@@ -174,15 +195,30 @@
                     outlined
                     dense
                     mask="##/##/####"
-                    hint="MM/DD/YYYY"
+                    hint="DD/MM/YYYY"
+                    :disable="hasExistingPDS"
                     :rules="[
                       (val) => !!val || 'Date of Birth is required',
-                      (val) => (val && val.length === 10) || 'Please enter valid date (MM/DD/YYYY)',
+                      (val) => isValidDate(val) || 'Please enter a valid date (DD/MM/YYYY)',
+                      (val) => isNotFutureDate(val) || 'Date of Birth cannot be in the future',
                     ]"
                     lazy-rules
                   >
                     <template v-slot:append>
-                      <q-icon name="event" />
+                      <q-icon name="event" :class="hasExistingPDS ? '' : 'cursor-pointer'">
+                        <q-popup-proxy
+                          v-if="!hasExistingPDS"
+                          cover
+                          transition-show="scale"
+                          transition-hide="scale"
+                        >
+                          <q-date v-model="form.personal.date_of_birth" mask="DD/MM/YYYY" today-btn>
+                            <div class="row items-center justify-end">
+                              <q-btn v-close-popup label="Close" color="primary" flat />
+                            </div>
+                          </q-date>
+                        </q-popup-proxy>
+                      </q-icon>
                     </template>
                   </q-input>
                 </div>
@@ -231,17 +267,18 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-2">
                   <q-input
-                    v-model="form.personal.height"
+                    v-model.number="form.personal.height"
                     label="Height (m)"
                     outlined
                     dense
                     type="number"
                     step="0.01"
                     min="0"
+                    max="2.99"
                     :rules="[
                       (val) =>
                         !val ||
-                        (parseFloat(val) > 0 && parseFloat(val) < 3) ||
+                        (isFiniteNumber(val) && parseFloat(val) > 0 && parseFloat(val) < 3) ||
                         'Please enter valid height (0-3m)',
                     ]"
                     lazy-rules
@@ -249,17 +286,18 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-2">
                   <q-input
-                    v-model="form.personal.weight"
+                    v-model.number="form.personal.weight"
                     label="Weight (kg)"
                     outlined
                     dense
                     type="number"
                     step="0.1"
                     min="0"
+                    max="499"
                     :rules="[
                       (val) =>
                         !val ||
-                        (parseFloat(val) > 0 && parseFloat(val) < 500) ||
+                        (isFiniteNumber(val) && parseFloat(val) > 0 && parseFloat(val) < 500) ||
                         'Please enter valid weight',
                     ]"
                     lazy-rules
@@ -271,20 +309,19 @@
                     label="Cellphone Number *"
                     outlined
                     dense
-                    mask="09###########"
-                    hint="09XXXXXXXXX"
+                    mask="###############"
+                    hint="09XXXXXXXXX (11 digits)"
                     :rules="[
                       (val) => !!val || 'Cellphone Number is required',
-                      (val) =>
-                        /^09\d{9,10}$/.test(val) ||
-                        'Invalid Philippine mobile number (09XXXXXXXXX)',
+                      (val) => {
+                        const cleaned = (val || '').replace(/\D/g, '');
+                        const isValid =
+                          /^(09|\+639)\d{9}$/.test(cleaned) || /^09\d{9}$/.test(cleaned);
+                        return isValid || 'Invalid Philippine mobile number (09XXXXXXXXX)';
+                      },
                     ]"
                     lazy-rules
-                  >
-                    <template v-slot:append>
-                      <q-icon name="phone" />
-                    </template>
-                  </q-input>
+                  />
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
                   <q-input
@@ -292,6 +329,13 @@
                     label="Telephone Number"
                     outlined
                     dense
+                    :rules="[
+                      (val) =>
+                        !val ||
+                        /^[0-9+\-() ]{6,20}$/.test(val) ||
+                        'Please enter a valid telephone number',
+                    ]"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6">
@@ -301,6 +345,7 @@
                     outlined
                     dense
                     type="email"
+                    disable
                     :rules="[
                       (val) => !!val || 'Email Address is required',
                       (val) =>
@@ -418,7 +463,8 @@
                     outlined
                     dense
                     :rules="[
-                      (val) => !val || /^[0-9-]+$/.test(val) || 'Please enter valid GSIS number',
+                      (val) =>
+                        !val || /^[0-9-]{4,20}$/.test(val) || 'Please enter valid GSIS number',
                     ]"
                     lazy-rules
                   />
@@ -430,7 +476,8 @@
                     outlined
                     dense
                     :rules="[
-                      (val) => !val || /^[0-9-]+$/.test(val) || 'Please enter valid PAGIBIG number',
+                      (val) =>
+                        !val || /^[0-9-]{4,20}$/.test(val) || 'Please enter valid PAGIBIG number',
                     ]"
                     lazy-rules
                   />
@@ -443,7 +490,9 @@
                     dense
                     :rules="[
                       (val) =>
-                        !val || /^[0-9-]+$/.test(val) || 'Please enter valid PHILHEALTH number',
+                        !val ||
+                        /^[0-9-]{4,20}$/.test(val) ||
+                        'Please enter valid PHILHEALTH number',
                     ]"
                     lazy-rules
                   />
@@ -455,7 +504,8 @@
                     outlined
                     dense
                     :rules="[
-                      (val) => !val || /^[0-9-]+$/.test(val) || 'Please enter valid SSS number',
+                      (val) =>
+                        !val || /^[0-9-]{4,20}$/.test(val) || 'Please enter valid SSS number',
                     ]"
                     lazy-rules
                   />
@@ -467,7 +517,8 @@
                     outlined
                     dense
                     :rules="[
-                      (val) => !val || /^[0-9-]+$/.test(val) || 'Please enter valid TIN number',
+                      (val) =>
+                        !val || /^[0-9-]{4,20}$/.test(val) || 'Please enter valid TIN number',
                     ]"
                     lazy-rules
                   />
@@ -560,6 +611,7 @@
                     label="Zip Code *"
                     outlined
                     dense
+                    mask="####"
                     :rules="[
                       (val) => !!val || 'Zip Code is required',
                       (val) => /^[0-9]{4}$/.test(val) || 'Please enter valid 4-digit zip code',
@@ -683,6 +735,7 @@
                     label="Zip Code *"
                     outlined
                     dense
+                    mask="####"
                     :disable="sameAsResidential"
                     :rules="
                       sameAsResidential
@@ -695,6 +748,132 @@
                     "
                     lazy-rules
                   />
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- XI. Upload PDS -->
+        <div id="section-upload-pds" class="scroll-target">
+          <q-card flat bordered class="q-mb-md">
+            <q-card-section class="bg-primary text-white q-py-sm">
+              <div class="text-subtitle1 text-bold">XI. Upload PDS</div>
+            </q-card-section>
+
+            <q-card-section>
+              <q-banner class="upload-instruction-banner bg-amber-1 text-amber q-mb-md" rounded>
+                <template v-slot:avatar>
+                  <q-icon name="info" />
+                </template>
+                <div class="banner-text">
+                  <strong>Upload your Personal Data Sheet (PDS):</strong>
+                  <ul class="q-mt-sm q-mb-none" style="padding-left: 20px">
+                    <li>
+                      Upload a fully accomplished Personal Data Sheet (PDS) using the latest
+                      CSC-prescribed CS Form No. 212 (Revised 2026) with a recent passport-sized
+                      photograph.
+                    </li>
+                    <li>File must be in PDF or image format (JPG, JPEG, PNG).</li>
+                    <li>Maximum file size: 5 MB.</li>
+                  </ul>
+                </div>
+              </q-banner>
+
+              <div class="upload-section q-pa-md">
+                <div class="upload-label text-grey-7 q-mb-sm">
+                  <q-icon name="attach_file" size="20px" class="q-mr-xs" />
+                  <span class="text-subtitle2">PDS File</span>
+                  <span class="text-caption text-grey-6 q-ml-sm">(CS Form No. 212)</span>
+                </div>
+
+                <!-- Existing PDS file(s) already on record -->
+                <div v-if="existingPdsFiles.length && !replacePds" class="q-mb-sm">
+                  <q-list bordered separator class="rounded-borders">
+                    <q-item v-for="(pf, i) in existingPdsFiles" :key="`pds-existing-${i}`">
+                      <q-item-section avatar>
+                        <q-icon name="picture_as_pdf" color="red" size="28px" />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-caption ellipsis" style="max-width: 320px">
+                          {{ pf.name }}
+                        </q-item-label>
+                        <q-item-label caption>Already uploaded</q-item-label>
+                      </q-item-section>
+                      <q-item-section side>
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          icon="visibility"
+                          color="primary"
+                          @click="viewAttachment(pf.url, pf.name)"
+                        >
+                          <q-tooltip>View File</q-tooltip>
+                        </q-btn>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                  <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    color="primary"
+                    icon="autorenew"
+                    label="Replace PDS File"
+                    class="q-mt-xs"
+                    @click="replacePds = true"
+                  />
+                </div>
+
+                <!-- Upload input: shown only when there's nothing on record, or user chose to replace -->
+                <template v-if="!existingPdsFiles.length || replacePds">
+                  <q-file
+                    v-model="form.pdsFile"
+                    label="Upload PDS (PDF, JPG, JPEG, PNG)"
+                    outlined
+                    dense
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    stack-label
+                    max-file-size="10485760"
+                    @rejected="onFileRejected"
+                    :rules="[
+                      (val) => {
+                        if (replacePds || !existingPdsFiles.length) {
+                          return !!val || 'PDS file is required';
+                        }
+                        return true;
+                      },
+                      (val) => {
+                        if (!val) return true;
+                        const size = val.size || 0;
+                        return size <= 10485760 || 'File size must be less than 10MB';
+                      },
+                    ]"
+                    lazy-rules
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="description" color="primary" />
+                    </template>
+                    <template v-slot:append>
+                      <q-icon name="cloud_upload" color="primary" />
+                    </template>
+                  </q-file>
+                  <q-btn
+                    v-if="replacePds && existingPdsFiles.length"
+                    flat
+                    dense
+                    size="sm"
+                    color="grey-7"
+                    label="Cancel Replace"
+                    class="q-mt-xs"
+                    @click="cancelReplacePds"
+                  />
+                </template>
+
+                <div class="text-caption text-grey-6 q-mt-xs">
+                  <q-icon name="info" size="14px" class="q-mr-xs" />
+                  Please upload a completed and signed PDS file.
                 </div>
               </div>
             </q-card-section>
@@ -717,6 +896,8 @@
                     label="Spouse's Firstname"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -725,6 +906,8 @@
                     label="Spouse's Surname"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -733,6 +916,8 @@
                     label="Spouse's Middlename"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -765,6 +950,13 @@
                     label="Business Telephone"
                     outlined
                     dense
+                    :rules="[
+                      (val) =>
+                        !val ||
+                        /^[0-9+\-() ]{6,20}$/.test(val) ||
+                        'Please enter a valid telephone number',
+                    ]"
+                    lazy-rules
                   />
                 </div>
               </div>
@@ -779,6 +971,8 @@
                     label="Father's Firstname"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -787,6 +981,8 @@
                     label="Father's Surname"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -795,6 +991,8 @@
                     label="Father's Middlename"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -803,6 +1001,8 @@
                     label="Mother's Firstname"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -811,6 +1011,8 @@
                     label="Mother's Surname"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
                 <div class="col-12 col-sm-6 col-md-4">
@@ -819,6 +1021,8 @@
                     label="Mother's Middlename"
                     outlined
                     dense
+                    :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                    lazy-rules
                   />
                 </div>
               </div>
@@ -848,23 +1052,41 @@
                 <q-card-section class="row items-center q-gutter-x-md q-py-sm">
                   <div class="text-grey-7 text-caption col-auto">#{{ idx + 1 }}</div>
                   <div class="col">
-                    <q-input v-model="child.child_name" label="Full Name" outlined dense />
+                    <q-input
+                      v-model="child.child_name"
+                      label="Full Name"
+                      outlined
+                      dense
+                      :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                      lazy-rules
+                    />
                   </div>
                   <div class="col-12 col-sm-4">
                     <q-input
                       v-model="child.birth_date"
-                      label="Birth Date (MM/DD/YYYY)"
+                      label="Birth Date (DD/MM/YYYY)"
                       outlined
                       dense
                       mask="##/##/####"
                       :rules="[
+                        (val) => !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         (val) =>
-                          !val ||
-                          (val && val.length === 10) ||
-                          'Please enter valid date (MM/DD/YYYY)',
+                          !val || isNotFutureDate(val) || 'Birth date cannot be in the future',
                       ]"
                       lazy-rules
-                    />
+                    >
+                      <template v-slot:append>
+                        <q-icon name="event" class="cursor-pointer">
+                          <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                            <q-date v-model="child.birth_date" mask="DD/MM/YYYY" today-btn>
+                              <div class="row items-center justify-end">
+                                <q-btn v-close-popup label="Close" color="primary" flat />
+                              </div>
+                            </q-date>
+                          </q-popup-proxy>
+                        </q-icon>
+                      </template>
+                    </q-input>
                   </div>
                   <q-btn
                     flat
@@ -909,8 +1131,9 @@
                 <div class="banner-text">
                   <strong>Upload supporting documents:</strong>
                   For each educational record, you can upload relevant documents such as diplomas,
-                  transcript of records, or certificates of graduation. Make it one pdf file for
+                  transcript of records, or certificates of graduation. Make it one PDF file for
                   multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -941,26 +1164,71 @@
                         :options="levelOptions"
                         outlined
                         dense
+                        :rules="[(val) => !!val || 'Level is required']"
+                        lazy-rules
                       />
                     </div>
                     <div class="col-12 col-sm-6 col-md-8">
-                      <q-input v-model="row.school_name" label="School Name" outlined dense />
+                      <q-input
+                        v-model="row.school_name"
+                        label="School Name"
+                        outlined
+                        dense
+                        :rules="[
+                          (val) => (!!val && val.trim().length > 0) || 'School Name is required',
+                        ]"
+                        lazy-rules
+                      />
                     </div>
                     <div class="col-12 col-sm-6">
                       <q-input v-model="row.degree" label="Degree / Course" outlined dense />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
-                      <q-input v-model="row.attendance_from" label="From" outlined dense />
-                    </div>
-                    <div class="col-12 col-sm-6 col-md-3">
-                      <q-input v-model="row.attendance_to" label="To" outlined dense />
+                      <q-input
+                        v-model="row.attendance_from"
+                        label="From (Year)"
+                        outlined
+                        dense
+                        mask="####"
+                        hint="YYYY"
+                        :rules="[
+                          (val) =>
+                            !val || /^[0-9]{4}$/.test(val) || 'Please enter a valid year (YYYY)',
+                        ]"
+                        lazy-rules
+                      />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
-                        v-model="row.highest_units"
+                        v-model="row.attendance_to"
+                        label="To (Year)"
+                        outlined
+                        dense
+                        mask="####"
+                        hint="YYYY"
+                        :rules="[
+                          (val) =>
+                            !val || /^[0-9]{4}$/.test(val) || 'Please enter a valid year (YYYY)',
+                        ]"
+                        lazy-rules
+                      />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                      <q-input
+                        v-model.number="row.highest_units"
                         label="Highest Units Earned"
                         outlined
                         dense
+                        type="number"
+                        min="0"
+                        step="1"
+                        :rules="[
+                          (val) =>
+                            !val ||
+                            (isFiniteNumber(val) && parseFloat(val) >= 0) ||
+                            'Please enter a valid number of units',
+                        ]"
+                        lazy-rules
                       />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
@@ -969,6 +1237,7 @@
                         label="Year Graduated"
                         outlined
                         dense
+                        mask="####"
                         :rules="[
                           (val) =>
                             !val || /^[0-9]{4}$/.test(val) || 'Please enter valid year (YYYY)',
@@ -999,7 +1268,52 @@
                           <q-icon name="attach_file" size="16px" class="q-mr-xs" />
                           <span class="text-caption">Upload Supporting Documents</span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1008,11 +1322,26 @@
                           multiple
                           use-chips
                           stack-label
+                          max-file-size="10485760"
+                          @rejected="onFileRejected"
                         >
                           <template v-slot:append>
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                   </div>
@@ -1051,7 +1380,8 @@
                 <div class="banner-text">
                   <strong>Upload supporting documents:</strong>
                   For each eligibility record, you can upload certificates, ratings, or license
-                  documents. Make it one pdf file for multiple documents.
+                  documents. Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -1081,10 +1411,32 @@
                         label="Eligibility / Career Service"
                         outlined
                         dense
+                        :rules="[
+                          (val) => (!!val && val.trim().length > 0) || 'Eligibility is required',
+                        ]"
+                        lazy-rules
                       />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
-                      <q-input v-model="row.rating" label="Rating (if applicable)" outlined dense />
+                      <q-input
+                        v-model="row.rating"
+                        label="Rating (if applicable)"
+                        outlined
+                        dense
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        :rules="[
+                          (val) =>
+                            !val ||
+                            (isFiniteNumber(val) &&
+                              parseFloat(val) >= 0 &&
+                              parseFloat(val) <= 100) ||
+                            'Please enter a valid rating (0-100)',
+                        ]"
+                        lazy-rules
+                      />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
@@ -1092,15 +1444,27 @@
                         label="Date of Exam"
                         outlined
                         dense
-                        hint="MM/DD/YYYY"
+                        mask="##/##/####"
+                        hint="DD/MM/YYYY"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
+                          (val) => !val || isNotFutureDate(val) || 'Date cannot be in the future',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.date_of_examination" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-6">
                       <q-input
@@ -1129,15 +1493,26 @@
                         label="Date of Validity"
                         outlined
                         dense
-                        hint="MM/DD/YYYY"
+                        mask="##/##/####"
+                        hint="DD/MM/YYYY"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.date_of_validity" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-6 col-md-4">
                       <div class="upload-section">
@@ -1145,7 +1520,52 @@
                           <q-icon name="attach_file" size="16px" class="q-mr-xs" />
                           <span class="text-caption">Upload Supporting Documents</span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1154,11 +1574,26 @@
                           multiple
                           use-chips
                           stack-label
+                          max-file-size="10485760"
+                          @rejected="onFileRejected"
                         >
                           <template v-slot:append>
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                   </div>
@@ -1205,7 +1640,8 @@
                       - Download the template below
                     </li>
                   </ul>
-                  Make it one pdf file for multiple documents.
+                  Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -1232,37 +1668,81 @@
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
                         v-model="row.work_date_from"
-                        label="From (MM/DD/YYYY)"
+                        label="From (DD/MM/YYYY)"
                         outlined
                         dense
+                        mask="##/##/####"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.work_date_from" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
                         v-model="row.work_date_to"
-                        label="To (MM/DD/YYYY)"
+                        label="To (DD/MM/YYYY)"
                         outlined
                         dense
-                        hint="Type 'PRESENT' for current job"
+                        mask="##/##/####"
+                        hint="Or check 'Present' below"
+                        :disable="row.currently_working"
                         :rules="[
                           (val) =>
-                            !val ||
-                            val === 'PRESENT' ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY) or PRESENT',
+                            row.currently_working ||
+                            !!val ||
+                            'Provide an end date or mark as Present',
+                          (val) =>
+                            row.currently_working ||
+                            isValidDate(val) ||
+                            'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer" v-if="!row.currently_working">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.work_date_to" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
+                      <q-checkbox
+                        :model-value="row.currently_working"
+                        label="Present (currently working here)"
+                        dense
+                        class="q-mt-xs"
+                        @update:model-value="(val) => onTogglePresent(row, val)"
                       />
                     </div>
                     <div class="col-12 col-sm-6">
-                      <q-input v-model="row.position_title" label="Position Title" outlined dense />
+                      <q-input
+                        v-model="row.position_title"
+                        label="Position Title"
+                        outlined
+                        dense
+                        :rules="[
+                          (val) => (!!val && val.trim().length > 0) || 'Position Title is required',
+                        ]"
+                        lazy-rules
+                      />
                     </div>
                     <div class="col-12 col-sm-6">
                       <q-input
@@ -1270,17 +1750,27 @@
                         label="Department / Office"
                         outlined
                         dense
+                        :rules="[
+                          (val) =>
+                            (!!val && val.trim().length > 0) || 'Department / Office is required',
+                        ]"
+                        lazy-rules
                       />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
-                        v-model="row.monthly_salary"
+                        v-model.number="row.monthly_salary"
                         label="Monthly Salary"
                         outlined
                         dense
                         type="number"
+                        min="0"
+                        step="0.01"
                         :rules="[
-                          (val) => !val || parseFloat(val) >= 0 || 'Please enter valid salary',
+                          (val) =>
+                            !val ||
+                            (isFiniteNumber(val) && parseFloat(val) >= 0) ||
+                            'Please enter valid salary',
                         ]"
                         lazy-rules
                       />
@@ -1315,7 +1805,52 @@
                             (COE, Performance Rating, WES)
                           </span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1324,11 +1859,26 @@
                           multiple
                           use-chips
                           stack-label
+                          max-file-size="10485760"
+                          @rejected="onFileRejected"
                         >
                           <template v-slot:append>
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                     <div class="col-12">
@@ -1417,42 +1967,69 @@
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
                         v-model="row.inclusive_date_from"
-                        label="From (MM/DD/YYYY)"
+                        label="From (DD/MM/YYYY)"
                         outlined
                         dense
+                        mask="##/##/####"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.inclusive_date_from" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
                         v-model="row.inclusive_date_to"
-                        label="To (MM/DD/YYYY)"
+                        label="To (DD/MM/YYYY)"
                         outlined
                         dense
+                        mask="##/##/####"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.inclusive_date_to" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
-                        v-model="row.number_of_hours"
+                        v-model.number="row.number_of_hours"
                         label="Number of Hours"
                         outlined
                         dense
                         type="number"
+                        min="0"
+                        step="0.5"
                         :rules="[
-                          (val) => !val || parseFloat(val) > 0 || 'Please enter valid hours',
+                          (val) =>
+                            !val ||
+                            (isFiniteNumber(val) && parseFloat(val) > 0) ||
+                            'Please enter valid hours',
                         ]"
                         lazy-rules
                       />
@@ -1501,7 +2078,8 @@
                 <div class="banner-text">
                   <strong>Upload supporting documents:</strong>
                   For each training/L&D intervention, upload certificates of completion, attendance
-                  certificates, or training records. Make it one pdf file for multiple documents.
+                  certificates, or training records. Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -1531,47 +2109,76 @@
                         label="Title of Learning &amp; Development Intervention"
                         outlined
                         dense
+                        :rules="[(val) => (!!val && val.trim().length > 0) || 'Title is required']"
+                        lazy-rules
                       />
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
                         v-model="row.inclusive_date_from"
-                        label="From (MM/DD/YYYY)"
+                        label="From (DD/MM/YYYY)"
                         outlined
                         dense
+                        mask="##/##/####"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.inclusive_date_from" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-6 col-md-3">
                       <q-input
                         v-model="row.inclusive_date_to"
-                        label="To (MM/DD/YYYY)"
+                        label="To (DD/MM/YYYY)"
                         outlined
                         dense
+                        mask="##/##/####"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.inclusive_date_to" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-6 col-md-2">
                       <q-input
-                        v-model="row.number_of_hours"
+                        v-model.number="row.number_of_hours"
                         label="No. of Hours"
                         outlined
                         dense
                         type="number"
+                        min="0"
+                        step="0.5"
                         :rules="[
-                          (val) => !val || parseFloat(val) > 0 || 'Please enter valid hours',
+                          (val) =>
+                            !val ||
+                            (isFiniteNumber(val) && parseFloat(val) > 0) ||
+                            'Please enter valid hours',
                         ]"
                         lazy-rules
                       />
@@ -1599,7 +2206,52 @@
                           <q-icon name="attach_file" size="16px" class="q-mr-xs" />
                           <span class="text-caption">Upload Supporting Documents</span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1608,11 +2260,26 @@
                           multiple
                           use-chips
                           stack-label
+                          max-file-size="10485760"
+                          @rejected="onFileRejected"
                         >
                           <template v-slot:append>
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                   </div>
@@ -1776,32 +2443,54 @@
                     <div class="col-12 col-sm-3">
                       <q-input
                         v-model="row.inclusive_date_from"
-                        label="From (MM/DD/YYYY)"
+                        label="From (DD/MM/YYYY)"
                         outlined
                         dense
+                        mask="##/##/####"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.inclusive_date_from" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                     <div class="col-12 col-sm-3">
                       <q-input
                         v-model="row.inclusive_date_to"
-                        label="To (MM/DD/YYYY)"
+                        label="To (DD/MM/YYYY)"
                         outlined
                         dense
+                        mask="##/##/####"
                         :rules="[
                           (val) =>
-                            !val ||
-                            (val && val.length === 10) ||
-                            'Please enter valid date (MM/DD/YYYY)',
+                            !val || isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
                         ]"
                         lazy-rules
-                      />
+                      >
+                        <template v-slot:append>
+                          <q-icon name="event" class="cursor-pointer">
+                            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                              <q-date v-model="row.inclusive_date_to" mask="DD/MM/YYYY" today-btn>
+                                <div class="row items-center justify-end">
+                                  <q-btn v-close-popup label="Close" color="primary" flat />
+                                </div>
+                              </q-date>
+                            </q-popup-proxy>
+                          </q-icon>
+                        </template>
+                      </q-input>
                     </div>
                   </div>
                 </q-card-section>
@@ -1841,7 +2530,14 @@
                 <q-card-section class="row items-center q-gutter-x-md q-py-sm">
                   <div class="text-grey-7 text-caption col-auto">#{{ idx + 1 }}</div>
                   <div class="col">
-                    <q-input v-model="row.full_name" label="Full Name" outlined dense />
+                    <q-input
+                      v-model="row.full_name"
+                      label="Full Name"
+                      outlined
+                      dense
+                      :rules="[(val) => !val || onlyLettersAndSpaces(val) || 'Letters only']"
+                      lazy-rules
+                    />
                   </div>
                   <div class="col">
                     <q-input v-model="row.address" label="Address" outlined dense />
@@ -1852,10 +2548,11 @@
                       label="Contact Number"
                       outlined
                       dense
+                      mask="###############"
                       :rules="[
                         (val) =>
                           !val ||
-                          /^09\d{9,10}$/.test(val) ||
+                          /^09\d{9}$/.test((val || '').replace(/\D/g, '')) ||
                           'Invalid Philippine mobile number (09XXXXXXXXX)',
                       ]"
                       lazy-rules
@@ -1996,9 +2693,30 @@
                       label="Date of filing"
                       outlined
                       dense
-                      :rules="[(val) => !!val || 'Date of filing is required']"
+                      mask="##/##/####"
+                      hint="DD/MM/YYYY"
+                      :rules="[
+                        (val) => !!val || 'Date of filing is required',
+                        (val) => isValidDate(val) || 'Please enter valid date (DD/MM/YYYY)',
+                      ]"
                       lazy-rules
-                    />
+                    >
+                      <template v-slot:append>
+                        <q-icon name="event" class="cursor-pointer">
+                          <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                            <q-date
+                              v-model="formData.criminalCaseDateFiled"
+                              mask="DD/MM/YYYY"
+                              today-btn
+                            >
+                              <div class="row items-center justify-end">
+                                <q-btn v-close-popup label="Close" color="primary" flat />
+                              </div>
+                            </q-date>
+                          </q-popup-proxy>
+                        </q-icon>
+                      </template>
+                    </q-input>
                   </div>
                   <div class="col-12 col-sm-6">
                     <q-input
@@ -2183,7 +2901,6 @@
                   </q-item-section>
                 </q-item>
 
-                <!-- Indigenous Group "Please specify" field -->
                 <div v-if="formData.indigenous === 'Yes'" class="q-pl-md q-mt-sm">
                   <q-input
                     v-model="formData.indigenousDetails"
@@ -2243,7 +2960,6 @@
                   </q-item-section>
                 </q-item>
 
-                <!-- Solo Parent "Please specify" field -->
                 <div v-if="formData.soloParent === 'Yes'" class="q-pl-md q-mt-sm">
                   <q-input
                     v-model="formData.soloParentDetails"
@@ -2256,6 +2972,130 @@
                 </div>
               </div>
             </div>
+          </q-card>
+        </div>
+
+        <!-- XI. Other Documents (Renumbered to XII) -->
+        <div id="section-other-documents" class="scroll-target">
+          <q-card flat bordered class="q-mb-md">
+            <q-card-section class="bg-primary text-white q-py-sm">
+              <div class="text-subtitle1 text-bold">XII. Other Documents</div>
+            </q-card-section>
+
+            <q-card-section>
+              <q-banner class="upload-instruction-banner bg-teal-1 text-teal q-mb-md" rounded>
+                <template v-slot:avatar>
+                  <q-icon name="info" />
+                </template>
+                <div class="banner-text">
+                  <strong>Upload other supporting documents:</strong>
+                  <ul class="q-mt-sm q-mb-none" style="padding-left: 20px">
+                    <li>
+                      <strong>Application Letter</strong>
+                      - Include your application letter
+                    </li>
+                    <li>
+                      <strong>Other Documents</strong>
+                      - Any additional supporting documents
+                    </li>
+                  </ul>
+                  Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
+                </div>
+              </q-banner>
+
+              <!-- Previously uploaded "Other Documents" — always shown, never disables adding more -->
+              <div v-if="existingOtherDocuments.length" class="q-mb-md">
+                <div class="section-label q-mb-sm">Previously Uploaded Documents</div>
+                <q-list bordered separator class="rounded-borders">
+                  <q-item v-for="(doc, i) in existingOtherDocuments" :key="`other-existing-${i}`">
+                    <q-item-section avatar>
+                      <q-icon name="insert_drive_file" color="primary" size="26px" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-caption ellipsis" style="max-width: 320px">
+                        {{ doc.name }}
+                      </q-item-label>
+                      <q-item-label caption>Already uploaded</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        icon="visibility"
+                        color="primary"
+                        @click="viewAttachment(doc.url, doc.name)"
+                      >
+                        <q-tooltip>View File</q-tooltip>
+                      </q-btn>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
+
+              <div class="row items-center justify-between q-mb-sm">
+                <div class="section-label q-mb-none">Additional Documents</div>
+                <q-btn
+                  unelevated
+                  rounded
+                  label="Add Document"
+                  icon="add"
+                  color="primary"
+                  size="sm"
+                  @click="addOtherDocument"
+                />
+              </div>
+
+              <q-card
+                v-for="(row, idx) in form.otherDocuments"
+                :key="`other-${idx}`"
+                flat
+                bordered
+                class="q-mb-sm"
+              >
+                <q-card-section class="row items-center q-gutter-x-md q-py-sm">
+                  <div class="text-grey-7 text-caption col-auto">#{{ idx + 1 }}</div>
+                  <div class="col">
+                    <q-input
+                      v-model="row.document_name"
+                      label="Document Name/Description"
+                      outlined
+                      dense
+                      placeholder="e.g., Application Letter, Certificates, etc."
+                    />
+                  </div>
+                  <div class="col-12 col-sm-6">
+                    <q-file
+                      v-model="row.file"
+                      label="Upload Document (PDF, JPG, PNG)"
+                      outlined
+                      dense
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      stack-label
+                      max-file-size="10485760"
+                      @rejected="onFileRejected"
+                    >
+                      <template v-slot:prepend>
+                        <q-icon name="attach_file" />
+                      </template>
+                    </q-file>
+                  </div>
+                  <q-btn
+                    flat
+                    round
+                    icon="delete"
+                    color="negative"
+                    size="sm"
+                    @click="removeRow('otherDocuments', idx)"
+                  />
+                </q-card-section>
+              </q-card>
+
+              <q-banner v-if="!form.otherDocuments.length" class="text-grey-7 bg-grey-2" rounded>
+                No additional documents added. Click "Add Document" to add one.
+              </q-banner>
+            </q-card-section>
           </q-card>
         </div>
 
@@ -2273,15 +3113,219 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══════════════════════ Attachment Viewer Dialog ═══════════════════════ -->
+    <q-dialog v-model="viewerDialog.show" maximized-mobile>
+      <q-card style="min-width: 350px; max-width: 900px; width: 90vw">
+        <q-card-section class="row items-center justify-between bg-primary text-white q-py-sm">
+          <div class="text-subtitle1 ellipsis" style="max-width: 80%">
+            {{ viewerDialog.name }}
+          </div>
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
+        </q-card-section>
+        <q-separator />
+        <q-card-section class="q-pa-none" style="height: 70vh">
+          <template v-if="viewerDialog.type === 'pdf'">
+            <iframe
+              v-if="viewerDialog.url"
+              :src="viewerDialog.url"
+              style="width: 100%; height: 100%; border: none"
+              title="PDF Preview"
+            ></iframe>
+          </template>
+          <template v-else-if="viewerDialog.type === 'image'">
+            <div class="flex flex-center full-height bg-grey-2">
+              <img
+                :src="viewerDialog.url"
+                style="max-width: 100%; max-height: 100%; object-fit: contain"
+                alt="Attachment preview"
+              />
+            </div>
+          </template>
+          <template v-else>
+            <div class="flex flex-center column full-height q-pa-lg">
+              <q-icon name="insert_drive_file" size="64px" color="grey-6" />
+              <div class="text-grey-7 q-mt-md text-center">
+                Preview isn't available for this file type. Use "Open in New Tab" or "Download"
+                below.
+              </div>
+            </div>
+          </template>
+        </q-card-section>
+        <q-separator />
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            icon="open_in_new"
+            label="Open in New Tab"
+            @click="openInNewTab(viewerDialog.url)"
+          />
+          <q-btn
+            flat
+            icon="download"
+            label="Download"
+            :href="viewerDialog.url"
+            target="_blank"
+            type="a"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup>
   import { ref, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
   import { useQuasar } from 'quasar';
+  import { usePDSStore } from 'src/stores/pdsFormStore';
+  import { useRouter } from 'vue-router';
 
   const $q = useQuasar();
+  const pdsStore = usePDSStore();
+  const router = useRouter();
   const emit = defineEmits(['submit']);
+
+  // ── State ──────────────────────────────────────────────────
+  const hasExistingPDS = ref(false);
+  const isLoading = ref(true);
+  const isSubmitting = ref(false);
+  const photoChanged = ref(false);
+
+  // ── Shared validation helpers ─────────────────────────────────
+  function isValidDate(val) {
+    if (!val) return true;
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(val);
+    if (!match) return false;
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    if (month < 1 || month > 12) return false;
+    if (year < 1900 || year > 2100) return false;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    if (day < 1 || day > daysInMonth) return false;
+    return true;
+  }
+
+  function isNotFutureDate(val) {
+    if (!val || !isValidDate(val)) return true;
+    const [day, month, year] = val.split('/').map(Number);
+    const inputDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return inputDate <= today;
+  }
+
+  function onlyLettersAndSpaces(val) {
+    if (!val) return true;
+    return /^[a-zA-ZÀ-ÿ.'\- ]+$/.test(val.trim());
+  }
+
+  function isFiniteNumber(val) {
+    if (val === null || val === undefined || val === '') return false;
+    return Number.isFinite(parseFloat(val));
+  }
+
+  function onFileRejected(rejectedEntries) {
+    $q.notify({
+      type: 'negative',
+      message: `${rejectedEntries.length} file(s) did not pass validation (max 10MB, allowed types only).`,
+      position: 'top',
+    });
+  }
+
+  function onTogglePresent(row, val) {
+    row.currently_working = val;
+    row.work_date_to = val ? 'PRESENT' : '';
+  }
+
+  // ── Attachment helpers (existing-file handling / viewer) ────────────
+  // Default fallback base — actual base is derived from the loaded record when available.
+  const storageBaseUrl = ref('http://192.168.8.182:8000/storage/');
+
+  function deriveStorageBaseUrl(data) {
+    const candidates = [
+      data?.image_url,
+      data?.file?.pds_file?.[0],
+      data?.file?.other_document?.[0],
+    ].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const idx = candidate.indexOf('/storage/');
+      if (idx !== -1) {
+        return candidate.substring(0, idx + '/storage/'.length);
+      }
+    }
+    return 'http://192.168.8.182:8000/storage/';
+  }
+
+  function stripStorageUrl(url) {
+    if (!url) return '';
+    if (storageBaseUrl.value && url.startsWith(storageBaseUrl.value)) {
+      return url.substring(storageBaseUrl.value.length);
+    }
+    // Fallback: strip a generic "<origin>/storage/" pattern
+    return url.replace(/^https?:\/\/[^/]+\/storage\//, '');
+  }
+
+  function getFileNameFromPath(path) {
+    if (!path) return '';
+    const clean = path.split('?')[0];
+    return clean.substring(clean.lastIndexOf('/') + 1);
+  }
+
+  function buildViewUrl(relativePath) {
+    if (!relativePath) return '';
+    if (/^https?:\/\//i.test(relativePath)) return relativePath;
+    return `${storageBaseUrl.value}${relativePath}`;
+  }
+
+  // Existing "on record" attachments loaded from the API
+  const existingPdsFiles = ref([]); // [{ url, path, name }]
+  const replacePds = ref(false);
+  const existingOtherDocuments = ref([]); // [{ url, path, name }]
+
+  function cancelReplacePds() {
+    replacePds.value = false;
+    form.pdsFile = null;
+  }
+
+  // ── Attachment Viewer Dialog ──────────────────────────────────
+  const viewerDialog = reactive({
+    show: false,
+    url: '',
+    name: '',
+    type: 'other', // 'pdf' | 'image' | 'other'
+  });
+
+  function getFileExt(url) {
+    try {
+      const clean = url.split('?')[0];
+      return clean.substring(clean.lastIndexOf('.') + 1).toLowerCase();
+    } catch {
+      return '';
+    }
+  }
+
+  function viewAttachment(url, name) {
+    if (!url) {
+      $q.notify({ type: 'warning', message: 'This attachment is not available to preview.' });
+      return;
+    }
+    const ext = getFileExt(url);
+    let type = 'other';
+    if (ext === 'pdf') type = 'pdf';
+    else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) type = 'image';
+
+    viewerDialog.url = url;
+    viewerDialog.name = name || getFileNameFromPath(url);
+    viewerDialog.type = type;
+    viewerDialog.show = true;
+  }
+
+  function openInNewTab(url) {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener');
+  }
 
   // ── Options ──────────────────────────────────────────────────
   const sexOptions = ['Male', 'Female'];
@@ -2304,7 +3348,6 @@
   ];
   const yesNoOptions = ['Yes', 'No'];
 
-  // Gender Reference Options
   const genderReferenceOptions = [
     { label: 'Female', value: 'Female' },
     { label: 'Male', value: 'Male' },
@@ -2322,7 +3365,6 @@
     { label: 'Other', value: 'Other' },
   ];
 
-  // Ethnic Group Options
   const ethnicGroupOptions = [
     { label: 'Maguindanao', value: 'Maguindanao' },
     { label: 'Maranao', value: 'Maranao' },
@@ -2373,7 +3415,6 @@
     { label: 'Other', value: 'Other' },
   ];
 
-  // PWD Options
   const pwdOptions = [
     'Psychosocial Disability',
     'Disability caused by chronic illness',
@@ -2388,6 +3429,7 @@
   const sections = [
     { id: 'section-photo', label: 'Photo & Name', icon: 'photo_camera' },
     { id: 'section-personal', label: 'Personal Information', icon: 'person' },
+    { id: 'section-upload-pds', label: 'Upload PDS', icon: 'description' },
     { id: 'section-family', label: 'Family Background', icon: 'family_restroom' },
     { id: 'section-education', label: 'Educational Background', icon: 'school' },
     { id: 'section-eligibility', label: 'Civil Service Eligibility', icon: 'verified' },
@@ -2397,6 +3439,7 @@
     { id: 'section-other', label: 'Other Information', icon: 'info' },
     { id: 'section-references', label: 'References', icon: 'contacts' },
     { id: 'section-declarations', label: 'Declarations', icon: 'fact_check' },
+    { id: 'section-other-documents', label: 'Other Documents', icon: 'folder' },
   ];
 
   const activeSection = ref('section-photo');
@@ -2404,6 +3447,15 @@
   let isScrolling = false;
   let scrollTimeout = null;
   let isManualScroll = false;
+
+  // ── Navigation Functions ──────────────────────────────────────
+  function goBack() {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/jobList');
+    }
+  }
 
   function scrollToSection(id) {
     const el = document.getElementById(id);
@@ -2437,18 +3489,27 @@
   const mobileNavHeight = ref(0);
   let barResizeObserver = null;
   let mobileNavResizeObserver = null;
+  let setupObserverTimeout = null;
 
   function getAppHeaderHeight() {
-    const value = getComputedStyle(document.documentElement).getPropertyValue(
-      '--app-header-height',
-    );
-    return parseFloat(value) || 0;
+    try {
+      const value = getComputedStyle(document.documentElement).getPropertyValue(
+        '--app-header-height',
+      );
+      return parseFloat(value) || 0;
+    } catch {
+      return 0;
+    }
   }
 
-  // ── Improved Intersection Observer for accurate section detection ──
+  // ── Improved Intersection Observer ──────────────────────────────────
   function setupSectionObserver() {
     const targets = sections.map((s) => document.getElementById(s.id)).filter(Boolean);
-    const stickyOffset = getAppHeaderHeight() + stickyBarHeight.value + mobileNavHeight.value + 20;
+
+    const appHeaderHeight = getAppHeaderHeight() || 0;
+    const barHeight = stickyBarHeight.value || 56;
+    const navHeight = mobileNavHeight.value || 0;
+    const stickyOffset = appHeaderHeight + barHeight + navHeight + 20;
 
     if (sectionObserver) {
       sectionObserver.disconnect();
@@ -2483,7 +3544,7 @@
         }
       },
       {
-        rootMargin: `-${stickyOffset + 10}px 0px -30% 0px`,
+        rootMargin: `-${Math.max(stickyOffset, 10)}px 0px -30% 0px`,
         threshold: [0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0],
       },
     );
@@ -2494,53 +3555,80 @@
   onMounted(() => {
     const barEl = stickyBarRef.value?.$el ?? stickyBarRef.value;
     if (barEl) {
-      stickyBarHeight.value = Math.round(barEl.getBoundingClientRect().height);
-      barResizeObserver = new ResizeObserver((entries) => {
-        stickyBarHeight.value = Math.round(entries[0].contentRect.height);
-        setTimeout(setupSectionObserver, 100);
-      });
-      barResizeObserver.observe(barEl);
+      try {
+        stickyBarHeight.value = Math.round(barEl.getBoundingClientRect().height) || 56;
+        barResizeObserver = new ResizeObserver((entries) => {
+          if (entries[0]) {
+            stickyBarHeight.value = Math.round(entries[0].contentRect.height) || 56;
+            clearTimeout(setupObserverTimeout);
+            setupObserverTimeout = setTimeout(setupSectionObserver, 100);
+          }
+        });
+        barResizeObserver.observe(barEl);
+      } catch (e) {
+        console.warn('Error setting up bar resize observer:', e);
+        stickyBarHeight.value = 56;
+      }
     }
 
     if (mobileNavRef.value) {
-      mobileNavHeight.value = Math.round(mobileNavRef.value.getBoundingClientRect().height);
-      mobileNavResizeObserver = new ResizeObserver((entries) => {
-        mobileNavHeight.value = Math.round(entries[0].contentRect.height);
-        setTimeout(setupSectionObserver, 100);
-      });
-      mobileNavResizeObserver.observe(mobileNavRef.value);
+      try {
+        mobileNavHeight.value = Math.round(mobileNavRef.value.getBoundingClientRect().height) || 0;
+        mobileNavResizeObserver = new ResizeObserver((entries) => {
+          if (entries[0]) {
+            mobileNavHeight.value = Math.round(entries[0].contentRect.height) || 0;
+            clearTimeout(setupObserverTimeout);
+            setupObserverTimeout = setTimeout(setupSectionObserver, 100);
+          }
+        });
+        mobileNavResizeObserver.observe(mobileNavRef.value);
+      } catch (e) {
+        console.warn('Error setting up mobile nav resize observer:', e);
+        mobileNavHeight.value = 0;
+      }
     }
 
     nextTick(() => {
       setupSectionObserver();
       window.addEventListener('scroll', handleScrollEnd);
     });
+
+    loadPDSData();
   });
 
   function handleScrollEnd() {
     if (isScrolling || isManualScroll) return;
 
-    const scrollY = window.scrollY;
-    const windowHeight = window.innerHeight;
-    const documentHeight = document.documentElement.scrollHeight;
+    try {
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
 
-    if (scrollY + windowHeight >= documentHeight - 100) {
-      const lastSection = sections[sections.length - 1];
-      if (lastSection) {
-        activeSection.value = lastSection.id;
+      if (scrollY + windowHeight >= documentHeight - 100) {
+        const lastSection = sections[sections.length - 1];
+        if (lastSection) {
+          activeSection.value = lastSection.id;
+        }
       }
+    } catch {
+      // Ignore scroll errors
     }
   }
 
   onUnmounted(() => {
-    barResizeObserver?.disconnect();
-    mobileNavResizeObserver?.disconnect();
-    sectionObserver?.disconnect();
-    window.removeEventListener('scroll', handleScrollEnd);
-    clearTimeout(scrollTimeout);
+    try {
+      barResizeObserver?.disconnect();
+      mobileNavResizeObserver?.disconnect();
+      sectionObserver?.disconnect();
+      window.removeEventListener('scroll', handleScrollEnd);
+      clearTimeout(scrollTimeout);
+      clearTimeout(setupObserverTimeout);
+    } catch {
+      // Ignore cleanup errors
+    }
   });
 
-  // ── Keep the active chip centered in the mobile nav's scroll area ──
+  // ── Keep the active chip centered ──────────────────────────────────
   const mobileNavScrollRef = ref(null);
   const chipRefs = {};
 
@@ -2550,15 +3638,19 @@
   }
 
   function centerActiveChip(id) {
-    const container = mobileNavScrollRef.value;
-    const chipEl = chipRefs[id]?.$el ?? chipRefs[id];
-    if (!container || !chipEl) return;
+    try {
+      const container = mobileNavScrollRef.value;
+      const chipEl = chipRefs[id]?.$el ?? chipRefs[id];
+      if (!container || !chipEl) return;
 
-    const containerRect = container.getBoundingClientRect();
-    const chipRect = chipEl.getBoundingClientRect();
-    const delta =
-      chipRect.left + chipRect.width / 2 - (containerRect.left + containerRect.width / 2);
-    container.scrollBy({ left: delta, behavior: 'smooth' });
+      const containerRect = container.getBoundingClientRect();
+      const chipRect = chipEl.getBoundingClientRect();
+      const delta =
+        chipRect.left + chipRect.width / 2 - (containerRect.left + containerRect.width / 2);
+      container.scrollBy({ left: delta, behavior: 'smooth' });
+    } catch {
+      // Ignore centering errors
+    }
   }
 
   watch(activeSection, (id) => {
@@ -2640,6 +3732,8 @@
     distinctions: [],
     memberships: [],
     references: [],
+    otherDocuments: [],
+    pdsFile: null,
   });
 
   // ── Personal Background Questionnaire ──────────────────────────
@@ -2673,12 +3767,31 @@
   // ── Same as residential toggle ──────────────────────────────────
   const sameAsResidential = ref(false);
   function onSameAddressToggle(val) {
-    if (val) Object.assign(form.permanent, { ...form.residential });
+    if (val) {
+      try {
+        Object.assign(form.permanent, { ...form.residential });
+      } catch {
+        // Ignore
+      }
+    }
   }
+
   watch(
-    () => ({ ...form.residential }),
+    () => {
+      try {
+        return { ...form.residential };
+      } catch {
+        return {};
+      }
+    },
     (val) => {
-      if (sameAsResidential.value) Object.assign(form.permanent, val);
+      if (sameAsResidential.value) {
+        try {
+          Object.assign(form.permanent, val);
+        } catch {
+          // Ignore
+        }
+      }
     },
   );
 
@@ -2704,31 +3817,51 @@
       return;
     }
 
-    if (photoPreview.value?.startsWith('blob:')) URL.revokeObjectURL(photoPreview.value);
+    if (photoPreview.value?.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(photoPreview.value);
+      } catch {
+        // Ignore
+      }
+    }
     photoFile.value = file;
     photoPreview.value = URL.createObjectURL(file);
+    photoChanged.value = true;
   }
 
   onUnmounted(() => {
-    if (photoPreview.value?.startsWith('blob:')) URL.revokeObjectURL(photoPreview.value);
+    if (photoPreview.value?.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(photoPreview.value);
+      } catch {
+        // Ignore
+      }
+    }
   });
 
   // ── WES Download ──────────────────────────────────────────────────
   const workExperienceDocxUrl = '/CS Form No. 212 Attachment - Work Experience Sheet.docx';
 
   function downloadWES() {
-    const a = document.createElement('a');
-    a.href = workExperienceDocxUrl;
-    a.download = 'CS Form No. 212 Attachment - Work Experience Sheet.docx';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    try {
+      const a = document.createElement('a');
+      a.href = workExperienceDocxUrl;
+      a.download = 'CS Form No. 212 Attachment - Work Experience Sheet.docx';
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
-    $q.notify({
-      type: 'positive',
-      message: 'Downloading Work Experience Sheet template...',
-    });
+      $q.notify({
+        type: 'positive',
+        message: 'Downloading Work Experience Sheet template...',
+      });
+    } catch {
+      $q.notify({
+        type: 'negative',
+        message: 'Failed to download WES template.',
+      });
+    }
   }
 
   // ── Dynamic row helpers ──────────────────────────────────────────
@@ -2750,7 +3883,10 @@
       year_graduated: '',
       scholarship: '',
       graduated: '',
-      file: [],
+      file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -2762,7 +3898,10 @@
       place_of_examination: '',
       license_number: '',
       date_of_validity: '',
-      file: [],
+      file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -2776,7 +3915,11 @@
       salary_grade: '',
       status_of_appointment: '',
       government_service: '',
-      file: [],
+      currently_working: false,
+      file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -2798,7 +3941,10 @@
       number_of_hours: '',
       type: '',
       conducted_by: '',
-      file: [],
+      file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -2823,27 +3969,700 @@
     form.references.push({ full_name: '', address: '', contact_number: '' });
   }
 
+  function addOtherDocument() {
+    form.otherDocuments.push({
+      document_name: '',
+      file: null,
+    });
+  }
+
   function removeRow(section, idx) {
-    form[section].splice(idx, 1);
-  }
-
-  // ── Actions ──────────────────────────────────────────────────
-  const isSubmitting = ref(false);
-
-  function buildPayload() {
-    return {
-      photo: photoFile.value,
-      ...form,
-      personalDeclarations: formData,
-    };
-  }
-
-  async function submitForm() {
-    isSubmitting.value = true;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      $q.notify({ type: 'positive', message: 'Form ready to submit (no API call wired up yet).' });
-      emit('submit', buildPayload());
+      form[section].splice(idx, 1);
+    } catch {
+      // Ignore
+    }
+  }
+
+  // ── Load PDS Data ──────────────────────────────────────────────────
+  async function loadPDSData() {
+    isLoading.value = true;
+    try {
+      const email = localStorage.getItem('userEmail');
+      if (!email) {
+        $q.notify({
+          type: 'warning',
+          message: 'No email found. Please login again.',
+          position: 'top',
+        });
+        return;
+      }
+
+      form.personal.email_address = email;
+
+      const result = await pdsStore.fetchPDS(email);
+
+      if (result.success && result.data) {
+        hasExistingPDS.value = true;
+        populateFormWithData(result.data);
+        $q.notify({
+          type: 'positive',
+          message: 'PDS data loaded successfully. You can update your information.',
+          position: 'top',
+          timeout: 3000,
+        });
+      } else {
+        hasExistingPDS.value = false;
+        $q.notify({
+          type: 'info',
+          message: 'No existing PDS found. Please fill out the form.',
+          position: 'top',
+          timeout: 3000,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading PDS:', error);
+      hasExistingPDS.value = false;
+      $q.notify({
+        type: 'negative',
+        message: 'Error loading PDS data. Please refresh and try again.',
+        position: 'top',
+      });
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // ── Populate Form with Data ──────────────────────────────────────
+  function populateFormWithData(data) {
+    try {
+      // Derive the storage base URL from the loaded record (falls back to default).
+      storageBaseUrl.value = deriveStorageBaseUrl(data);
+
+      form.personal.firstname = data.firstname || '';
+      form.personal.lastname = data.lastname || '';
+      form.personal.middlename = data.middlename || '';
+      form.personal.name_extension = data.name_extension || '';
+      form.personal.date_of_birth = data.date_of_birth || '';
+      form.personal.place_of_birth = data.place_of_birth || '';
+      form.personal.sex = data.sex || '';
+      form.personal.civil_status = data.civil_status || '';
+      form.personal.blood_type = data.blood_type || '';
+      form.personal.height = data.height || '';
+      form.personal.weight = data.weight || '';
+      form.personal.cellphone_number = data.cellphone_number || '';
+      form.personal.telephone_number = data.telephone_number || '';
+      form.personal.email_address = data.email_address || '';
+      form.personal.citizenship = data.citizenship || '';
+      form.personal.religion = data.religion || '';
+      form.personal.gender_reference = data.gender_prefer || '';
+      form.personal.gender_other = data.other_specify || '';
+      form.personal.ethnic_group = data.ethnic_group || '';
+      form.personal.ethnic_other = data.ethnic_specify || '';
+      form.personal.gsis_no = data.gsis_no || '';
+      form.personal.pagibig_no = data.pagibig_no || '';
+      form.personal.philhealth_no = data.philhealth_no || '';
+      form.personal.sss_no = data.sss_no || '';
+      form.personal.tin_no = data.tin_no || '';
+      form.personal.agency_employee_no = data.agency_employee_no || '';
+
+      form.residential.house = data.residential_house || '';
+      form.residential.street = data.Rpurok || data.residential_street || '';
+      form.residential.subdivision = data.residential_subdivision || '';
+      form.residential.barangay = data.residential_barangay || '';
+      form.residential.city = data.residential_city || '';
+      form.residential.province = data.residential_province || '';
+      form.residential.region = data.residential_region || '';
+      form.residential.zip = data.residential_zip || '';
+
+      form.permanent.house = data.permanent_house || '';
+      form.permanent.street = data.Ppurok || data.permanent_street || '';
+      form.permanent.subdivision = data.permanent_subdivision || '';
+      form.permanent.barangay = data.permanent_barangay || '';
+      form.permanent.city = data.permanent_city || '';
+      form.permanent.province = data.permanent_province || '';
+      form.permanent.region = data.permanent_region || '';
+      form.permanent.zip = data.permanent_zip || '';
+
+      if (data.family) {
+        form.family.spouse_firstname = data.family.spouse_firstname || '';
+        form.family.spouse_name = data.family.spouse_name || '';
+        form.family.spouse_middlename = data.family.spouse_middlename || '';
+        form.family.spouse_occupation = data.family.spouse_occupation || '';
+        form.family.spouse_employer = data.family.spouse_employer || '';
+        form.family.spouse_employer_address = data.family.spouse_employer_address || '';
+        form.family.spouse_employer_telephone = data.family.spouse_employer_telephone || '';
+        form.family.father_firstname = data.family.father_firstname || '';
+        form.family.father_lastname = data.family.father_lastname || '';
+        form.family.father_middlename = data.family.father_middlename || '';
+        form.family.mother_firstname = data.family.mother_firstname || '';
+        form.family.mother_lastname = data.family.mother_lastname || '';
+        form.family.mother_middlename = data.family.mother_middlename || '';
+      }
+
+      if (data.children && data.children.length > 0) {
+        form.children = data.children.map((child) => ({
+          child_name: child.child_name || '',
+          birth_date: child.birth_date || '',
+        }));
+      }
+
+      if (data.education && data.education.length > 0) {
+        form.education = data.education.map((edu) => ({
+          level: edu.level || '',
+          school_name: edu.school_name || '',
+          degree: edu.degree || '',
+          attendance_from: edu.attendance_from || '',
+          attendance_to: edu.attendance_to || '',
+          highest_units: edu.highest_units || '',
+          year_graduated: edu.year_graduated || '',
+          scholarship: edu.scholarship || '',
+          graduated: edu.graduated || '',
+          file: null,
+          existingAttachment: edu.attachment_path || null,
+          existingAttachmentUrl: edu.attachment_path ? buildViewUrl(edu.attachment_path) : null,
+          replaceFile: false,
+        }));
+      }
+
+      if (data.work_experience && data.work_experience.length > 0) {
+        form.workExperience = data.work_experience.map((work) => ({
+          work_date_from: work.work_date_from || '',
+          work_date_to: work.work_date_to || '',
+          position_title: work.position_title || '',
+          department: work.department || '',
+          monthly_salary: work.monthly_salary || '',
+          salary_grade: work.salary_grade || '',
+          status_of_appointment: work.status_of_appointment || '',
+          government_service: work.government_service || '',
+          currently_working: (work.work_date_to || '').toUpperCase() === 'PRESENT',
+          file: null,
+          existingAttachment: work.attachment_path || null,
+          existingAttachmentUrl: work.attachment_path ? buildViewUrl(work.attachment_path) : null,
+          replaceFile: false,
+        }));
+      }
+
+      if (data.training && data.training.length > 0) {
+        form.training = data.training.map((train) => ({
+          training_title: train.training_title || '',
+          inclusive_date_from: train.inclusive_date_from || '',
+          inclusive_date_to: train.inclusive_date_to || '',
+          number_of_hours: train.number_of_hours || '',
+          type: train.type || '',
+          conducted_by: train.conducted_by || '',
+          file: null,
+          existingAttachment: train.attachment_path || null,
+          existingAttachmentUrl: train.attachment_path ? buildViewUrl(train.attachment_path) : null,
+          replaceFile: false,
+        }));
+      }
+
+      if (data.eligibity && data.eligibity.length > 0) {
+        form.eligibility = data.eligibity.map((elig) => ({
+          eligibility: elig.eligibility || '',
+          rating: elig.rating || '',
+          date_of_examination: elig.date_of_examination || '',
+          place_of_examination: elig.place_of_examination || '',
+          license_number: elig.license_number || '',
+          date_of_validity: elig.date_of_validity || '',
+          file: null,
+          existingAttachment: elig.attachment_path || null,
+          existingAttachmentUrl: elig.attachment_path ? buildViewUrl(elig.attachment_path) : null,
+          replaceFile: false,
+        }));
+      }
+
+      // ── Fetch/populate previously uploaded files (PDS & Other Documents) ──
+      existingPdsFiles.value = (data.file?.pds_file || []).map((url) => ({
+        url,
+        path: stripStorageUrl(url),
+        name: getFileNameFromPath(url),
+      }));
+      replacePds.value = false;
+
+      existingOtherDocuments.value = (data.file?.other_document || []).map((url) => ({
+        url,
+        path: stripStorageUrl(url),
+        name: getFileNameFromPath(url),
+      }));
+
+      // Set photo from existing data
+      if (data.image_url) {
+        photoPreview.value = data.image_url;
+        photoFile.value = null;
+        photoChanged.value = false;
+      }
+
+      const residentialStr = `${form.residential.house}${form.residential.street}${form.residential.subdivision}${form.residential.barangay}${form.residential.city}${form.residential.province}${form.residential.zip}`;
+      const permanentStr = `${form.permanent.house}${form.permanent.street}${form.permanent.subdivision}${form.permanent.barangay}${form.permanent.city}${form.permanent.province}${form.permanent.zip}`;
+      sameAsResidential.value = residentialStr === permanentStr && residentialStr !== '';
+
+      if (data.personal_declarations && data.personal_declarations.length > 0) {
+        const dec = data.personal_declarations[0];
+        formData.relationThirdDegree = dec.question_34a || 'No';
+        formData.relationFourthDegree = dec.question_34b || 'No';
+        formData.relationDetails = dec.response_34 || '';
+        formData.administrativeOffense = dec.question_35a || 'No';
+        formData.administrativeOffenseDetails = dec.response_35a || '';
+        formData.criminallyCharged = dec.question_35b || 'No';
+        formData.criminalCaseDateFiled = dec.response_35b_date || '';
+        formData.criminalCaseStatus = dec.response_35b_status || '';
+        formData.convicted = dec.question_36 || 'No';
+        formData.convictedDetails = dec.response_36 || '';
+        formData.separatedFromService = dec.question_37 || 'No';
+        formData.separatedFromServiceDetails = dec.response_37 || '';
+        formData.electionCandidate = dec.question_38a || 'No';
+        formData.electionCandidateDetails = dec.response_38a || '';
+        formData.resignedForCampaign = dec.question_38b || 'No';
+        formData.resignedForCampaignDetails = dec.response_38b || '';
+        formData.immigrant = dec.question_39 || 'No';
+        formData.immigrantDetails = dec.response_39 || '';
+        formData.indigenous = dec.question_40a || 'No';
+        formData.indigenousDetails = dec.response_40a || '';
+        formData.pwd = dec.question_40b || 'No';
+
+        const pwdTypes = [];
+        if (dec.chronic === '1') pwdTypes.push('Disability caused by chronic illness');
+        if (dec.Psychosocial === '1') pwdTypes.push('Psychosocial Disability');
+        if (dec.Orthopedic === '1') pwdTypes.push('Orthopedic Disability');
+        if (dec.Communication === '1') pwdTypes.push('Communication Disability');
+        if (dec.Learning === '1') pwdTypes.push('Learning Disability');
+        if (dec.Mental === '1') pwdTypes.push('Mental Disability');
+        if (dec.Visual === '1') pwdTypes.push('Visual Disability');
+        formData.pwdTypes = pwdTypes;
+
+        formData.soloParent = dec.question_40c || 'No';
+        formData.soloParentDetails = dec.response_40c || '';
+      }
+    } catch (error) {
+      console.error('Error populating form with data:', error);
+    }
+  }
+
+  // ── Build Payload ──────────────────────────────────────────────────
+  function buildPayload() {
+    const payload = {
+      email_checker: form.personal.email_address,
+      job_batches_rsp_id: localStorage.getItem('selectedJobId') || '',
+      lastname: form.personal.lastname,
+      firstname: form.personal.firstname,
+      middlename: form.personal.middlename || '',
+      name_extension: form.personal.name_extension || '',
+      date_of_birth: form.personal.date_of_birth,
+      sex: form.personal.sex,
+      place_of_birth: form.personal.place_of_birth,
+      weight: form.personal.weight,
+      height: form.personal.height,
+      blood_type: form.personal.blood_type || '',
+      gsis_no: form.personal.gsis_no || '',
+      pagibig_no: form.personal.pagibig_no || '',
+      philhealth_no: form.personal.philhealth_no || '',
+      sss_no: form.personal.sss_no || '',
+      tin_no: form.personal.tin_no || '',
+      civil_status: form.personal.civil_status,
+      citizenship: form.personal.citizenship || 'Filipino',
+      citizenship_status: '',
+      residential_house: form.residential.house || '',
+      residential_street: form.residential.street || '',
+      residential_subdivision: form.residential.subdivision || '',
+      residential_barangay: form.residential.barangay || '',
+      residential_city: form.residential.city || '',
+      residential_province: form.residential.province || '',
+      residential_zip: form.residential.zip || '',
+      permanent_house: form.permanent.house || '',
+      permanent_street: form.permanent.street || '',
+      permanent_subdivision: form.permanent.subdivision || '',
+      permanent_barangay: form.permanent.barangay || '',
+      permanent_city: form.permanent.city || '',
+      permanent_province: form.permanent.province || '',
+      permanent_zip: form.permanent.zip || '',
+      telephone_number: form.personal.telephone_number || '',
+      cellphone_number: form.personal.cellphone_number || '',
+      email_address: form.personal.email_address,
+      agency_employee_no: form.personal.agency_employee_no || '',
+      umId: '',
+      philSys: '',
+      pwd: formData.pwd === 'Yes' ? 'Yes' : 'No',
+      gender_prefer: form.personal.gender_reference || '',
+      other_specify: form.personal.gender_other || '',
+      Ppurok: form.permanent.street || '',
+      Rpurok: form.residential.street || '',
+      ethnic_group: form.personal.ethnic_group || '',
+      ethnic_specify: form.personal.ethnic_other || '',
+      spouse_name: form.family.spouse_name || '',
+      spouse_firstname: form.family.spouse_firstname || '',
+      spouse_middlename: form.family.spouse_middlename || '',
+      spouse_extension: '',
+      spouse_occupation: form.family.spouse_occupation || '',
+      spouse_employer: form.family.spouse_employer || '',
+      spouse_employer_address: form.family.spouse_employer_address || '',
+      spouse_employer_telephone: form.family.spouse_employer_telephone || '',
+      father_lastname: form.family.father_lastname || '',
+      father_firstname: form.family.father_firstname || '',
+      father_middlename: form.family.father_middlename || '',
+      father_extension: '',
+      mother_lastname: form.family.mother_lastname || '',
+      mother_firstname: form.family.mother_firstname || '',
+      mother_middlename: form.family.mother_middlename || '',
+      mother_maidenname: '',
+    };
+
+    // ── Children ──────────────────────────────────────────────
+    form.children.forEach((child, index) => {
+      payload[`children[${index}][child_name]`] = child.child_name || '';
+      payload[`children[${index}][birth_date]`] = child.birth_date || '';
+    });
+
+    // ── Education (School) ────────────────────────────────────
+    form.education.forEach((edu, index) => {
+      payload[`school[${index}][degree]`] = edu.degree || '';
+      payload[`school[${index}][attendance_from]`] = edu.attendance_from || '';
+      payload[`school[${index}][attendance_to]`] = edu.attendance_to || '';
+      payload[`school[${index}][highest_units]`] = edu.highest_units || '';
+      payload[`school[${index}][year_graduated]`] = edu.year_graduated || '';
+      payload[`school[${index}][scholarship]`] = edu.scholarship || '';
+      payload[`school[${index}][level]`] = edu.level || '';
+      payload[`school[${index}][school_name]`] = edu.school_name || '';
+
+      if (edu.file && edu.file.length > 0) {
+        const file = edu.file[0] || edu.file;
+        if (file instanceof File) {
+          payload[`school[${index}][attachment_path]`] = file;
+        }
+      } else if (edu.existingAttachment && !edu.replaceFile) {
+        // Unchanged — resend the existing (relative) attachment path as-is.
+        payload[`school[${index}][attachment_path]`] = edu.existingAttachment;
+      }
+    });
+
+    // ── Training ──────────────────────────────────────────────
+    form.training.forEach((train, index) => {
+      payload[`training[${index}][training_title]`] = train.training_title || '';
+      payload[`training[${index}][inclusive_date_from]`] = train.inclusive_date_from || '';
+      payload[`training[${index}][inclusive_date_to]`] = train.inclusive_date_to || '';
+      payload[`training[${index}][number_of_hours]`] = train.number_of_hours || '';
+      payload[`training[${index}][type]`] = train.type || '';
+      payload[`training[${index}][conducted_by]`] = train.conducted_by || '';
+
+      if (train.file && train.file.length > 0) {
+        const file = train.file[0] || train.file;
+        if (file instanceof File) {
+          payload[`training[${index}][attachment_path]`] = file;
+        }
+      } else if (train.existingAttachment && !train.replaceFile) {
+        payload[`training[${index}][attachment_path]`] = train.existingAttachment;
+      }
+    });
+
+    // ── Work Experience ────────────────────────────────────────
+    form.workExperience.forEach((work, index) => {
+      payload[`experience[${index}][work_date_from]`] = work.work_date_from || '';
+      payload[`experience[${index}][work_date_to]`] = work.currently_working
+        ? 'PRESENT'
+        : work.work_date_to || '';
+      payload[`experience[${index}][position_title]`] = work.position_title || '';
+      payload[`experience[${index}][department]`] = work.department || '';
+      payload[`experience[${index}][monthly_salary]`] = work.monthly_salary || '';
+      payload[`experience[${index}][salary_grade]`] = work.salary_grade || '';
+      payload[`experience[${index}][status_of_appointment]`] = work.status_of_appointment || '';
+      payload[`experience[${index}][government_service]`] = work.government_service || '';
+
+      if (work.file && work.file.length > 0) {
+        const file = work.file[0] || work.file;
+        if (file instanceof File) {
+          payload[`experience[${index}][attachment_path]`] = file;
+        }
+      } else if (work.existingAttachment && !work.replaceFile) {
+        payload[`experience[${index}][attachment_path]`] = work.existingAttachment;
+      }
+    });
+
+    // ── Voluntary Work ────────────────────────────────────────
+    form.voluntaryWork.forEach((vol, index) => {
+      payload[`voluntary[${index}][organization_name]`] = vol.organization_name || '';
+      payload[`voluntary[${index}][inclusive_date_from]`] = vol.inclusive_date_from || '';
+      payload[`voluntary[${index}][inclusive_date_to]`] = vol.inclusive_date_to || '';
+      payload[`voluntary[${index}][number_of_hours]`] = vol.number_of_hours || '';
+      payload[`voluntary[${index}][position]`] = vol.position || '';
+    });
+
+    // ── Eligibility ────────────────────────────────────────────
+    form.eligibility.forEach((elig, index) => {
+      payload[`eligibility[${index}][eligibility]`] = elig.eligibility || '';
+      payload[`eligibility[${index}][rating]`] = elig.rating || '';
+      payload[`eligibility[${index}][date_of_examination]`] = elig.date_of_examination || '';
+      payload[`eligibility[${index}][place_of_examination]`] = elig.place_of_examination || '';
+      payload[`eligibility[${index}][license_number]`] = elig.license_number || '';
+      payload[`eligibility[${index}][date_of_validity]`] = elig.date_of_validity || '';
+
+      if (elig.file && elig.file.length > 0) {
+        const file = elig.file[0] || elig.file;
+        if (file instanceof File) {
+          payload[`eligibility[${index}][attachment_path]`] = file;
+        }
+      } else if (elig.existingAttachment && !elig.replaceFile) {
+        payload[`eligibility[${index}][attachment_path]`] = elig.existingAttachment;
+      }
+    });
+
+    // ── Skills, Distinctions, Memberships ────────────────────
+    form.skills.forEach((skill, index) => {
+      payload[`skill[${index}][skill]`] = skill.skill || '';
+    });
+
+    form.distinctions.forEach((dist, index) => {
+      payload[`skill[${index}][non_academic]`] = dist.non_academic || '';
+    });
+
+    form.memberships.forEach((mem, index) => {
+      payload[`skill[${index}][organization]`] = mem.organization || '';
+    });
+
+    // ── References ─────────────────────────────────────────────
+    form.references.forEach((ref, index) => {
+      payload[`reference[${index}][full_name]`] = ref.full_name || '';
+      payload[`reference[${index}][address]`] = ref.address || '';
+      payload[`reference[${index}][contact_number]`] = ref.contact_number || '';
+    });
+
+    // ── Personal Declarations ──────────────────────────────────
+    payload[`personal_declaration[0][question_34a]`] = formData.relationThirdDegree;
+    payload[`personal_declaration[0][question_34b]`] = formData.relationFourthDegree;
+    payload[`personal_declaration[0][response_34]`] = formData.relationDetails || '';
+    payload[`personal_declaration[0][question_35a]`] = formData.administrativeOffense;
+    payload[`personal_declaration[0][response_35a]`] = formData.administrativeOffenseDetails || '';
+    payload[`personal_declaration[0][question_35b]`] = formData.criminallyCharged;
+    payload[`personal_declaration[0][response_35b_date]`] = formData.criminalCaseDateFiled || '';
+    payload[`personal_declaration[0][response_35b_status]`] = formData.criminalCaseStatus || '';
+    payload[`personal_declaration[0][question_36]`] = formData.convicted;
+    payload[`personal_declaration[0][response_36]`] = formData.convictedDetails || '';
+    payload[`personal_declaration[0][question_37]`] = formData.separatedFromService;
+    payload[`personal_declaration[0][response_37]`] = formData.separatedFromServiceDetails || '';
+    payload[`personal_declaration[0][question_38a]`] = formData.electionCandidate;
+    payload[`personal_declaration[0][response_38a]`] = formData.electionCandidateDetails || '';
+    payload[`personal_declaration[0][question_38b]`] = formData.resignedForCampaign;
+    payload[`personal_declaration[0][response_38b]`] = formData.resignedForCampaignDetails || '';
+    payload[`personal_declaration[0][question_39]`] = formData.immigrant;
+    payload[`personal_declaration[0][response_39]`] = formData.immigrantDetails || '';
+    payload[`personal_declaration[0][question_40a]`] = formData.indigenous;
+    payload[`personal_declaration[0][response_40a]`] = formData.indigenousDetails || '';
+    payload[`personal_declaration[0][question_40b]`] = formData.pwd;
+    payload[`personal_declaration[0][response_40b]`] =
+      formData.pwdTypes.length > 0 ? formData.pwdTypes.join(', ') : '';
+    payload[`personal_declaration[0][question_40c]`] = formData.soloParent;
+    payload[`personal_declaration[0][response_40c]`] = formData.soloParentDetails || '';
+
+    // PWD flags
+    payload[`personal_declaration[0][chronic]`] = formData.pwdTypes.includes(
+      'Disability caused by chronic illness',
+    )
+      ? '1'
+      : '0';
+    payload[`personal_declaration[0][Psychosocial]`] = formData.pwdTypes.includes(
+      'Psychosocial Disability',
+    )
+      ? '1'
+      : '0';
+    payload[`personal_declaration[0][Orthopedic]`] = formData.pwdTypes.includes(
+      'Orthopedic Disability',
+    )
+      ? '1'
+      : '0';
+    payload[`personal_declaration[0][Communication]`] = formData.pwdTypes.includes(
+      'Communication Disability',
+    )
+      ? '1'
+      : '0';
+    payload[`personal_declaration[0][Learning]`] = formData.pwdTypes.includes('Learning Disability')
+      ? '1'
+      : '0';
+    payload[`personal_declaration[0][Mental]`] = formData.pwdTypes.includes('Mental Disability')
+      ? '1'
+      : '0';
+    payload[`personal_declaration[0][Visual]`] = formData.pwdTypes.includes('Visual Disability')
+      ? '1'
+      : '0';
+
+    // ── Handle Photo ──────────────────────────────────────────────
+    if (photoFile.value && photoFile.value instanceof File) {
+      payload['image_path'] = photoFile.value;
+    } else if (photoPreview.value) {
+      payload['image_path'] = stripStorageUrl(photoPreview.value) || photoPreview.value;
+    }
+
+    // ── PDS File(s) ──────────────────────────────────────────────
+    if (form.pdsFile && form.pdsFile instanceof File) {
+      payload['pds[0][pds_file]'] = form.pdsFile;
+    } else if (existingPdsFiles.value.length > 0 && !replacePds.value) {
+      // Unchanged — resend each existing PDS file path (prefix stripped) as-is.
+      existingPdsFiles.value.forEach((item, idx) => {
+        payload[`pds[${idx}][pds_file]`] = item.path;
+      });
+    }
+
+    // ── Other Documents ────────────────────────────────────────
+    // Previously uploaded documents that were not modified — resend path (prefix stripped).
+    existingOtherDocuments.value.forEach((item, idx) => {
+      payload[`other_document[${idx}][document]`] = item.path;
+    });
+
+    // Newly added documents by the user (multiple allowed, never disabled).
+    const existingOtherDocsCount = existingOtherDocuments.value.length;
+    form.otherDocuments.forEach((doc, index) => {
+      if (doc.file && doc.file instanceof File) {
+        payload[`other_document[${existingOtherDocsCount + index}][document]`] = doc.file;
+      }
+    });
+
+    return payload;
+  }
+
+  // ── Form-wide validation before submit ─────────────────────────────
+  function validateFormBeforeSubmit() {
+    const errors = [];
+
+    if (!form.personal.firstname || !form.personal.firstname.trim()) {
+      errors.push('First Name is required.');
+    } else if (!onlyLettersAndSpaces(form.personal.firstname)) {
+      errors.push('First Name must contain letters only.');
+    }
+
+    if (!form.personal.lastname || !form.personal.lastname.trim()) {
+      errors.push('Last Name is required.');
+    } else if (!onlyLettersAndSpaces(form.personal.lastname)) {
+      errors.push('Last Name must contain letters only.');
+    }
+
+    if (!form.personal.date_of_birth) {
+      errors.push('Date of Birth is required.');
+    } else if (!isValidDate(form.personal.date_of_birth)) {
+      errors.push('Date of Birth is not a valid date (DD/MM/YYYY).');
+    } else if (!isNotFutureDate(form.personal.date_of_birth)) {
+      errors.push('Date of Birth cannot be in the future.');
+    }
+
+    if (!form.personal.cellphone_number) {
+      errors.push('Cellphone Number is required.');
+    }
+
+    if (!form.personal.email_address) {
+      errors.push('Email Address is required.');
+    }
+
+    // PDS File validation — required only if there's no existing PDS on record
+    // (or the user chose to replace it but hasn't picked a new file yet).
+    if (existingPdsFiles.value.length === 0 && !form.pdsFile) {
+      errors.push('PDS file is required. Please upload your Personal Data Sheet.');
+    } else if (replacePds.value && !form.pdsFile) {
+      errors.push('Please upload the replacement PDS file, or click "Cancel Replace".');
+    }
+
+    // Check if photo is present
+    if (!photoPreview.value) {
+      errors.push('2x2 ID picture is required. Please upload a photo.');
+    }
+
+    form.education.forEach((edu, idx) => {
+      if (edu.highest_units && !isFiniteNumber(edu.highest_units)) {
+        errors.push(`Education Row #${idx + 1}: Highest Units Earned must be a number.`);
+      }
+      if (edu.replaceFile && !edu.file) {
+        errors.push(
+          `Education Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
+      }
+    });
+
+    form.eligibility.forEach((elig, idx) => {
+      if (elig.replaceFile && !elig.file) {
+        errors.push(
+          `Eligibility Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
+      }
+    });
+
+    form.workExperience.forEach((work, idx) => {
+      if (work.work_date_from && !isValidDate(work.work_date_from)) {
+        errors.push(`Work Experience Row #${idx + 1}: "From" date is invalid.`);
+      }
+      if (!work.currently_working && work.work_date_to && !isValidDate(work.work_date_to)) {
+        errors.push(`Work Experience Row #${idx + 1}: "To" date is invalid.`);
+      }
+      if (work.replaceFile && !work.file) {
+        errors.push(
+          `Work Experience Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
+      }
+    });
+
+    form.training.forEach((train, idx) => {
+      if (train.replaceFile && !train.file) {
+        errors.push(
+          `L&D Intervention Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
+      }
+    });
+
+    return errors;
+  }
+
+  // ── Submit Form ──────────────────────────────────────────────────
+  async function submitForm() {
+    const errors = validateFormBeforeSubmit();
+    if (errors.length > 0) {
+      $q.notify({
+        type: 'negative',
+        message: errors[0],
+        caption: errors.length > 1 ? `+${errors.length - 1} more issue(s) to fix` : undefined,
+        position: 'top',
+        timeout: 4000,
+      });
+      return;
+    }
+
+    isSubmitting.value = true;
+
+    try {
+      // Build the payload (includes all files including photo)
+      const payload = buildPayload();
+
+      // Use the store's submitApplication method
+      // Pass null for photo since it's already in the payload
+      const result = await pdsStore.submitApplication(payload, null);
+
+      if (result.success) {
+        const successMessage = result.message || 'Application submitted successfully!';
+        $q.notify({
+          type: 'positive',
+          message: successMessage,
+          position: 'top',
+          timeout: 3000,
+        });
+
+        console.log('Response data:', result.data);
+        emit('submit', payload);
+
+        setTimeout(() => {
+          router.push('/page');
+        }, 1500);
+      } else {
+        const errorMessage = result.error || 'Failed to submit application. Please try again.';
+        $q.notify({
+          type: 'negative',
+          message: errorMessage,
+          position: 'top',
+          timeout: 4000,
+        });
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'An unexpected error occurred. Please try again.',
+        position: 'top',
+        timeout: 4000,
+      });
     } finally {
       isSubmitting.value = false;
     }
@@ -3011,6 +4830,28 @@
     line-height: 1.6;
   }
 
+  /* ── Existing attachment display ───────────────────────────── */
+  .existing-attachment-box {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    background: #eef5ff;
+    border: 1px solid #cfe0fa;
+    border-radius: 6px;
+    gap: 2px;
+  }
+
+  .existing-attachment-box .ellipsis {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rounded-borders {
+    border-radius: 8px;
+  }
+
   @media (max-width: 1023px) {
     .side-nav {
       display: none;
@@ -3065,6 +4906,10 @@
 
     .banner-text ul li {
       font-size: 0.8rem;
+    }
+
+    .existing-attachment-box .ellipsis {
+      max-width: 140px;
     }
   }
 
