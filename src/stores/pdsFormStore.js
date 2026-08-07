@@ -195,7 +195,7 @@ export const usePDSStore = defineStore('pds', {
 
         // Append photo if provided
         if (photo && photo instanceof File) {
-          formData.append('photo', photo);
+          formData.append('image_path', photo);
         }
 
         const response = await applicantApi.post('/applicant/application/submission', formData, {

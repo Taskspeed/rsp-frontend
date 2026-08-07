@@ -571,6 +571,14 @@
       <ListPositionReport :publicationDate="selectedListPositionPublicationDate" />
     </q-dialog>
 
+    <!-- Newly Appointed Report Viewer -->
+    <q-dialog v-model="showNewEmployeeReportViewer" maximized>
+      <NewEmployeeReport
+        :publicationDate="selectedNewEmployeePublicationDate"
+        :effectiveDate="selectedNewEmployeeEffectiveDate"
+      />
+    </q-dialog>
+
     <!-- ==================== SELECTED APPLICANT PER POSITION MODAL ==================== -->
     <q-dialog v-model="showSelectedApplicantModal" persistent>
       <SelectApplicantPositionModal @close="closeSelectedApplicantModal" />
@@ -585,6 +593,7 @@
   import TopApplicantReport from 'components/reports/TopApplicantReport.vue';
   import ApplicantPosition from 'components/reports/ApplicantPositionReport.vue';
   import ListPositionReport from 'components/reports/ListPositionReport.vue';
+  import NewEmployeeReport from 'src/components/Reports/NewEmployeeReport.vue';
   import SelectApplicantPositionModal from 'components/SelectApplicantPositionModal.vue';
 
   export default {
@@ -596,6 +605,7 @@
       TopApplicantReport,
       ApplicantPosition,
       ListPositionReport,
+      NewEmployeeReport,
       SelectApplicantPositionModal,
     },
 
@@ -774,6 +784,7 @@
 
         // Newly Appointed Modal
         showNewEmployeeModal: false,
+        showNewEmployeeReportViewer: false,
 
         // ==================== REPORT VIEWER VISIBILITY STATES ====================
         showFinalSummaryReportViewer: false,
@@ -1064,8 +1075,13 @@
         try {
           const response = await summaryReportStore.fetchPublicationDateNewEmployee();
           const list = response?.data ?? response;
-          this.newEmployeeDateOptions = list;
-          this.filteredNewEmployeeDateOptions = [...list];
+
+          // Format dates for display
+          this.newEmployeeDateOptions = list.map((item) => ({
+            ...item,
+            date: this.formatDateForDisplay(item.date),
+          }));
+          this.filteredNewEmployeeDateOptions = [...this.newEmployeeDateOptions];
         } catch (error) {
           console.error('Error loading new employee publication dates:', error);
           this.$q.notify({
@@ -1416,6 +1432,7 @@
         this.resetNewEmployeeFilters();
         this.newEmployeeDateOptions = [];
         this.filteredNewEmployeeDateOptions = [];
+        this.showNewEmployeeReportViewer = false;
       },
 
       filterNewEmployeeDates(val, update) {
@@ -1443,13 +1460,89 @@
         }
       },
 
-      generateNewEmployeeReport() {
+      async generateNewEmployeeReport() {
+        // Close the modal
         this.showNewEmployeeModal = false;
-        this.$q.notify({
-          type: 'info',
-          message: 'Opening PDF report...',
-          position: 'top',
+
+        // Validate that we have the required data
+        if (!this.selectedNewEmployeePublicationDate) {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Please select a publication date.',
+            position: 'top',
+          });
+          return;
+        }
+
+        if (this.availableEffectiveDates.length > 1 && !this.selectedNewEmployeeEffectiveDate) {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Please select an effective date.',
+            position: 'top',
+          });
+          return;
+        }
+
+        // Show loading
+        this.$q.loading.show({
+          message: 'Generating New Employee Report...',
         });
+
+        try {
+          // Format dates to Y-m-d format for API
+          const formattedPublicationDate = this.formatDateToYMD(
+            this.selectedNewEmployeePublicationDate,
+          );
+          const formattedEffectiveDate = this.selectedNewEmployeeEffectiveDate
+            ? this.formatDateToYMD(this.selectedNewEmployeeEffectiveDate)
+            : null;
+
+          // Call the API to fetch the report data
+          const summaryReportStore = useSummaryReportStore();
+          const reportData = await summaryReportStore.fetchNewEmployeeReport(
+            formattedPublicationDate,
+            formattedEffectiveDate,
+          );
+
+          // Store the data in the store or pass it to the component
+          summaryReportStore.setNewEmployeeReportData(reportData);
+
+          // Open the report viewer
+          this.showNewEmployeeReportViewer = true;
+
+          this.$q.notify({
+            type: 'positive',
+            message: 'Report generated successfully!',
+            position: 'top',
+          });
+        } catch (error) {
+          console.error('Error generating new employee report:', error);
+
+          // Show detailed error message
+          let errorMessage = 'Failed to generate report';
+          if (error.response?.data?.errors) {
+            const errors = error.response.data.errors;
+            const messages = [];
+            if (errors.publication_date)
+              messages.push(`Publication Date: ${errors.publication_date.join(', ')}`);
+            if (errors.effective_date)
+              messages.push(`Effective Date: ${errors.effective_date.join(', ')}`);
+            if (messages.length > 0) {
+              errorMessage = messages.join('; ');
+            }
+          } else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+          }
+
+          this.$q.notify({
+            type: 'negative',
+            message: errorMessage,
+            position: 'top',
+            timeout: 5000,
+          });
+        } finally {
+          this.$q.loading.hide();
+        }
       },
 
       // ==================== SELECTED APPLICANT PER POSITION METHODS ====================
@@ -1481,6 +1574,55 @@
           month: 'short',
           day: 'numeric',
         });
+      },
+
+      formatDateToYMD(dateString) {
+        if (!dateString) return null;
+
+        // If it's already in Y-m-d format, return as is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+          return dateString;
+        }
+
+        try {
+          const date = new Date(dateString);
+          // Check if date is valid
+          if (isNaN(date.getTime())) {
+            console.warn('Invalid date:', dateString);
+            return dateString; // Return original if can't parse
+          }
+
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } catch (error) {
+          console.error('Error formatting date:', error);
+          return dateString;
+        }
+      },
+
+      formatDateForDisplay(dateString) {
+        if (!dateString) return '';
+
+        // If it's already in a display format, return as is
+        if (dateString.includes(',')) {
+          return dateString;
+        }
+
+        try {
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) {
+            return dateString;
+          }
+          return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+        } catch {
+          return dateString;
+        }
       },
     },
   };

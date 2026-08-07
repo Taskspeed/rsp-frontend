@@ -138,8 +138,8 @@
   function generateJobPostContent(jobPost) {
     const content = [];
 
-    // Office box — full width, centered text, bordered
-    content.push({
+    // ── Office Box with border ────────────────────────────────────────────
+    const officeBox = {
       table: {
         widths: ['*'],
         body: [
@@ -149,32 +149,27 @@
               fontSize: 9,
               bold: true,
               alignment: 'center',
-              margin: [4, 4, 4, 4],
             },
           ],
         ],
       },
       layout: {
-        hLineWidth: () => 1,
-        vLineWidth: () => 1,
+        hLineWidth: () => 1.5,
+        vLineWidth: () => 1.5,
         hLineColor: () => '#000000',
         vLineColor: () => '#000000',
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 4,
+        paddingBottom: () => 4,
       },
       margin: [0, 10, 0, 0],
-    });
+    };
 
-    // Sub-location line (division / section / unit hierarchy), left-aligned
+    // ── Sub-location line ──────────────────────────────────────────────────
     const subLocation = buildSubLocation(jobPost);
-    if (subLocation) {
-      content.push({
-        text: subLocation.toUpperCase(),
-        fontSize: 8,
-        alignment: 'left',
-        margin: [0, 4, 0, 4],
-      });
-    }
 
-    // Applicants table
+    // ── Applicants table ───────────────────────────────────────────────────
     const tableBody = [
       [
         { text: 'Appointed Personnel', style: 'tableHeader', alignment: 'center' },
@@ -187,31 +182,90 @@
     const hired = jobPost.hired_applicants || [];
 
     if (hired.length === 0) {
-      tableBody.push([{ text: '', fontSize: 8, colSpan: 4, alignment: 'center' }, {}, {}, {}]);
+      tableBody.push([
+        { text: 'No hired applicants', fontSize: 8, colSpan: 4, alignment: 'center' },
+        {},
+        {},
+        {},
+      ]);
     } else {
       hired.forEach((applicant) => {
         tableBody.push([
           { text: applicant.name.toUpperCase() || '', bold: true, fontSize: 8, alignment: 'left' },
-          { text: applicant.ItemNo || '', fontSize: 8, alignment: 'center' },
-          { text: applicant.designation || '', fontSize: 8, alignment: 'left' },
-          { text: applicant.salary_grade || '', fontSize: 8, alignment: 'center' },
+          { text: applicant.ItemNo || '', fontSize: 8, bold: true, alignment: 'center' },
+          { text: applicant.designation || '', bold: true, fontSize: 8, alignment: 'left' },
+          { text: applicant.salary_grade || '', bold: true, fontSize: 8, alignment: 'center' },
         ]);
       });
     }
 
-    content.push({
+    const applicantsTable = {
       table: {
-        headerRows: 1,
         widths: ['30%', '10%', '50%', '10%'],
         body: tableBody,
+        keepWithHeaderRows: 1,
+        dontBreakRows: true,
       },
       layout: {
-        // fillColor: (rowIndex) => (rowIndex === 0 ? '#d9d9d9' : null),
-        hLineWidth: () => 0.5,
-        vLineWidth: () => 0.5,
+        hLineWidth: () => 1.5,
+        vLineWidth: () => 1.5,
+        paddingLeft: () => 4,
+        paddingRight: () => 4,
+        paddingTop: () => 4,
+        paddingBottom: () => 4,
       },
+      margin: [0, 0, 0, 0],
+    };
+
+    // ── Combine everything into a single unbreakable unit ──────────────
+    const sectionItems = [officeBox];
+
+    // Add sub-location text if it exists, with proper spacing
+    if (subLocation) {
+      sectionItems.push({
+        text: subLocation.toUpperCase(),
+        fontSize: 8,
+        alignment: 'left',
+        margin: [0, 4, 0, 4],
+      });
+    } else {
+      // Add a small spacer when there's no sub-location to maintain consistent spacing
+      sectionItems.push({
+        text: '',
+        fontSize: 8,
+        margin: [0, 2, 0, 0],
+      });
+    }
+
+    // Add the applicants table
+    sectionItems.push(applicantsTable);
+
+    // Wrap everything in a single unbreakable table
+    const unbreakableWrapper = {
+      table: {
+        widths: ['*'],
+        body: [
+          [
+            {
+              stack: sectionItems,
+              margin: [0, 0, 0, 0],
+            },
+          ],
+        ],
+      },
+      layout: {
+        hLineWidth: () => 0,
+        vLineWidth: () => 0,
+        paddingLeft: () => 0,
+        paddingRight: () => 0,
+        paddingTop: () => 0,
+        paddingBottom: () => 0,
+      },
+      pageBreak: 'avoid',
       margin: [0, 0, 0, 10],
-    });
+    };
+
+    content.push(unbreakableWrapper);
 
     return content;
   }
@@ -238,10 +292,10 @@
           stack: [
             {
               text: 'LIST OF NEWLY APPOINTED & PROMOTED PERMANENT EMPLOYEES',
-              fontSize: 16,
+              fontSize: 14,
               bold: true,
               alignment: 'center',
-              margin: [0, 0, 0, 3],
+              margin: [0, -20, 0, 3],
             },
             {
               text: `As per ${reportData.value.publication_date || props.publicationDate} Publication`,
@@ -250,24 +304,43 @@
               margin: [0, 0, 0, 3],
             },
             {
-              text: `Effective date of Appointment: ${reportData.value.effective_date || props.effectiveDate || ''}`,
-              fontSize: 9,
+              text: [
+                {
+                  text: `Effective date of Appointment: `,
+                  fontSize: 9,
+                  italics: true,
+                },
+                {
+                  text: reportData.value.effective_date || props.effectiveDate || '',
+                  fontSize: 9,
+                  bold: true,
+                  italics: true,
+                },
+              ],
               alignment: 'center',
               margin: [0, 0, 0, 0],
             },
           ],
-          margin: [0, 0, 0, 12],
+          margin: [0, 0, 0, 0],
         });
 
-        // ── Job post sections ────────────────────────────────────────────────
+        // ── Job post sections (SORTED BY OFFICE) ──────────────────────────
         const jobPosts = reportData.value.data || [];
-        jobPosts.forEach((jobPost) => {
+
+        // Sort by office alphabetically
+        const sortedJobPosts = [...jobPosts].sort((a, b) => {
+          const officeA = (a.office || '').toUpperCase();
+          const officeB = (b.office || '').toUpperCase();
+          return officeA.localeCompare(officeB);
+        });
+
+        sortedJobPosts.forEach((jobPost) => {
           allContent.push(...generateJobPostContent(jobPost));
         });
 
         // ── PDF document definition ──────────────────────────────────────────
         const docDefinition = {
-          pageSize: 'A4',
+          pageSize: 'Legal',
           pageOrientation: 'portrait',
           pageMargins: [60, 120, 60, 50],
           header: function () {

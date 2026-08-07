@@ -6,6 +6,7 @@ export const useSummaryReportStore = defineStore('summaryReport', {
     positions: [],
     publicationDates: [],
     positionDetails: null,
+    newEmployeeReportData: null, // Add this state property
     loading: false,
     error: null,
   }),
@@ -172,6 +173,21 @@ export const useSummaryReportStore = defineStore('summaryReport', {
       }
     },
 
+    // ADD THIS METHOD - Set new employee report data
+    setNewEmployeeReportData(data) {
+      this.newEmployeeReportData = data;
+    },
+
+    // ADD THIS METHOD - Get new employee report data
+    getNewEmployeeReportData() {
+      return this.newEmployeeReportData;
+    },
+
+    // ADD THIS METHOD - Clear new employee report data
+    clearNewEmployeeReportData() {
+      this.newEmployeeReportData = null;
+    },
+
     async fetchListPositionReport(publicationDate) {
       try {
         this.loading = true;
@@ -297,7 +313,7 @@ export const useSummaryReportStore = defineStore('summaryReport', {
         const formattedDate = this.formatDateToYYYYMMDD(publicationDate);
         const response = await adminApi.post(
           '/generate/top/ranking/applicant',
-          { publication_date: formattedDate }, // ✅ fixed
+          { publication_date: formattedDate },
           { responseType: 'blob' },
         );
         this.error = null;
@@ -430,6 +446,7 @@ export const useSummaryReportStore = defineStore('summaryReport', {
         this.loading = false;
       }
     },
+
     async generateQualifiedRecommendedApplicantExcel(publicationDate) {
       try {
         this.loading = true;

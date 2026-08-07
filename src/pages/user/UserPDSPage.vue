@@ -15,8 +15,10 @@
             <q-tooltip>Go Back</q-tooltip>
           </q-btn>
           <div>
-            <div class="text-subtitle1 text-bold">Personal Data Sheet</div>
-            <div class="text-caption text-blue-1">CS Form No. 212 &middot; Revised 2017</div>
+            <div class="text-subtitle1 text-bold">Personal Information</div>
+            <div class="text-caption text-blue-1">
+              Please fill out the applicable information accurately and completely
+            </div>
           </div>
         </div>
         <q-btn
@@ -754,6 +756,132 @@
           </q-card>
         </div>
 
+        <!-- XI. Upload PDS -->
+        <div id="section-upload-pds" class="scroll-target">
+          <q-card flat bordered class="q-mb-md">
+            <q-card-section class="bg-primary text-white q-py-sm">
+              <div class="text-subtitle1 text-bold">XI. Upload PDS</div>
+            </q-card-section>
+
+            <q-card-section>
+              <q-banner class="upload-instruction-banner bg-amber-1 text-amber q-mb-md" rounded>
+                <template v-slot:avatar>
+                  <q-icon name="info" />
+                </template>
+                <div class="banner-text">
+                  <strong>Upload your Personal Data Sheet (PDS):</strong>
+                  <ul class="q-mt-sm q-mb-none" style="padding-left: 20px">
+                    <li>
+                      Upload a fully accomplished Personal Data Sheet (PDS) using the latest
+                      CSC-prescribed CS Form No. 212 (Revised 2026) with a recent passport-sized
+                      photograph.
+                    </li>
+                    <li>File must be in PDF or image format (JPG, JPEG, PNG).</li>
+                    <li>Maximum file size: 5 MB.</li>
+                  </ul>
+                </div>
+              </q-banner>
+
+              <div class="upload-section q-pa-md">
+                <div class="upload-label text-grey-7 q-mb-sm">
+                  <q-icon name="attach_file" size="20px" class="q-mr-xs" />
+                  <span class="text-subtitle2">PDS File</span>
+                  <span class="text-caption text-grey-6 q-ml-sm">(CS Form No. 212)</span>
+                </div>
+
+                <!-- Existing PDS file(s) already on record -->
+                <div v-if="existingPdsFiles.length && !replacePds" class="q-mb-sm">
+                  <q-list bordered separator class="rounded-borders">
+                    <q-item v-for="(pf, i) in existingPdsFiles" :key="`pds-existing-${i}`">
+                      <q-item-section avatar>
+                        <q-icon name="picture_as_pdf" color="red" size="28px" />
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label class="text-caption ellipsis" style="max-width: 320px">
+                          {{ pf.name }}
+                        </q-item-label>
+                        <q-item-label caption>Already uploaded</q-item-label>
+                      </q-item-section>
+                      <q-item-section side>
+                        <q-btn
+                          flat
+                          dense
+                          round
+                          icon="visibility"
+                          color="primary"
+                          @click="viewAttachment(pf.url, pf.name)"
+                        >
+                          <q-tooltip>View File</q-tooltip>
+                        </q-btn>
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                  <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    color="primary"
+                    icon="autorenew"
+                    label="Replace PDS File"
+                    class="q-mt-xs"
+                    @click="replacePds = true"
+                  />
+                </div>
+
+                <!-- Upload input: shown only when there's nothing on record, or user chose to replace -->
+                <template v-if="!existingPdsFiles.length || replacePds">
+                  <q-file
+                    v-model="form.pdsFile"
+                    label="Upload PDS (PDF, JPG, JPEG, PNG)"
+                    outlined
+                    dense
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    stack-label
+                    max-file-size="10485760"
+                    @rejected="onFileRejected"
+                    :rules="[
+                      (val) => {
+                        if (replacePds || !existingPdsFiles.length) {
+                          return !!val || 'PDS file is required';
+                        }
+                        return true;
+                      },
+                      (val) => {
+                        if (!val) return true;
+                        const size = val.size || 0;
+                        return size <= 5242880 || 'File size must be less than 5MB';
+                      },
+                    ]"
+                    lazy-rules
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="description" color="primary" />
+                    </template>
+                    <template v-slot:append>
+                      <q-icon name="cloud_upload" color="primary" />
+                    </template>
+                  </q-file>
+                  <q-btn
+                    v-if="replacePds && existingPdsFiles.length"
+                    flat
+                    dense
+                    size="sm"
+                    color="grey-7"
+                    label="Cancel Replace"
+                    class="q-mt-xs"
+                    @click="cancelReplacePds"
+                  />
+                </template>
+
+                <div class="text-caption text-grey-6 q-mt-xs">
+                  <q-icon name="info" size="14px" class="q-mr-xs" />
+                  Please upload a completed and signed PDS file.
+                </div>
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
         <!-- II. Family Background -->
         <div id="section-family" class="scroll-target">
           <q-card flat bordered class="q-mb-md">
@@ -1007,6 +1135,7 @@
                   For each educational record, you can upload relevant documents such as diplomas,
                   transcript of records, or certificates of graduation. Make it one PDF file for
                   multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -1141,7 +1270,52 @@
                           <q-icon name="attach_file" size="16px" class="q-mr-xs" />
                           <span class="text-caption">Upload Supporting Documents</span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1157,6 +1331,19 @@
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                   </div>
@@ -1196,6 +1383,7 @@
                   <strong>Upload supporting documents:</strong>
                   For each eligibility record, you can upload certificates, ratings, or license
                   documents. Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -1334,7 +1522,52 @@
                           <q-icon name="attach_file" size="16px" class="q-mr-xs" />
                           <span class="text-caption">Upload Supporting Documents</span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1350,6 +1583,19 @@
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                   </div>
@@ -1397,6 +1643,7 @@
                     </li>
                   </ul>
                   Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -1560,7 +1807,52 @@
                             (COE, Performance Rating, WES)
                           </span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1576,6 +1868,19 @@
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                     <div class="col-12">
@@ -1776,6 +2081,7 @@
                   <strong>Upload supporting documents:</strong>
                   For each training/L&D intervention, upload certificates of completion, attendance
                   certificates, or training records. Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
 
@@ -1902,7 +2208,52 @@
                           <q-icon name="attach_file" size="16px" class="q-mr-xs" />
                           <span class="text-caption">Upload Supporting Documents</span>
                         </div>
+
+                        <div
+                          v-if="row.existingAttachment && !row.replaceFile"
+                          class="existing-attachment-box q-mb-xs"
+                        >
+                          <q-icon
+                            name="insert_drive_file"
+                            color="primary"
+                            size="18px"
+                            class="q-mr-xs"
+                          />
+                          <span class="text-caption text-grey-8 ellipsis">
+                            {{ getFileNameFromPath(row.existingAttachment) }}
+                          </span>
+                          <q-space />
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="visibility"
+                            color="primary"
+                            @click="
+                              viewAttachment(
+                                row.existingAttachmentUrl,
+                                getFileNameFromPath(row.existingAttachment),
+                              )
+                            "
+                          >
+                            <q-tooltip>View</q-tooltip>
+                          </q-btn>
+                          <q-btn
+                            flat
+                            dense
+                            round
+                            size="sm"
+                            icon="autorenew"
+                            color="grey-7"
+                            @click="row.replaceFile = true"
+                          >
+                            <q-tooltip>Replace File</q-tooltip>
+                          </q-btn>
+                        </div>
+
                         <q-file
+                          v-if="!row.existingAttachment || row.replaceFile"
                           v-model="row.file"
                           label="Upload document(s) (PDF, JPG, PNG)"
                           outlined
@@ -1918,6 +2269,19 @@
                             <q-icon name="cloud_upload" />
                           </template>
                         </q-file>
+                        <q-btn
+                          v-if="row.replaceFile && row.existingAttachment"
+                          flat
+                          dense
+                          size="sm"
+                          color="grey-7"
+                          label="Cancel Replace"
+                          class="q-mt-xs"
+                          @click="
+                            row.replaceFile = false;
+                            row.file = null;
+                          "
+                        />
                       </div>
                     </div>
                   </div>
@@ -2613,11 +2977,11 @@
           </q-card>
         </div>
 
-        <!-- XI. Other Documents -->
+        <!-- XI. Other Documents (Renumbered to XII) -->
         <div id="section-other-documents" class="scroll-target">
           <q-card flat bordered class="q-mb-md">
             <q-card-section class="bg-primary text-white q-py-sm">
-              <div class="text-subtitle1 text-bold">XI. Other Documents</div>
+              <div class="text-subtitle1 text-bold">XII. Other Documents</div>
             </q-card-section>
 
             <q-card-section>
@@ -2638,8 +3002,39 @@
                     </li>
                   </ul>
                   Make it one PDF file for multiple documents.
+                  <strong>Maximum file size: 5MB.</strong>
                 </div>
               </q-banner>
+
+              <!-- Previously uploaded "Other Documents" — always shown, never disables adding more -->
+              <div v-if="existingOtherDocuments.length" class="q-mb-md">
+                <div class="section-label q-mb-sm">Previously Uploaded Documents</div>
+                <q-list bordered separator class="rounded-borders">
+                  <q-item v-for="(doc, i) in existingOtherDocuments" :key="`other-existing-${i}`">
+                    <q-item-section avatar>
+                      <q-icon name="insert_drive_file" color="primary" size="26px" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-caption ellipsis" style="max-width: 320px">
+                        {{ doc.name }}
+                      </q-item-label>
+                      <q-item-label caption>Already uploaded</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-btn
+                        flat
+                        dense
+                        round
+                        icon="visibility"
+                        color="primary"
+                        @click="viewAttachment(doc.url, doc.name)"
+                      >
+                        <q-tooltip>View File</q-tooltip>
+                      </q-btn>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
 
               <div class="row items-center justify-between q-mb-sm">
                 <div class="section-label q-mb-none">Additional Documents</div>
@@ -2720,6 +3115,64 @@
         </div>
       </div>
     </div>
+
+    <!-- ═══════════════════════ Attachment Viewer Dialog ═══════════════════════ -->
+    <q-dialog v-model="viewerDialog.show" maximized-mobile>
+      <q-card style="min-width: 350px; max-width: 900px; width: 90vw">
+        <q-card-section class="row items-center justify-between bg-primary text-white q-py-sm">
+          <div class="text-subtitle1 ellipsis" style="max-width: 80%">
+            {{ viewerDialog.name }}
+          </div>
+          <q-btn flat round dense icon="close" color="white" v-close-popup />
+        </q-card-section>
+        <q-separator />
+        <q-card-section class="q-pa-none" style="height: 70vh">
+          <template v-if="viewerDialog.type === 'pdf'">
+            <iframe
+              v-if="viewerDialog.url"
+              :src="viewerDialog.url"
+              style="width: 100%; height: 100%; border: none"
+              title="PDF Preview"
+            ></iframe>
+          </template>
+          <template v-else-if="viewerDialog.type === 'image'">
+            <div class="flex flex-center full-height bg-grey-2">
+              <img
+                :src="viewerDialog.url"
+                style="max-width: 100%; max-height: 100%; object-fit: contain"
+                alt="Attachment preview"
+              />
+            </div>
+          </template>
+          <template v-else>
+            <div class="flex flex-center column full-height q-pa-lg">
+              <q-icon name="insert_drive_file" size="64px" color="grey-6" />
+              <div class="text-grey-7 q-mt-md text-center">
+                Preview isn't available for this file type. Use "Open in New Tab" or "Download"
+                below.
+              </div>
+            </div>
+          </template>
+        </q-card-section>
+        <q-separator />
+        <q-card-actions align="right">
+          <q-btn
+            flat
+            icon="open_in_new"
+            label="Open in New Tab"
+            @click="openInNewTab(viewerDialog.url)"
+          />
+          <q-btn
+            flat
+            icon="download"
+            label="Download"
+            :href="viewerDialog.url"
+            target="_blank"
+            type="a"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -2738,17 +3191,15 @@
   const hasExistingPDS = ref(false);
   const isLoading = ref(true);
   const isSubmitting = ref(false);
+  const photoChanged = ref(false);
 
   // ── Shared validation helpers ─────────────────────────────────
-  // Strict DD/MM/YYYY validator: checks format AND that the date actually exists
-  // (e.g. rejects 02/30/2024, 13/01/2024, etc.) instead of only checking length.
   function isValidDate(val) {
     if (!val) return true;
-    // Change regex from MM/DD/YYYY to DD/MM/YYYY
     const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(val);
     if (!match) return false;
-    const day = parseInt(match[1], 10); // First group is now DAY
-    const month = parseInt(match[2], 10); // Second group is now MONTH
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
     const year = parseInt(match[3], 10);
     if (month < 1 || month > 12) return false;
     if (year < 1900 || year > 2100) return false;
@@ -2757,10 +3208,8 @@
     return true;
   }
 
-  // Ensures a DD/MM/YYYY date string is not later than today (used for birthdates, exam dates, etc.)
   function isNotFutureDate(val) {
     if (!val || !isValidDate(val)) return true;
-    // Change order: [day, month, year] instead of [month, day, year]
     const [day, month, year] = val.split('/').map(Number);
     const inputDate = new Date(year, month - 1, day);
     const today = new Date();
@@ -2786,10 +3235,119 @@
     });
   }
 
-  // Toggle "Present" for an ongoing work experience row
   function onTogglePresent(row, val) {
     row.currently_working = val;
     row.work_date_to = val ? 'PRESENT' : '';
+  }
+
+  // ── File fetching and conversion ──────────────────────────────────
+  async function fetchFileAsFile(url, filename) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch file');
+      const blob = await response.blob();
+      const ext = filename.split('.').pop().toLowerCase();
+      const mimeTypes = {
+        pdf: 'application/pdf',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        doc: 'application/msword',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+      const mimeType = mimeTypes[ext] || blob.type || 'application/octet-stream';
+      return new File([blob], filename, { type: mimeType });
+    } catch (error) {
+      console.error('Error fetching file:', error);
+      return null;
+    }
+  }
+
+  // ── Attachment helpers ──────────────────────────────────────────
+  const storageBaseUrl = ref('http://192.168.8.182:8000/storage/');
+
+  function deriveStorageBaseUrl(data) {
+    const candidates = [
+      data?.image_url,
+      data?.file?.pds_file?.[0],
+      data?.file?.other_document?.[0],
+    ].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const idx = candidate.indexOf('/storage/');
+      if (idx !== -1) {
+        return candidate.substring(0, idx + '/storage/'.length);
+      }
+    }
+    return 'http://192.168.8.182:8000/storage/';
+  }
+
+  function stripStorageUrl(url) {
+    if (!url) return '';
+    if (storageBaseUrl.value && url.startsWith(storageBaseUrl.value)) {
+      return url.substring(storageBaseUrl.value.length);
+    }
+    return url.replace(/^https?:\/\/[^/]+\/storage\//, '');
+  }
+
+  function getFileNameFromPath(path) {
+    if (!path) return '';
+    const clean = path.split('?')[0];
+    return clean.substring(clean.lastIndexOf('/') + 1);
+  }
+
+  function buildViewUrl(relativePath) {
+    if (!relativePath) return '';
+    if (/^https?:\/\//i.test(relativePath)) return relativePath;
+    return `${storageBaseUrl.value}${relativePath}`;
+  }
+
+  // Existing files stored as File objects
+  const existingPdsFiles = ref([]);
+  const replacePds = ref(false);
+  const existingOtherDocuments = ref([]);
+
+  function cancelReplacePds() {
+    replacePds.value = false;
+    form.pdsFile = null;
+  }
+
+  // ── Attachment Viewer Dialog ──────────────────────────────────
+  const viewerDialog = reactive({
+    show: false,
+    url: '',
+    name: '',
+    type: 'other',
+  });
+
+  function getFileExt(url) {
+    try {
+      const clean = url.split('?')[0];
+      return clean.substring(clean.lastIndexOf('.') + 1).toLowerCase();
+    } catch {
+      return '';
+    }
+  }
+
+  function viewAttachment(url, name) {
+    if (!url) {
+      $q.notify({ type: 'warning', message: 'This attachment is not available to preview.' });
+      return;
+    }
+    const ext = getFileExt(url);
+    let type = 'other';
+    if (ext === 'pdf') type = 'pdf';
+    else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) type = 'image';
+
+    viewerDialog.url = url;
+    viewerDialog.name = name || getFileNameFromPath(url);
+    viewerDialog.type = type;
+    viewerDialog.show = true;
+  }
+
+  function openInNewTab(url) {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener');
   }
 
   // ── Options ──────────────────────────────────────────────────
@@ -2813,7 +3371,6 @@
   ];
   const yesNoOptions = ['Yes', 'No'];
 
-  // Gender Reference Options
   const genderReferenceOptions = [
     { label: 'Female', value: 'Female' },
     { label: 'Male', value: 'Male' },
@@ -2831,7 +3388,6 @@
     { label: 'Other', value: 'Other' },
   ];
 
-  // Ethnic Group Options
   const ethnicGroupOptions = [
     { label: 'Maguindanao', value: 'Maguindanao' },
     { label: 'Maranao', value: 'Maranao' },
@@ -2882,7 +3438,6 @@
     { label: 'Other', value: 'Other' },
   ];
 
-  // PWD Options
   const pwdOptions = [
     'Psychosocial Disability',
     'Disability caused by chronic illness',
@@ -2897,6 +3452,7 @@
   const sections = [
     { id: 'section-photo', label: 'Photo & Name', icon: 'photo_camera' },
     { id: 'section-personal', label: 'Personal Information', icon: 'person' },
+    { id: 'section-upload-pds', label: 'Upload PDS', icon: 'description' },
     { id: 'section-family', label: 'Family Background', icon: 'family_restroom' },
     { id: 'section-education', label: 'Educational Background', icon: 'school' },
     { id: 'section-eligibility', label: 'Civil Service Eligibility', icon: 'verified' },
@@ -2906,7 +3462,7 @@
     { id: 'section-other', label: 'Other Information', icon: 'info' },
     { id: 'section-references', label: 'References', icon: 'contacts' },
     { id: 'section-declarations', label: 'Declarations', icon: 'fact_check' },
-    { id: 'section-other-documents', label: 'Other Documents', icon: 'description' },
+    { id: 'section-other-documents', label: 'Other Documents', icon: 'folder' },
   ];
 
   const activeSection = ref('section-photo');
@@ -3200,6 +3756,7 @@
     memberships: [],
     references: [],
     otherDocuments: [],
+    pdsFile: null,
   });
 
   // ── Personal Background Questionnaire ──────────────────────────
@@ -3292,6 +3849,7 @@
     }
     photoFile.value = file;
     photoPreview.value = URL.createObjectURL(file);
+    photoChanged.value = true;
   }
 
   onUnmounted(() => {
@@ -3349,6 +3907,9 @@
       scholarship: '',
       graduated: '',
       file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -3361,6 +3922,9 @@
       license_number: '',
       date_of_validity: '',
       file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -3376,6 +3940,9 @@
       government_service: '',
       currently_working: false,
       file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -3398,6 +3965,9 @@
       type: '',
       conducted_by: '',
       file: null,
+      existingAttachment: null,
+      existingAttachmentUrl: null,
+      replaceFile: false,
     });
   }
 
@@ -3457,7 +4027,7 @@
 
       if (result.success && result.data) {
         hasExistingPDS.value = true;
-        populateFormWithData(result.data);
+        await populateFormWithData(result.data);
         $q.notify({
           type: 'positive',
           message: 'PDS data loaded successfully. You can update your information.',
@@ -3487,9 +4057,10 @@
   }
 
   // ── Populate Form with Data ──────────────────────────────────────
-  function populateFormWithData(data) {
+  async function populateFormWithData(data) {
     try {
-      // Personal Information
+      storageBaseUrl.value = deriveStorageBaseUrl(data);
+
       form.personal.firstname = data.firstname || '';
       form.personal.lastname = data.lastname || '';
       form.personal.middlename = data.middlename || '';
@@ -3517,7 +4088,6 @@
       form.personal.tin_no = data.tin_no || '';
       form.personal.agency_employee_no = data.agency_employee_no || '';
 
-      // Residential Address
       form.residential.house = data.residential_house || '';
       form.residential.street = data.Rpurok || data.residential_street || '';
       form.residential.subdivision = data.residential_subdivision || '';
@@ -3527,7 +4097,6 @@
       form.residential.region = data.residential_region || '';
       form.residential.zip = data.residential_zip || '';
 
-      // Permanent Address
       form.permanent.house = data.permanent_house || '';
       form.permanent.street = data.Ppurok || data.permanent_street || '';
       form.permanent.subdivision = data.permanent_subdivision || '';
@@ -3537,7 +4106,6 @@
       form.permanent.region = data.permanent_region || '';
       form.permanent.zip = data.permanent_zip || '';
 
-      // Family
       if (data.family) {
         form.family.spouse_firstname = data.family.spouse_firstname || '';
         form.family.spouse_name = data.family.spouse_name || '';
@@ -3554,7 +4122,6 @@
         form.family.mother_middlename = data.family.mother_middlename || '';
       }
 
-      // Children
       if (data.children && data.children.length > 0) {
         form.children = data.children.map((child) => ({
           child_name: child.child_name || '',
@@ -3562,75 +4129,165 @@
         }));
       }
 
-      // Education
+      // ── Education with files converted to File objects ──
       if (data.education && data.education.length > 0) {
-        form.education = data.education.map((edu) => ({
-          level: edu.level || '',
-          school_name: edu.school_name || '',
-          degree: edu.degree || '',
-          attendance_from: edu.attendance_from || '',
-          attendance_to: edu.attendance_to || '',
-          highest_units: edu.highest_units || '',
-          year_graduated: edu.year_graduated || '',
-          scholarship: edu.scholarship || '',
-          graduated: edu.graduated || '',
-          file: null,
-        }));
+        const educationPromises = data.education.map(async (edu) => {
+          let file = null;
+          if (edu.attachment_path) {
+            const url = buildViewUrl(edu.attachment_path);
+            const filename = getFileNameFromPath(edu.attachment_path);
+            file = await fetchFileAsFile(url, filename);
+          }
+          return {
+            level: edu.level || '',
+            school_name: edu.school_name || '',
+            degree: edu.degree || '',
+            attendance_from: edu.attendance_from || '',
+            attendance_to: edu.attendance_to || '',
+            highest_units: edu.highest_units || '',
+            year_graduated: edu.year_graduated || '',
+            scholarship: edu.scholarship || '',
+            graduated: edu.graduated || '',
+            file: file,
+            existingAttachment: edu.attachment_path || null,
+            existingAttachmentUrl: edu.attachment_path ? buildViewUrl(edu.attachment_path) : null,
+            replaceFile: false,
+          };
+        });
+        form.education = await Promise.all(educationPromises);
       }
 
-      // Work Experience
+      // ── Work Experience with files ──
       if (data.work_experience && data.work_experience.length > 0) {
-        form.workExperience = data.work_experience.map((work) => ({
-          work_date_from: work.work_date_from || '',
-          work_date_to: work.work_date_to || '',
-          position_title: work.position_title || '',
-          department: work.department || '',
-          monthly_salary: work.monthly_salary || '',
-          salary_grade: work.salary_grade || '',
-          status_of_appointment: work.status_of_appointment || '',
-          government_service: work.government_service || '',
-          currently_working: (work.work_date_to || '').toUpperCase() === 'PRESENT',
-          file: null,
-        }));
+        const workPromises = data.work_experience.map(async (work) => {
+          let file = null;
+          if (work.attachment_path) {
+            const url = buildViewUrl(work.attachment_path);
+            const filename = getFileNameFromPath(work.attachment_path);
+            file = await fetchFileAsFile(url, filename);
+          }
+          return {
+            work_date_from: work.work_date_from || '',
+            work_date_to: work.work_date_to || '',
+            position_title: work.position_title || '',
+            department: work.department || '',
+            monthly_salary: work.monthly_salary || '',
+            salary_grade: work.salary_grade || '',
+            status_of_appointment: work.status_of_appointment || '',
+            government_service: work.government_service || '',
+            currently_working: (work.work_date_to || '').toUpperCase() === 'PRESENT',
+            file: file,
+            existingAttachment: work.attachment_path || null,
+            existingAttachmentUrl: work.attachment_path ? buildViewUrl(work.attachment_path) : null,
+            replaceFile: false,
+          };
+        });
+        form.workExperience = await Promise.all(workPromises);
       }
 
-      // Training
+      // ── Training with files ──
       if (data.training && data.training.length > 0) {
-        form.training = data.training.map((train) => ({
-          training_title: train.training_title || '',
-          inclusive_date_from: train.inclusive_date_from || '',
-          inclusive_date_to: train.inclusive_date_to || '',
-          number_of_hours: train.number_of_hours || '',
-          type: train.type || '',
-          conducted_by: train.conducted_by || '',
-          file: null,
-        }));
+        const trainingPromises = data.training.map(async (train) => {
+          let file = null;
+          if (train.attachment_path) {
+            const url = buildViewUrl(train.attachment_path);
+            const filename = getFileNameFromPath(train.attachment_path);
+            file = await fetchFileAsFile(url, filename);
+          }
+          return {
+            training_title: train.training_title || '',
+            inclusive_date_from: train.inclusive_date_from || '',
+            inclusive_date_to: train.inclusive_date_to || '',
+            number_of_hours: train.number_of_hours || '',
+            type: train.type || '',
+            conducted_by: train.conducted_by || '',
+            file: file,
+            existingAttachment: train.attachment_path || null,
+            existingAttachmentUrl: train.attachment_path
+              ? buildViewUrl(train.attachment_path)
+              : null,
+            replaceFile: false,
+          };
+        });
+        form.training = await Promise.all(trainingPromises);
       }
 
-      // Eligibility
+      // ── Eligibility with files ──
       if (data.eligibity && data.eligibity.length > 0) {
-        form.eligibility = data.eligibity.map((elig) => ({
-          eligibility: elig.eligibility || '',
-          rating: elig.rating || '',
-          date_of_examination: elig.date_of_examination || '',
-          place_of_examination: elig.place_of_examination || '',
-          license_number: elig.license_number || '',
-          date_of_validity: elig.date_of_validity || '',
-          file: null,
-        }));
+        const eligibilityPromises = data.eligibity.map(async (elig) => {
+          let file = null;
+          if (elig.attachment_path) {
+            const url = buildViewUrl(elig.attachment_path);
+            const filename = getFileNameFromPath(elig.attachment_path);
+            file = await fetchFileAsFile(url, filename);
+          }
+          return {
+            eligibility: elig.eligibility || '',
+            rating: elig.rating || '',
+            date_of_examination: elig.date_of_examination || '',
+            place_of_examination: elig.place_of_examination || '',
+            license_number: elig.license_number || '',
+            date_of_validity: elig.date_of_validity || '',
+            file: file,
+            existingAttachment: elig.attachment_path || null,
+            existingAttachmentUrl: elig.attachment_path ? buildViewUrl(elig.attachment_path) : null,
+            replaceFile: false,
+          };
+        });
+        form.eligibility = await Promise.all(eligibilityPromises);
       }
 
-      // Photo
+      // ── PDS Files ──
+      if (data.file?.pds_file && data.file.pds_file.length > 0) {
+        const pdsPromises = data.file.pds_file.map(async (url) => {
+          const filename = getFileNameFromPath(url);
+          const file = await fetchFileAsFile(url, filename);
+          return {
+            url,
+            path: stripStorageUrl(url),
+            name: filename,
+            file: file,
+          };
+        });
+        existingPdsFiles.value = await Promise.all(pdsPromises);
+
+        if (existingPdsFiles.value.length > 0 && existingPdsFiles.value[0].file) {
+          form.pdsFile = existingPdsFiles.value[0].file;
+        }
+      }
+
+      // ── Other Documents ──
+      if (data.file?.other_document && data.file.other_document.length > 0) {
+        const otherPromises = data.file.other_document.map(async (url) => {
+          const filename = getFileNameFromPath(url);
+          const file = await fetchFileAsFile(url, filename);
+          return {
+            url,
+            path: stripStorageUrl(url),
+            name: filename,
+            file: file,
+          };
+        });
+        existingOtherDocuments.value = await Promise.all(otherPromises);
+      }
+
+      // ── Photo ──
       if (data.image_url) {
-        photoPreview.value = data.image_url;
+        const filename = getFileNameFromPath(data.image_url);
+        const file = await fetchFileAsFile(data.image_url, filename);
+        if (file) {
+          photoFile.value = file;
+          photoPreview.value = URL.createObjectURL(file);
+          photoChanged.value = true;
+        } else {
+          photoPreview.value = data.image_url;
+        }
       }
 
-      // Check if same as residential
       const residentialStr = `${form.residential.house}${form.residential.street}${form.residential.subdivision}${form.residential.barangay}${form.residential.city}${form.residential.province}${form.residential.zip}`;
       const permanentStr = `${form.permanent.house}${form.permanent.street}${form.permanent.subdivision}${form.permanent.barangay}${form.permanent.city}${form.permanent.province}${form.permanent.zip}`;
       sameAsResidential.value = residentialStr === permanentStr && residentialStr !== '';
 
-      // Personal Declarations
       if (data.personal_declarations && data.personal_declarations.length > 0) {
         const dec = data.personal_declarations[0];
         formData.relationThirdDegree = dec.question_34a || 'No';
@@ -3747,7 +4404,7 @@
       payload[`children[${index}][birth_date]`] = child.birth_date || '';
     });
 
-    // ── Education (School) ────────────────────────────────────
+    // ── Education ──────────────────────────────────────────────
     form.education.forEach((edu, index) => {
       payload[`school[${index}][degree]`] = edu.degree || '';
       payload[`school[${index}][attendance_from]`] = edu.attendance_from || '';
@@ -3757,11 +4414,10 @@
       payload[`school[${index}][scholarship]`] = edu.scholarship || '';
       payload[`school[${index}][level]`] = edu.level || '';
       payload[`school[${index}][school_name]`] = edu.school_name || '';
-      if (edu.file && edu.file.length > 0) {
-        const file = edu.file[0] || edu.file;
-        if (file instanceof File) {
-          payload[`school[${index}][attachment_path]`] = file;
-        }
+
+      // Always send the file if it exists (whether existing or new)
+      if (edu.file instanceof File) {
+        payload[`school[${index}][attachment_path]`] = edu.file;
       }
     });
 
@@ -3773,11 +4429,9 @@
       payload[`training[${index}][number_of_hours]`] = train.number_of_hours || '';
       payload[`training[${index}][type]`] = train.type || '';
       payload[`training[${index}][conducted_by]`] = train.conducted_by || '';
-      if (train.file && train.file.length > 0) {
-        const file = train.file[0] || train.file;
-        if (file instanceof File) {
-          payload[`training[${index}][attachment_path]`] = file;
-        }
+
+      if (train.file instanceof File) {
+        payload[`training[${index}][attachment_path]`] = train.file;
       }
     });
 
@@ -3793,11 +4447,9 @@
       payload[`experience[${index}][salary_grade]`] = work.salary_grade || '';
       payload[`experience[${index}][status_of_appointment]`] = work.status_of_appointment || '';
       payload[`experience[${index}][government_service]`] = work.government_service || '';
-      if (work.file && work.file.length > 0) {
-        const file = work.file[0] || work.file;
-        if (file instanceof File) {
-          payload[`experience[${index}][attachment_path]`] = file;
-        }
+
+      if (work.file instanceof File) {
+        payload[`experience[${index}][attachment_path]`] = work.file;
       }
     });
 
@@ -3818,11 +4470,9 @@
       payload[`eligibility[${index}][place_of_examination]`] = elig.place_of_examination || '';
       payload[`eligibility[${index}][license_number]`] = elig.license_number || '';
       payload[`eligibility[${index}][date_of_validity]`] = elig.date_of_validity || '';
-      if (elig.file && elig.file.length > 0) {
-        const file = elig.file[0] || elig.file;
-        if (file instanceof File) {
-          payload[`eligibility[${index}][attachment_path]`] = file;
-        }
+
+      if (elig.file instanceof File) {
+        payload[`eligibility[${index}][attachment_path]`] = elig.file;
       }
     });
 
@@ -3904,10 +4554,26 @@
       ? '1'
       : '0';
 
+    // ── Handle Photo ──────────────────────────────────────────────
+    if (photoFile.value instanceof File) {
+      payload['image_path'] = photoFile.value;
+    }
+
+    // ── PDS File ──────────────────────────────────────────────
+    if (form.pdsFile instanceof File) {
+      payload['pds[0][pds_file]'] = form.pdsFile;
+    }
+
     // ── Other Documents ────────────────────────────────────────
-    form.otherDocuments.forEach((doc, index) => {
-      if (doc.file && doc.file instanceof File) {
-        payload[`other_document[${index}][document]`] = doc.file;
+    // Combine existing and new other documents
+    const allOtherDocuments = [
+      ...existingOtherDocuments.value.map((doc) => doc.file).filter((f) => f instanceof File),
+      ...form.otherDocuments.map((doc) => doc.file).filter((f) => f instanceof File),
+    ];
+
+    allOtherDocuments.forEach((file, index) => {
+      if (file instanceof File) {
+        payload[`other_document[${index}][document]`] = file;
       }
     });
 
@@ -3946,14 +4612,30 @@
       errors.push('Email Address is required.');
     }
 
-    // Education: highest units earned must be numeric if provided
+    // PDS File validation
+    if (!form.pdsFile) {
+      errors.push('PDS file is required. Please upload your Personal Data Sheet.');
+    }
+
+    // Check if photo is present
+    if (!photoFile.value && !photoPreview.value) {
+      errors.push('2x2 ID picture is required. Please upload a photo.');
+    }
+
     form.education.forEach((edu, idx) => {
       if (edu.highest_units && !isFiniteNumber(edu.highest_units)) {
         errors.push(`Education Row #${idx + 1}: Highest Units Earned must be a number.`);
       }
     });
 
-    // Work experience: date range sanity check
+    form.eligibility.forEach((elig, idx) => {
+      if (elig.replaceFile && !elig.file) {
+        errors.push(
+          `Eligibility Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+        );
+      }
+    });
+
     form.workExperience.forEach((work, idx) => {
       if (work.work_date_from && !isValidDate(work.work_date_from)) {
         errors.push(`Work Experience Row #${idx + 1}: "From" date is invalid.`);
@@ -3966,6 +4648,7 @@
     return errors;
   }
 
+  // ── Submit Form ──────────────────────────────────────────────────
   async function submitForm() {
     const errors = validateFormBeforeSubmit();
     if (errors.length > 0) {
@@ -3982,13 +4665,27 @@
     isSubmitting.value = true;
 
     try {
+      // Build the payload
       const payload = buildPayload();
-      const photo = photoFile.value;
 
-      const result = await pdsStore.submitApplication(payload, photo);
+      // Create FormData for multipart upload
+      const formData = new FormData();
+
+      // Add all fields to FormData
+      for (const [key, value] of Object.entries(payload)) {
+        if (value instanceof File) {
+          // Add file with the appropriate field name
+          formData.append(key, value);
+        } else if (value !== null && value !== undefined) {
+          // Add regular fields
+          formData.append(key, value);
+        }
+      }
+
+      // Submit using the store with FormData
+      const result = await pdsStore.submitApplication(formData);
 
       if (result.success) {
-        // Show the actual message from the response
         const successMessage = result.message || 'Application submitted successfully!';
         $q.notify({
           type: 'positive',
@@ -3997,16 +4694,12 @@
           timeout: 3000,
         });
 
-        // Log the response data for debugging
-        console.log('Response data:', result.data);
-
         emit('submit', payload);
 
         setTimeout(() => {
           router.push('/page');
         }, 1500);
       } else {
-        // Show error message from response
         const errorMessage = result.error || 'Failed to submit application. Please try again.';
         $q.notify({
           type: 'negative',
@@ -4190,6 +4883,27 @@
     line-height: 1.6;
   }
 
+  .existing-attachment-box {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    background: #eef5ff;
+    border: 1px solid #cfe0fa;
+    border-radius: 6px;
+    gap: 2px;
+  }
+
+  .existing-attachment-box .ellipsis {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rounded-borders {
+    border-radius: 8px;
+  }
+
   @media (max-width: 1023px) {
     .side-nav {
       display: none;
@@ -4244,6 +4958,10 @@
 
     .banner-text ul li {
       font-size: 0.8rem;
+    }
+
+    .existing-attachment-box .ellipsis {
+      max-width: 140px;
     }
   }
 

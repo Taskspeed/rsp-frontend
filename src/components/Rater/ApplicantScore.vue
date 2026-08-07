@@ -204,7 +204,7 @@
           <div>
             <q-btn
               v-if="
-                showHireButton &&
+                // showHireButton &&
                 !isJobOccupied &&
                 !isRepublish &&
                 !isUnoccupied &&
@@ -529,16 +529,16 @@
         );
       });
 
-      const showHireButton = computed(() => {
-        if (!canModifyJobPost.value) return false;
+      // const showHireButton = computed(() => {
+      //   if (!canModifyJobPost.value) return false;
 
-        const allRatingsCompleted =
-          props.ratingData.total_completed === props.ratingData.total_assigned;
-        const applicantRank = parseInt(finalScores.value?.rank) || 999;
-        const isTopFive = applicantRank <= 5;
+      //   const allRatingsCompleted =
+      //     props.ratingData.total_completed === props.ratingData.total_assigned;
+      //   const applicantRank = parseInt(finalScores.value?.rank) || 999;
+      //   const isTopFive = applicantRank <= 5;
 
-        return allRatingsCompleted && isTopFive && !isJobOccupied.value;
-      });
+      //   return allRatingsCompleted && isTopFive && !isJobOccupied.value;
+      // });
 
       const fetchApplicantPhoto = async (url) => {
         if (!url) {
@@ -940,7 +940,7 @@
         closeModal,
         getRankColor,
         formatScore,
-        showHireButton,
+        // showHireButton,
         isJobOccupied,
         isRepublish,
         isUnoccupied,
