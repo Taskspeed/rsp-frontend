@@ -13,7 +13,7 @@
               This is to certify all pertinent provisions of Sec 325 of RA No. 7160 (Local
               Government Code of 1991) have been complied with relative to the appointments issued
               on
-              {{ formatDateEnglish(data.sepdate) }}
+              {{ formatDateEnglish(data.EffectiveDate) }}
             </slot>
           </p>
 
@@ -26,13 +26,13 @@
           </div>
 
           <div class="stamp" style="padding-top: 35px; padding-bottom: 40px">
-            Date: {{ formatDateEnglish(data.sepdate) }}
+            Date: {{ formatDateEnglish(data.EffectiveDate) }}
           </div>
 
           <!-- <div class="left-signature-container">
             <div class="stamp">
               Date:
-              <span class="underlined">{{ formatDateEnglish(data.sepdate) }}</span>
+              <span class="underlined">{{ formatDateEnglish(data.EffectiveDate) }}</span>
             </div>
           </div> -->
         </div>
@@ -44,7 +44,7 @@
           <p class="main-text indented" :style="mainTextStyle">
             <slot name="main-text">
               This is to certify that funds are available pursusant to Appropriation Ordinance No. 6
-              Series of {{ formatYear(data.sepdate) }}
+              Series of {{ formatYear(data.EffectiveDate) }}
             </slot>
           </p>
 
@@ -57,13 +57,13 @@
           </div>
 
           <div class="stamp" style="padding-top: 35px; padding-bottom: 40px">
-            Date: {{ formatDateEnglish(data.sepdate) }}
+            Date: {{ formatDateEnglish(data.EffectiveDate) }}
           </div>
 
           <!-- <div class="left-signature-container">
             <div class="stamp">
               Date:
-              <span class="underlined">{{ formatDateEnglish(data.sepdate) }}</span>
+              <span class="underlined">{{ formatDateEnglish(data.EffectiveDate) }}</span>
             </div>
           </div> -->
         </div>
@@ -93,7 +93,7 @@
               of
               <span class="bold underline">{{ data.NewOffice || 'NA' }}</span>
               effective
-              <span class="bold underline">{{ formatDateEnglish(data.sepdate) }}</span>
+              <span class="bold underline">{{ formatDateEnglish(data.EffectiveDate) }}</span>
               .
             </slot>
           </p>
@@ -112,9 +112,9 @@
 
           <p class="issuance-text indented" :style="issuanceTextStyle">
             <slot name="issuance-text">
-              Done this {{ formatDayWithSuffix(data.sepdate) }} day of
-              {{ formatMonth(data.sepdate) }}, {{ formatYear(data.sepdate) }} at the City Government
-              Center, JV Ayala Avenue, Apokon, Tagum City, Davao del Norte.
+              Done this {{ formatDayWithSuffix(data.EffectiveDate) }} day of
+              {{ formatMonth(data.EffectiveDate) }}, {{ formatYear(data.EffectiveDate) }} at the
+              City Government Center, JV Ayala Avenue, Apokon, Tagum City, Davao del Norte.
             </slot>
           </p>
           <div class="signature-container">
@@ -133,7 +133,7 @@
               <div class="signature-title">City Human Resource Mgt. Officer</div>
             </div>
             <div class="stamp" style="padding-top: 35px; padding-bottom: 40px">
-              Date: {{ formatDateEnglish(data.sepdate) }}
+              Date: {{ formatDateEnglish(data.EffectiveDate) }}
             </div>
           </div>
 
@@ -222,8 +222,9 @@
 
           <p class="main-text indented" :style="mainTextStyle">
             <slot>
-              Nilagdaan at pinanumpaan sa harap ko ngayong {{ formatDateTagalog(data.sepdate) }} sa
-              Tagum City, Davao Del Norte, Pilipinas.
+              Nilagdaan at pinanumpaan sa harap ko ngayong
+              {{ formatDateTagalog(data.EffectiveDate) }} sa Tagum City, Davao Del Norte,
+              Pilipinas.
             </slot>
           </p>
 

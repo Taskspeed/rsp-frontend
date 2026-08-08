@@ -99,7 +99,7 @@
 
       <div class="form-row">
         <q-input
-          v-model="formData.sepdate"
+          v-model="formData.EffectiveDate"
           label="Appointment/Assumption Date"
           type="date"
           outlined
@@ -190,8 +190,8 @@
       </div>
     </div>
 
-    <!-- Preview Data Section
-    <div class="section bg-green-1">
+    <!-- Preview Data Section -->
+    <!-- <div class="section bg-green-1">
       <div class="section-header text-green-9">
         <q-icon name="info" class="q-mr-sm" />
         Certification Preview Information
@@ -234,18 +234,48 @@
 
   const emit = defineEmits(['update']);
 
-  const formData = ref({ ...props.data });
+  // Initialize form data with EffectiveDate
+  const formData = ref({
+    TINNo: '',
+    NewDesignation: '',
+    NewOffice: '',
+    Status: '',
+    EffectiveDate: '',
+    ...props.data,
+  });
 
   watch(
     () => props.data,
     (newData) => {
-      formData.value = { ...newData };
+      // Map effectiveDate from API to EffectiveDate
+      const mappedData = { ...newData };
+      if (newData.effectiveDate && !newData.EffectiveDate) {
+        mappedData.EffectiveDate = newData.effectiveDate;
+      }
+      // Also handle sepdate for backward compatibility if needed
+      if (newData.sepdate && !mappedData.EffectiveDate) {
+        mappedData.EffectiveDate = newData.sepdate;
+      }
+      formData.value = {
+        TINNo: '',
+        NewDesignation: '',
+        NewOffice: '',
+        Status: '',
+        EffectiveDate: '',
+        ...mappedData,
+      };
     },
     { deep: true },
   );
 
   function emitUpdate() {
-    emit('update', { ...formData.value });
+    // Send EffectiveDate as the appointment date
+    const updateData = {
+      ...formData.value,
+      // Keep sepdate for backward compatibility
+      sepdate: formData.value.EffectiveDate,
+    };
+    emit('update', updateData);
   }
 
   // Computed properties for preview

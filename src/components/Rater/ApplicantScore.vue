@@ -204,7 +204,7 @@
           <div>
             <q-btn
               v-if="
-                // showHireButton &&
+                showHireButton &&
                 !isJobOccupied &&
                 !isRepublish &&
                 !isUnoccupied &&
@@ -254,12 +254,24 @@
             </q-card-section>
           </q-card>
 
-          <!-- From Date Input (dd/mm/yyyy UI, calendar popup) -->
+          <!-- From Date Input with Get Latest Button -->
           <q-card flat bordered class="q-mb-md">
             <q-card-section class="bg-grey-1">
               <div class="row items-center q-col-gutter-md">
                 <div class="col-12">
-                  <div class="text-subtitle2 text-grey-7 q-mb-sm">From Date</div>
+                  <div class="row items-center justify-between q-mb-sm">
+                    <div class="text-subtitle2 text-grey-7">From Date (Effectivity Date)</div>
+                    <q-btn
+                      color="primary"
+                      icon="autorenew"
+                      label="Get Latest"
+                      size="sm"
+                      flat
+                      dense
+                      :loading="loadingEffectivity"
+                      @click="fetchLatestEffectivityDate"
+                    />
+                  </div>
                 </div>
 
                 <div class="col-12">
@@ -269,7 +281,7 @@
                     outlined
                     mask="##/##/####"
                     placeholder="dd/mm/yyyy"
-                    hint="Format: dd/mm/yyyy"
+                    hint="Format: dd/mm/yyyy | Click calendar to pick date"
                     :error="!!fromDateError"
                     :error-message="fromDateError"
                   >
@@ -289,6 +301,10 @@
                       </q-icon>
                     </template>
                   </q-input>
+                  <div v-if="effectivityDateFetched" class="text-caption text-grey-6 q-mt-xs">
+                    <q-icon name="check_circle" color="positive" size="14px" class="q-mr-xs" />
+                    Latest effectivity date: {{ formatDateDisplay(fromDateDisplay) }}
+                  </div>
                 </div>
               </div>
             </q-card-section>
@@ -403,6 +419,8 @@
       const hiringLoading = ref(false);
       const hireConfirmationDialog = ref(false);
       const dataLoading = ref(false);
+      const loadingEffectivity = ref(false);
+      const effectivityDateFetched = ref(false);
 
       // UI value (dd/mm/yyyy)
       const fromDateDisplay = ref('');
@@ -429,6 +447,37 @@
         const mm = m[2];
         const yyyy = m[3];
         return `${yyyy}-${mm}-${dd}`;
+      };
+
+      // --- helper: yyyy-mm-dd -> dd/mm/yyyy ---
+      const toDmy = (ymd) => {
+        if (!ymd) return '';
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+        if (!m) return '';
+        const yyyy = m[1];
+        const mm = m[2];
+        const dd = m[3];
+        return `${dd}/${mm}/${yyyy}`;
+      };
+
+      const formatDateDisplay = (dateString) => {
+        if (!dateString) return '';
+        try {
+          const ymd = toYmd(dateString);
+          if (ymd) {
+            const date = new Date(ymd);
+            if (!isNaN(date.getTime())) {
+              return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error formatting date:', error);
+        }
+        return dateString;
       };
 
       const validateFromDate = () => {
@@ -529,16 +578,16 @@
         );
       });
 
-      // const showHireButton = computed(() => {
-      //   if (!canModifyJobPost.value) return false;
+      const showHireButton = computed(() => {
+        if (!canModifyJobPost.value) return false;
 
-      //   const allRatingsCompleted =
-      //     props.ratingData.total_completed === props.ratingData.total_assigned;
-      //   const applicantRank = parseInt(finalScores.value?.rank) || 999;
-      //   const isTopFive = applicantRank <= 5;
+        const allRatingsCompleted =
+          props.ratingData.total_completed === props.ratingData.total_assigned;
+        const applicantRank = parseInt(finalScores.value?.rank) || 999;
+        const isTopFive = applicantRank <= 5;
 
-      //   return allRatingsCompleted && isTopFive && !isJobOccupied.value;
-      // });
+        return allRatingsCompleted && isTopFive && !isJobOccupied.value;
+      });
 
       const fetchApplicantPhoto = async (url) => {
         if (!url) {
@@ -753,6 +802,8 @@
         hiringLoading.value = false;
         hireConfirmationDialog.value = false;
         dataLoading.value = false;
+        loadingEffectivity.value = false;
+        effectivityDateFetched.value = false;
 
         fromDateDisplay.value = '';
         fromDateError.value = '';
@@ -772,9 +823,77 @@
         return isNaN(num) ? '-' : num.toFixed(2);
       };
 
+      // Fetch latest effectivity date from API
+      const fetchLatestEffectivityDate = async () => {
+        try {
+          loadingEffectivity.value = true;
+
+          // Get the jobpost ID
+          const jobpostId = props.jobDetails?.id;
+          if (!jobpostId) {
+            toast.warning('Job post ID not found');
+            return;
+          }
+
+          // Fetch effectivity dates from the store
+          const response = await jobPostStore.fetchEffectivityDate(jobpostId);
+
+          console.log('Effectivity API response:', response);
+
+          // Handle the response structure: { success: true, message: "Successful", data: [{ effectiveDate: "2026-08-15" }] }
+          if (
+            response &&
+            response.success === true &&
+            response.data &&
+            Array.isArray(response.data)
+          ) {
+            const effectivityData = response.data;
+
+            if (effectivityData.length > 0) {
+              // Get the latest date - sort by date and take the first one
+              const sortedDates = effectivityData
+                .filter((item) => item.effectiveDate) // Filter out items without date
+                .sort((a, b) => {
+                  return new Date(b.effectiveDate) - new Date(a.effectiveDate);
+                });
+
+              if (sortedDates.length > 0) {
+                const latestDate = sortedDates[0];
+                if (latestDate && latestDate.effectiveDate) {
+                  // Convert to dd/mm/yyyy format for display
+                  const formattedDate = toDmy(latestDate.effectiveDate);
+                  if (formattedDate) {
+                    fromDateDisplay.value = formattedDate;
+                    effectivityDateFetched.value = true;
+                    validateFromDate();
+
+                    toast.success(
+                      `Latest effectivity date set: ${formatDateDisplay(formattedDate)}`,
+                    );
+                    console.log('Latest effectivity date set:', formattedDate);
+                  }
+                }
+              }
+            } else {
+              toast.info('No effectivity dates found. You can manually set the date.');
+            }
+          } else {
+            console.log('Invalid response format or no data:', response);
+            toast.info('No effectivity dates available. You can manually set the date.');
+          }
+        } catch (error) {
+          console.error('Error fetching effectivity date:', error);
+          toast.warning('Could not fetch latest effectivity date. You can manually set it.');
+        } finally {
+          loadingEffectivity.value = false;
+        }
+      };
+
       const showHireConfirmation = () => {
         if (!isJobOccupied.value && canModifyJobPost.value) {
           fromDateError.value = '';
+          // Auto-fetch effectivity date when opening confirmation dialog
+          fetchLatestEffectivityDate();
           hireConfirmationDialog.value = true;
         }
       };
@@ -940,7 +1059,7 @@
         closeModal,
         getRankColor,
         formatScore,
-        // showHireButton,
+        showHireButton,
         isJobOccupied,
         isRepublish,
         isUnoccupied,
@@ -950,12 +1069,16 @@
         confirmHireApplicant,
         canModifyJobPost,
         dataLoading,
+        loadingEffectivity,
+        effectivityDateFetched,
+        fetchLatestEffectivityDate,
 
         // fromDate UI + validation
         fromDateDisplay,
         fromDateError,
         validateFromDate,
         isFromDateValid,
+        formatDateDisplay,
       };
     },
   };

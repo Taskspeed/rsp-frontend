@@ -194,16 +194,37 @@
       </div>
 
       <div class="form-row">
-        <q-input
-          v-model="formData.deliberation_date"
-          label="HRMPSB Deliberation Date"
-          type="date"
-          outlined
-          dense
-          class="form-field"
-          hint="Date when HRMPSB deliberated on this appointment"
-          @update:model-value="emitUpdate"
-        />
+        <div class="form-field">
+          <div class="row items-center q-mb-xs">
+            <div class="text-subtitle2 text-grey-8 q-mr-sm">HRMPSB Deliberation Date</div>
+            <q-btn
+              color="primary"
+              icon="autorenew"
+              label="Get Latest"
+              size="sm"
+              flat
+              dense
+              :loading="loadingDeliberation"
+              @click="fetchDeliberationDate"
+            />
+          </div>
+          <q-input
+            v-model="formData.deliberation_date"
+            type="date"
+            outlined
+            dense
+            class="form-field"
+            hint="Date when HRMPSB deliberated on this appointment"
+            @update:model-value="emitUpdate"
+          />
+          <div
+            v-if="deliberationDateFetched && formData.deliberation_date"
+            class="text-caption text-grey-6 q-mt-xs"
+          >
+            <q-icon name="check_circle" color="positive" size="14px" class="q-mr-xs" />
+            Latest deliberation date: {{ formatDateDisplay(formData.deliberation_date) }}
+          </div>
+        </div>
 
         <q-input
           v-model="formData.signingDate"
@@ -302,7 +323,7 @@
 </template>
 
 <script setup>
-  import { ref, watch } from 'vue';
+  import { ref, watch, onMounted } from 'vue';
   import { useQuasar } from 'quasar';
   import { usePlantillaStore } from 'src/stores/plantillaStore.js';
 
@@ -320,16 +341,27 @@
 
   const formData = ref({ ...props.data });
   const loadingVice = ref(false);
+  const loadingDeliberation = ref(false);
   const viceDialog = ref(false);
   const viceEmployees = ref([]);
+  const deliberationDateFetched = ref(false);
 
   watch(
     () => props.data,
     (newData) => {
       formData.value = { ...newData };
+      // Reset fetched flag when data changes
+      deliberationDateFetched.value = false;
+      // Auto-fetch deliberation date when data changes
+      fetchDeliberationDate();
     },
     { deep: true },
   );
+
+  // Fetch deliberation date on component mount
+  onMounted(() => {
+    fetchDeliberationDate();
+  });
 
   function emitUpdate() {
     emit('update', { ...formData.value });
@@ -367,7 +399,7 @@
       if (!isNaN(date.getTime())) {
         return date.toLocaleDateString('en-US', {
           year: 'numeric',
-          month: 'short',
+          month: 'long',
           day: 'numeric',
         });
       }
@@ -376,6 +408,90 @@
     }
 
     return dateString;
+  }
+
+  async function fetchDeliberationDate() {
+    // Don't auto-fetch if user has manually set a date and we've already fetched
+    if (formData.value.deliberation_date && deliberationDateFetched.value) {
+      return;
+    }
+
+    try {
+      loadingDeliberation.value = true;
+
+      // Fetch from API - this now returns the response with success/data structure
+      const response = await plantillaStore.fetchDeliberationDate();
+
+      console.log('Deliberation API response:', response);
+
+      // Handle the response structure: { success: true, message: "Successful", data: [{ deliberation_date: "2026-08-15" }] }
+      if (response && response.success === true && response.data && Array.isArray(response.data)) {
+        const deliberationData = response.data;
+
+        if (deliberationData.length > 0) {
+          // Get the latest date - sort by date and take the first one
+          const sortedDates = deliberationData
+            .filter((item) => item.deliberation_date) // Filter out items without date
+            .sort((a, b) => {
+              return new Date(b.deliberation_date) - new Date(a.deliberation_date);
+            });
+
+          if (sortedDates.length > 0) {
+            const latestDate = sortedDates[0];
+            if (latestDate && latestDate.deliberation_date) {
+              const formattedDate = formatDate(latestDate.deliberation_date);
+
+              // Only set if empty or not manually changed
+              if (!formData.value.deliberation_date) {
+                formData.value.deliberation_date = formattedDate;
+                deliberationDateFetched.value = true;
+
+                // Emit update to parent
+                emitUpdate();
+
+                $q.notify({
+                  type: 'positive',
+                  message: `Latest deliberation date set: ${formatDateDisplay(formattedDate)}`,
+                  position: 'top',
+                  timeout: 2000,
+                });
+              } else {
+                // Date already has a value, just mark as fetched
+                deliberationDateFetched.value = true;
+              }
+
+              console.log('Latest deliberation date available:', formattedDate);
+            }
+          }
+        } else {
+          console.log('No deliberation dates found in the data array');
+          $q.notify({
+            type: 'info',
+            message: 'No deliberation dates found. You can manually set the date.',
+            position: 'top',
+            timeout: 2000,
+          });
+        }
+      } else {
+        console.log('Invalid response format or no data:', response);
+        $q.notify({
+          type: 'info',
+          message: 'No deliberation dates available. You can manually set the date.',
+          position: 'top',
+          timeout: 2000,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching deliberation date:', error);
+      $q.notify({
+        type: 'warning',
+        message: 'Could not fetch latest deliberation date. You can manually set it.',
+        position: 'top',
+        timeout: 3000,
+      });
+    } finally {
+      loadingDeliberation.value = false;
+    }
   }
 
   async function showViceDialog() {
@@ -496,6 +612,7 @@
     display: flex;
     gap: 16px;
     margin-bottom: 16px;
+    flex-wrap: wrap;
   }
 
   .form-row:last-child {

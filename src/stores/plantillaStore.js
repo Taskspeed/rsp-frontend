@@ -333,6 +333,40 @@ export const usePlantillaStore = defineStore('plantilla', {
       }
     },
 
+    async fetchEffectivityDate() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await adminApi.get(`appointment/effective/date/list`);
+        this.vice = response.data;
+        return response.data;
+      } catch (err) {
+        this.error = err;
+        toast.error('Failed to fetch job post: ' + (err.response?.data?.message || err.message));
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchDeliberationDate() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const response = await adminApi.get(`/appointment/deliberation/date/list`);
+        this.vice = response.data;
+        return response.data;
+      } catch (err) {
+        this.error = err;
+        toast.error(
+          'Failed to fetch deliberation date: ' + (err.response?.data?.message || err.message),
+        );
+        throw err;
+      } finally {
+        this.loading = false;
+      }
+    },
+
     async addEmployee(payload) {
       try {
         this.loading = true;
@@ -374,7 +408,6 @@ export const usePlantillaStore = defineStore('plantilla', {
         if (response.data && response.data.length > 0) {
           // Transform the data to match your template structure
           const appointmentData = response.data[0];
-
           // Access the first element of each array
           const plantillaInfo = appointmentData.active?.[0];
           const tempRegInfo = appointmentData.temp_reg_appointments?.[0];
@@ -419,8 +452,11 @@ export const usePlantillaStore = defineStore('plantilla', {
             vicecause: tempRegInfo?.vicecause || '',
             sepcause: tempRegInfo?.sepcause || '',
             sepdate: tempRegInfo?.sepdate || '',
+            deliberation_date: tempRegInfo?.deliberation_date || '',
+            employmenttype: tempRegInfo?.employment_type || '',
 
             // Date Range
+            EffectiveDate: appointmentData.effectiveDate || '',
             FromDate: appointmentData.FromDate || '',
             ToDate: appointmentData.ToDate || '',
 

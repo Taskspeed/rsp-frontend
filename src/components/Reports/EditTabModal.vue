@@ -221,13 +221,25 @@
         // Appointment Data (from edited data)
         ...editedData.value,
 
-        // Ensure all required fields have values
-        sepdate: editedData.value.sepdate || new Date().toISOString().split('T')[0],
+        // ✅ CORRECT: Use EffectiveDate for the appointment date
+        effectiveDate:
+          editedData.value.EffectiveDate ||
+          editedData.value.effectiveDate ||
+          new Date().toISOString().split('T')[0],
+
+        // Keep sepdate in sync for backward compatibility (this is the appointment/assumption date)
+        sepdate:
+          editedData.value.EffectiveDate ||
+          editedData.value.effectiveDate ||
+          new Date().toISOString().split('T')[0],
+
+        // ❌ DO NOT change sepcause - this is the separation cause (e.g., "REAPPOINTMENT", "RESIGNATION")
         sepcause: editedData.value.sepcause || 'N/A',
+
         vicename: editedData.value.vicename || '',
         vicecause: editedData.value.vicecause || '',
 
-        // NEW: Add deliberation_date
+        // deliberation_date
         deliberation_date: editedData.value.deliberation_date || '',
 
         // Appropriation fields (required)
@@ -296,6 +308,10 @@
 
         // Refresh the data
         await fetchCompleteEmployeeData(props.employee.ControlNo);
+
+        // ✅ CLOSE THE DIALOG AFTER SUCCESSFUL SAVE
+        show.value = false;
+        emit('close');
       } else {
         $q.notify({
           type: 'negative',

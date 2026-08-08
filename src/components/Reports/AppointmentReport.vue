@@ -106,7 +106,7 @@
             <ruby>
               <strong class="underline">
                 <span style="color: white">*</span>
-                {{ data.Status || '(Permanent, Temporary, etc.)' }}
+                {{ data.employmenttype || '(Permanent, Temporary, etc.)' }}
                 <span style="color: white">*</span>
               </strong>
               <rt>
@@ -271,7 +271,7 @@
             <p class="certification-text">
               This is to certify that the appointee has been screened and found qualified by at
               least the majority of the HRMPSB/Placement Committee during the deliberation held on
-              <span class="underline">December 27, 2024</span>
+              <span class="underline">{{ deliberationDate }}</span>
               .
             </p>
 
@@ -481,6 +481,10 @@
 
   const publishedAt = computed(() => {
     return isCoterminousOrElective.value ? 'N/A' : 'CSC Website';
+  });
+
+  const deliberationDate = computed(() => {
+    return isCoterminousOrElective.value ? 'N/A' : formatDate(props.data.deliberation_date);
   });
 
   const publishStartDate = computed(() => {
