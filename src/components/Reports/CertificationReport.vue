@@ -52,7 +52,7 @@
             <div class="signature-section">
               <div class="signature-name">{{ data.cityaccountant }}</div>
               <div class="signature-line"></div>
-              <div class="signature-title">City Accountant</div>
+              <div class="signature-title">CITY ACCOUNTANT</div>
             </div>
           </div>
 
@@ -119,9 +119,9 @@
           </p>
           <div class="signature-container">
             <div class="signature-section">
-              <div class="signature-name">{{ data.admin }}</div>
+              <div class="signature-name">{{ data.officeHeadName }}</div>
               <div class="signature-line"></div>
-              <div class="signature-title">City Administrator</div>
+              <div class="signature-title">{{ data.officeHeadPosition }}</div>
             </div>
           </div>
 
@@ -130,7 +130,7 @@
             <div class="signature-section">
               <div class="signature-name">{{ data.HR }}</div>
               <div class="signature-line"></div>
-              <div class="signature-title">City Human Resource Mgt. Officer</div>
+              <div class="signature-title">CITY HUMAN RESOURCE MGT. OFFICER</div>
             </div>
             <div class="stamp" style="padding-top: 35px; padding-bottom: 40px">
               Date: {{ formatDateEnglish(data.EffectiveDate) }}
@@ -223,8 +223,7 @@
           <p class="main-text indented" :style="mainTextStyle">
             <slot>
               Nilagdaan at pinanumpaan sa harap ko ngayong
-              {{ formatDateTagalog(data.EffectiveDate) }} sa Tagum City, Davao Del Norte,
-              Pilipinas.
+              {{ formatDateTagalog(data.EffectiveDate) }} sa Tagum City, Davao Del Norte, Pilipinas.
             </slot>
           </p>
 
@@ -302,9 +301,9 @@
       props.data.NewOffice?.includes('SANGGUNIANG PANLUNGSOD') ||
       props.data.NewOffice?.includes('SANGGUNIAN')
     ) {
-      return 'City Vice Mayor';
+      return 'CITY VICE MAYOR';
     } else {
-      return 'City Mayor';
+      return 'CITY MAYOR';
     }
   });
 
@@ -587,7 +586,7 @@
     margin: 20px 0;
   }
   .signature-section {
-    width: 3in;
+    width: 4in;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -607,6 +606,7 @@
 
   .signature-title {
     text-align: center;
+    font-size: small;
   }
 
   .subtitle {
