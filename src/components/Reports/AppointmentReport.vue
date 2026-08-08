@@ -146,7 +146,7 @@
             <ruby>
               <strong class="underline">
                 <span style="color: white">*</span>
-                {{ data.Renew || '(Original, Promotion, etc.)' }}
+                {{ data.Renew || '' }}
                 <span style="color: white">*</span>
               </strong>
               <rt>

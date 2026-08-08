@@ -221,17 +221,15 @@
         // Appointment Data (from edited data)
         ...editedData.value,
 
+        renew: editedData.value.Renew || '',
+
         // ✅ CORRECT: Use EffectiveDate for the appointment date
         effectiveDate:
           editedData.value.EffectiveDate ||
           editedData.value.effectiveDate ||
           new Date().toISOString().split('T')[0],
 
-        // Keep sepdate in sync for backward compatibility (this is the appointment/assumption date)
-        sepdate:
-          editedData.value.EffectiveDate ||
-          editedData.value.effectiveDate ||
-          new Date().toISOString().split('T')[0],
+        sepdate: editedData.value.sepdate || '',
 
         // ❌ DO NOT change sepcause - this is the separation cause (e.g., "REAPPOINTMENT", "RESIGNATION")
         sepcause: editedData.value.sepcause || 'N/A',
