@@ -406,19 +406,26 @@ export const usePlantillaStore = defineStore('plantilla', {
         console.log('Appointment data:', response.data); // Debugging
 
         if (response.data && response.data.length > 0) {
-          // Transform the data to match your template structure
-          const appointmentData = response.data[0];
+          // Find the main appointment data (first object with ControlNo)
+          const mainAppointment = response.data.find((item) => item.ControlNo === ControlNo);
+          // Find the office head (the object with "CITY GOVERNMENT DEPARTMENT HEAD I" position)
+          const officeHead = response.data.find(
+            (item) =>
+              item.position === 'CITY GOVERNMENT DEPARTMENT HEAD I' &&
+              item.office === mainAppointment?.Office,
+          );
+
           // Access the first element of each array
-          const plantillaInfo = appointmentData.active?.[0];
-          const tempRegInfo = appointmentData.temp_reg_appointments?.[0];
-          const reorgExtInfo = appointmentData.temp_reg_appointment_reorg_ext?.[0];
-          const x_personal = appointmentData.x_personal?.[0];
-          const jobpost = appointmentData.posting_date?.[0];
-          const plantilla = appointmentData.plantilla?.[0];
+          const plantillaInfo = mainAppointment?.active?.[0];
+          const tempRegInfo = mainAppointment?.temp_reg_appointments?.[0];
+          const reorgExtInfo = mainAppointment?.temp_reg_appointment_reorg_ext?.[0];
+          const x_personal = mainAppointment?.x_personal?.[0];
+          const jobpost = mainAppointment?.posting_date?.[0];
+          const plantilla = mainAppointment?.plantilla?.[0];
 
           const transformedData = {
             // Basic Info
-            SalaryAnnual: appointmentData.RateYear || '',
+            SalaryAnnual: mainAppointment?.RateYear || '',
             TINNo: x_personal?.TINNo || '',
             Address: x_personal?.Address || '',
             Sex: plantillaInfo?.Sex,
@@ -456,9 +463,9 @@ export const usePlantillaStore = defineStore('plantilla', {
             employmenttype: tempRegInfo?.employment_type || '',
 
             // Date Range
-            EffectiveDate: appointmentData.effectiveDate || '',
-            FromDate: appointmentData.FromDate || '',
-            ToDate: appointmentData.ToDate || '',
+            EffectiveDate: mainAppointment?.effectiveDate || '',
+            FromDate: mainAppointment?.FromDate || '',
+            ToDate: mainAppointment?.ToDate || '',
 
             // Extended Info from temp_reg_appointment_reorg_ext
             tempId: reorgExtInfo?.tempId || '',
@@ -528,6 +535,11 @@ export const usePlantillaStore = defineStore('plantilla', {
             Groupcode: tempRegInfo?.Groupcode || '',
             group: tempRegInfo?.group || '',
             unitcode: tempRegInfo?.unitcode || '',
+
+            // Office Head Information
+            officeHeadName: officeHead?.Name4 || '',
+            officeHeadPosition: officeHead?.position || '',
+            officeHeadOffice: officeHead?.office || '',
 
             // Default/Configurable Values
             vicemayor: 'ATTY. EVA LORRAINE E. ESTABILLO',
