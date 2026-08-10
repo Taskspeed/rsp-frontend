@@ -3167,1170 +3167,1211 @@
 </template>
 
 <script setup>
-  import { ref, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
-  import { useQuasar } from 'quasar';
-  import { usePDSStore } from 'src/stores/pdsFormStore';
-  import { useRouter } from 'vue-router';
+    import { ref, reactive, watch, onMounted, onUnmounted, nextTick } from 'vue';
+    import { useQuasar } from 'quasar';
+    import { usePDSStore } from 'src/stores/pdsFormStore';
+    import { useRouter } from 'vue-router';
 
-  const $q = useQuasar();
-  const pdsStore = usePDSStore();
-  const router = useRouter();
-  const emit = defineEmits(['submit']);
+    const $q = useQuasar();
+    const pdsStore = usePDSStore();
+    const router = useRouter();
+    const emit = defineEmits(['submit']);
 
-  // ── State ──────────────────────────────────────────────────
-  const hasExistingPDS = ref(false);
-  const isLoading = ref(true);
-  const isSubmitting = ref(false);
-  const photoChanged = ref(false);
+    // ── State ──────────────────────────────────────────────────
+    const hasExistingPDS = ref(false);
+    const isLoading = ref(true);
+    const isSubmitting = ref(false);
+    const photoChanged = ref(false);
 
-  // ── Shared validation helpers ─────────────────────────────────
-  function isValidDate(val) {
-    if (!val) return true;
-    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(val);
-    if (!match) return false;
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const year = parseInt(match[3], 10);
-    if (month < 1 || month > 12) return false;
-    if (year < 1900 || year > 2100) return false;
-    const daysInMonth = new Date(year, month, 0).getDate();
-    if (day < 1 || day > daysInMonth) return false;
-    return true;
+    // ── Shared validation helpers ─────────────────────────────────
+    function isValidDate(val) {
+      if (!val) return true;
+      const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(val);
+      if (!match) return false;
+      const day = parseInt(match[1], 10);
+      const month = parseInt(match[2], 10);
+      const year = parseInt(match[3], 10);
+      if (month < 1 || month > 12) return false;
+      if (year < 1900 || year > 2100) return false;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      if (day < 1 || day > daysInMonth) return false;
+      return true;
+    }
+
+    function isNotFutureDate(val) {
+      if (!val || !isValidDate(val)) return true;
+      const [day, month, year] = val.split('/').map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return inputDate <= today;
+    }
+
+    function onlyLettersAndSpaces(val) {
+      if (!val) return true;
+      return /^[a-zA-ZÀ-ÿ.'\- ]+$/.test(val.trim());
+    }
+
+    function isFiniteNumber(val) {
+      if (val === null || val === undefined || val === '') return false;
+      return Number.isFinite(parseFloat(val));
+    }
+
+    function onFileRejected(rejectedEntries) {
+      $q.notify({
+        type: 'negative',
+        message: `${rejectedEntries.length} file(s) did not pass validation (max 10MB, allowed types only).`,
+        position: 'top',
+      });
+    }
+
+    function onTogglePresent(row, val) {
+      row.currently_working = val;
+      row.work_date_to = val ? 'PRESENT' : '';
+    }
+
+
+    function buildCorsProxyUrl(storageUrl) {
+    if (!storageUrl) return '';
+
+    // Kunin lang yung relative path pagkatapos ng '/storage/'
+    const relativePath = stripStorageUrl(storageUrl);
+
+    // Kunin yung origin (protocol + host + port) mula sa storage URL mismo
+    // para hindi mo na kailangang i-hardcode yung backend host
+    try {
+      const urlObj = new URL(storageUrl);
+      return `${urlObj.origin}/api/storage-cors/${relativePath}`;
+    } catch {
+      // Fallback kung hindi valid URL (baka relative path na siya)
+      return `/api/storage-cors/${relativePath}`;
+    }
   }
+    function stripStorageUrl(url) {
+      if (!url) return '';
 
-  function isNotFutureDate(val) {
-    if (!val || !isValidDate(val)) return true;
-    const [day, month, year] = val.split('/').map(Number);
-    const inputDate = new Date(year, month - 1, day);
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    return inputDate <= today;
-  }
-
-  function onlyLettersAndSpaces(val) {
-    if (!val) return true;
-    return /^[a-zA-ZÀ-ÿ.'\- ]+$/.test(val.trim());
-  }
-
-  function isFiniteNumber(val) {
-    if (val === null || val === undefined || val === '') return false;
-    return Number.isFinite(parseFloat(val));
-  }
-
-  function onFileRejected(rejectedEntries) {
-    $q.notify({
-      type: 'negative',
-      message: `${rejectedEntries.length} file(s) did not pass validation (max 10MB, allowed types only).`,
-      position: 'top',
-    });
-  }
-
-  function onTogglePresent(row, val) {
-    row.currently_working = val;
-    row.work_date_to = val ? 'PRESENT' : '';
-  }
-
-  function stripStorageUrl(url) {
-    if (!url) return '';
-
-    // Handle full URLs
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      // Extract the path after '/storage/'
-      const match = url.match(/\/storage\/(.+)$/);
-      if (match) {
-        return match[1];
+      // Handle full URLs
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        // Extract the path after '/storage/'
+        const match = url.match(/\/storage\/(.+)$/);
+        if (match) {
+          return match[1];
+        }
+        return url;
       }
+
+      // If it's already a relative path, return as is
       return url;
     }
 
-    // If it's already a relative path, return as is
-    return url;
-  }
+    function getFileNameFromPath(path) {
+      if (!path) return '';
+      const clean = path.split('?')[0];
+      return clean.substring(clean.lastIndexOf('/') + 1);
+    }
 
-  function getFileNameFromPath(path) {
-    if (!path) return '';
-    const clean = path.split('?')[0];
-    return clean.substring(clean.lastIndexOf('/') + 1);
-  }
-
-  function buildViewUrl(relativePath) {
-    if (!relativePath) return '';
-    if (/^https?:\/\//i.test(relativePath)) return relativePath;
-    return `${relativePath}`;
-  }
-
-  // Existing "on record" attachments loaded from the API
-  const existingPdsFiles = ref([]); // [{ url, path, name }]
-  const replacePds = ref(false);
-  const existingOtherDocuments = ref([]); // [{ url, path, name }]
-
-  function cancelReplacePds() {
-    replacePds.value = false;
-    form.pdsFile = null;
-  }
-
-  // ── Attachment Viewer Dialog ──────────────────────────────────
-  const viewerDialog = reactive({
-    show: false,
-    url: '',
-    name: '',
-    type: 'other', // 'pdf' | 'image' | 'other'
-  });
-
-  function getFileExt(url) {
+    async function urlToFile(url, filename) {
     try {
-      const clean = url.split('?')[0];
-      return clean.substring(clean.lastIndexOf('.') + 1).toLowerCase();
-    } catch {
-      return '';
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file (${response.status}): ${url}`);
+      }
+      const blob = await response.blob();
+      return new File([blob], filename, {
+        type: blob.type || 'application/octet-stream',
+      });
+    } catch (error) {
+      console.error(`urlToFile failed for ${url}:`, error);
+      return null; // babalik null kung nag-fail (e.g. CORS, network error)
     }
   }
-
-  function viewAttachment(url, name) {
-    if (!url) {
-      $q.notify({ type: 'warning', message: 'This attachment is not available to preview.' });
-      return;
+    function buildViewUrl(relativePath) {
+      if (!relativePath) return '';
+      if (/^https?:\/\//i.test(relativePath)) return relativePath;
+      return `${relativePath}`;
     }
-    const ext = getFileExt(url);
-    let type = 'other';
-    if (ext === 'pdf') type = 'pdf';
-    else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) type = 'image';
 
-    viewerDialog.url = url;
-    viewerDialog.name = name || getFileNameFromPath(url);
-    viewerDialog.type = type;
-    viewerDialog.show = true;
-  }
+    // Existing "on record" attachments loaded from the API
+    const existingPdsFiles = ref([]); // [{ url, path, name }]
+    const replacePds = ref(false);
+    const existingOtherDocuments = ref([]); // [{ url, path, name }]
 
-  function openInNewTab(url) {
-    if (!url) return;
-    window.open(url, '_blank', 'noopener');
-  }
-
-  // ── Options ──────────────────────────────────────────────────
-  const sexOptions = ['Male', 'Female'];
-  const civilStatusOptions = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled'];
-  const bloodTypeOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-  const levelOptions = [
-    'Elementary',
-    'Secondary',
-    'Vocational / Trade Course',
-    'College',
-    'Graduate Studies',
-  ];
-  const appointmentOptions = ['Permanent', 'Temporary', 'Casual', 'Contractual', 'Co-terminus'];
-  const trainingTypeOptions = [
-    'Managerial',
-    'Supervisory',
-    'Technical',
-    'Foundation',
-    'Orientation',
-  ];
-  const yesNoOptions = ['Yes', 'No'];
-
-  const genderReferenceOptions = [
-    { label: 'Female', value: 'Female' },
-    { label: 'Male', value: 'Male' },
-    { label: 'Lesbian', value: 'Lesbian' },
-    { label: 'Gay', value: 'Gay' },
-    { label: 'Bisexual', value: 'Bisexual' },
-    { label: 'Transgender', value: 'Transgender' },
-    { label: 'Transgender Woman', value: 'Transgender Woman' },
-    { label: 'Transgender Man', value: 'Transgender Man' },
-    { label: 'Non-binary', value: 'Non-binary' },
-    { label: 'Gender Fluid', value: 'Gender Fluid' },
-    { label: 'Queer', value: 'Queer' },
-    { label: 'Intersex', value: 'Intersex' },
-    { label: 'Prefer not to say', value: 'Prefer not to say' },
-    { label: 'Other', value: 'Other' },
-  ];
-
-  const ethnicGroupOptions = [
-    { label: 'Maguindanao', value: 'Maguindanao' },
-    { label: 'Maranao', value: 'Maranao' },
-    { label: 'Tausug', value: 'Tausug' },
-    { label: 'Yakan', value: 'Yakan' },
-    { label: 'Sama', value: 'Sama' },
-    { label: 'Badjao', value: 'Badjao' },
-    { label: 'Subanen', value: 'Subanen' },
-    { label: 'Manobo', value: 'Manobo' },
-    { label: 'Bagobo', value: 'Bagobo' },
-    { label: 'Bukidnon', value: 'Bukidnon' },
-    { label: 'Higaonon', value: 'Higaonon' },
-    { label: 'Bilaan', value: 'Bilaan' },
-    { label: 'Tboli', value: 'Tboli' },
-    { label: 'Tiruray', value: 'Tiruray' },
-    { label: 'Kalagan', value: 'Kalagan' },
-    { label: 'Mansaka', value: 'Mansaka' },
-    { label: 'Mandaya', value: 'Mandaya' },
-    { label: 'Lumad', value: 'Lumad' },
-    { label: 'Moro', value: 'Moro' },
-    { label: 'Bisaya', value: 'Bisaya' },
-    { label: 'Cebuano', value: 'Cebuano' },
-    { label: 'Hiligaynon', value: 'Hiligaynon' },
-    { label: 'Waray', value: 'Waray' },
-    { label: 'Ilonggo', value: 'Ilonggo' },
-    { label: 'Aklanon', value: 'Aklanon' },
-    { label: 'Capiznon', value: 'Capiznon' },
-    { label: 'Surigaonon', value: 'Surigaonon' },
-    { label: 'Kinaray-a', value: 'Kinaray-a' },
-    { label: 'Romblomanon', value: 'Romblomanon' },
-    { label: 'Masbateño', value: 'Masbateño' },
-    { label: 'Boholano', value: 'Boholano' },
-    { label: 'Porohanon', value: 'Porohanon' },
-    { label: 'Cuyonon', value: 'Cuyonon' },
-    { label: 'Tagalog', value: 'Tagalog' },
-    { label: 'Ilocano', value: 'Ilocano' },
-    { label: 'Bicolano', value: 'Bicolano' },
-    { label: 'Kapampangan', value: 'Kapampangan' },
-    { label: 'Pangasinense', value: 'Pangasinense' },
-    { label: 'Ivatan', value: 'Ivatan' },
-    { label: 'Ibanag', value: 'Ibanag' },
-    { label: 'Gaddang', value: 'Gaddang' },
-    { label: 'Sambal', value: 'Sambal' },
-    { label: 'Chinese Filipino', value: 'Chinese Filipino' },
-    { label: 'Spanish Filipino', value: 'Spanish Filipino' },
-    { label: 'Mixed Race', value: 'Mixed Race' },
-    { label: 'Prefer not to say', value: 'Prefer not to say' },
-    { label: 'Other', value: 'Other' },
-  ];
-
-  const pwdOptions = [
-    'Psychosocial Disability',
-    'Disability caused by chronic illness',
-    'Learning Disability',
-    'Mental Disability',
-    'Visual Disability',
-    'Orthopedic Disability',
-    'Communication Disability',
-  ];
-
-  // ── Side navigation ──────────────────────────────────────────
-  const sections = [
-    { id: 'section-photo', label: 'Photo & Name', icon: 'photo_camera' },
-    { id: 'section-personal', label: 'Personal Information', icon: 'person' },
-    { id: 'section-upload-pds', label: 'Upload PDS', icon: 'description' },
-    { id: 'section-family', label: 'Family Background', icon: 'family_restroom' },
-    { id: 'section-education', label: 'Educational Background', icon: 'school' },
-    { id: 'section-eligibility', label: 'Civil Service Eligibility', icon: 'verified' },
-    { id: 'section-work', label: 'Work Experience', icon: 'work' },
-    { id: 'section-voluntary', label: 'Voluntary Work', icon: 'volunteer_activism' },
-    { id: 'section-training', label: 'L&D Interventions', icon: 'menu_book' },
-    { id: 'section-other', label: 'Other Information', icon: 'info' },
-    { id: 'section-references', label: 'References', icon: 'contacts' },
-    { id: 'section-declarations', label: 'Declarations', icon: 'fact_check' },
-    { id: 'section-other-documents', label: 'Other Documents', icon: 'folder' },
-  ];
-
-  const activeSection = ref('section-photo');
-  let sectionObserver = null;
-  let isScrolling = false;
-  let scrollTimeout = null;
-  let isManualScroll = false;
-
-  // ── Navigation Functions ──────────────────────────────────────
-  function goBack() {
-    if (window.history.length > 1) {
-      router.back();
-    } else {
-      router.push('/jobList');
+    function cancelReplacePds() {
+      replacePds.value = false;
+      form.pdsFile = null;
     }
-  }
 
-  function scrollToSection(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    isManualScroll = true;
-    isScrolling = true;
-    activeSection.value = id;
-
-    const appHeaderHeight = getAppHeaderHeight();
-    const offset = appHeaderHeight + stickyBarHeight.value + mobileNavHeight.value + 20;
-    const elementPosition = el.getBoundingClientRect().top + window.pageYOffset;
-    const offsetPosition = elementPosition - offset;
-
-    window.scrollTo({
-      top: offsetPosition,
-      behavior: 'smooth',
+    // ── Attachment Viewer Dialog ──────────────────────────────────
+    const viewerDialog = reactive({
+      show: false,
+      url: '',
+      name: '',
+      type: 'other', // 'pdf' | 'image' | 'other'
     });
 
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(() => {
-      isScrolling = false;
-      isManualScroll = false;
-    }, 800);
-  }
-
-  // ── Sticky bar offset ────────────────────────────────────────────
-  const stickyBarRef = ref(null);
-  const stickyBarHeight = ref(56);
-  const mobileNavRef = ref(null);
-  const mobileNavHeight = ref(0);
-  let barResizeObserver = null;
-  let mobileNavResizeObserver = null;
-  let setupObserverTimeout = null;
-
-  function getAppHeaderHeight() {
-    try {
-      const value = getComputedStyle(document.documentElement).getPropertyValue(
-        '--app-header-height',
-      );
-      return parseFloat(value) || 0;
-    } catch {
-      return 0;
-    }
-  }
-
-  // ── Improved Intersection Observer ──────────────────────────────────
-  function setupSectionObserver() {
-    const targets = sections.map((s) => document.getElementById(s.id)).filter(Boolean);
-
-    const appHeaderHeight = getAppHeaderHeight() || 0;
-    const barHeight = stickyBarHeight.value || 56;
-    const navHeight = mobileNavHeight.value || 0;
-    const stickyOffset = appHeaderHeight + barHeight + navHeight + 20;
-
-    if (sectionObserver) {
-      sectionObserver.disconnect();
-    }
-
-    sectionObserver = new IntersectionObserver(
-      (entries) => {
-        if (isScrolling || isManualScroll) return;
-
-        const visibleSections = entries
-          .filter((entry) => entry.isIntersecting)
-          .map((entry) => ({
-            id: entry.target.id,
-            ratio: entry.intersectionRatio,
-            boundingRect: entry.boundingRect,
-            isAtTop: entry.boundingRect.top <= stickyOffset + 50 && entry.boundingRect.top >= -50,
-          }))
-          .sort((a, b) => {
-            if (a.isAtTop && !b.isAtTop) return -1;
-            if (!a.isAtTop && b.isAtTop) return 1;
-            return b.ratio - a.ratio;
-          });
-
-        if (visibleSections.length === 0) return;
-
-        const bestSection = visibleSections[0];
-
-        if (bestSection.ratio > 0.15 || bestSection.isAtTop) {
-          if (sections.some((s) => s.id === bestSection.id)) {
-            activeSection.value = bestSection.id;
-          }
-        }
-      },
-      {
-        rootMargin: `-${Math.max(stickyOffset, 10)}px 0px -30% 0px`,
-        threshold: [0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0],
-      },
-    );
-
-    targets.forEach((t) => sectionObserver.observe(t));
-  }
-
-  onMounted(() => {
-    const barEl = stickyBarRef.value?.$el ?? stickyBarRef.value;
-    if (barEl) {
+    function getFileExt(url) {
       try {
-        stickyBarHeight.value = Math.round(barEl.getBoundingClientRect().height) || 56;
-        barResizeObserver = new ResizeObserver((entries) => {
-          if (entries[0]) {
-            stickyBarHeight.value = Math.round(entries[0].contentRect.height) || 56;
-            clearTimeout(setupObserverTimeout);
-            setupObserverTimeout = setTimeout(setupSectionObserver, 100);
-          }
-        });
-        barResizeObserver.observe(barEl);
-      } catch (e) {
-        console.warn('Error setting up bar resize observer:', e);
-        stickyBarHeight.value = 56;
+        const clean = url.split('?')[0];
+        return clean.substring(clean.lastIndexOf('.') + 1).toLowerCase();
+      } catch {
+        return '';
       }
     }
 
-    if (mobileNavRef.value) {
-      try {
-        mobileNavHeight.value = Math.round(mobileNavRef.value.getBoundingClientRect().height) || 0;
-        mobileNavResizeObserver = new ResizeObserver((entries) => {
-          if (entries[0]) {
-            mobileNavHeight.value = Math.round(entries[0].contentRect.height) || 0;
-            clearTimeout(setupObserverTimeout);
-            setupObserverTimeout = setTimeout(setupSectionObserver, 100);
-          }
-        });
-        mobileNavResizeObserver.observe(mobileNavRef.value);
-      } catch (e) {
-        console.warn('Error setting up mobile nav resize observer:', e);
-        mobileNavHeight.value = 0;
+    function viewAttachment(url, name) {
+      if (!url) {
+        $q.notify({ type: 'warning', message: 'This attachment is not available to preview.' });
+        return;
+      }
+      const ext = getFileExt(url);
+      let type = 'other';
+      if (ext === 'pdf') type = 'pdf';
+      else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext)) type = 'image';
+
+      viewerDialog.url = url;
+      viewerDialog.name = name || getFileNameFromPath(url);
+      viewerDialog.type = type;
+      viewerDialog.show = true;
+    }
+
+    function openInNewTab(url) {
+      if (!url) return;
+      window.open(url, '_blank', 'noopener');
+    }
+
+    // ── Options ──────────────────────────────────────────────────
+    const sexOptions = ['Male', 'Female'];
+    const civilStatusOptions = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled'];
+    const bloodTypeOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    const levelOptions = [
+      'Elementary',
+      'Secondary',
+      'Vocational / Trade Course',
+      'College',
+      'Graduate Studies',
+    ];
+    const appointmentOptions = ['Permanent', 'Temporary', 'Casual', 'Contractual', 'Co-terminus'];
+    const trainingTypeOptions = [
+      'Managerial',
+      'Supervisory',
+      'Technical',
+      'Foundation',
+      'Orientation',
+    ];
+    const yesNoOptions = ['Yes', 'No'];
+
+    const genderReferenceOptions = [
+      { label: 'Female', value: 'Female' },
+      { label: 'Male', value: 'Male' },
+      { label: 'Lesbian', value: 'Lesbian' },
+      { label: 'Gay', value: 'Gay' },
+      { label: 'Bisexual', value: 'Bisexual' },
+      { label: 'Transgender', value: 'Transgender' },
+      { label: 'Transgender Woman', value: 'Transgender Woman' },
+      { label: 'Transgender Man', value: 'Transgender Man' },
+      { label: 'Non-binary', value: 'Non-binary' },
+      { label: 'Gender Fluid', value: 'Gender Fluid' },
+      { label: 'Queer', value: 'Queer' },
+      { label: 'Intersex', value: 'Intersex' },
+      { label: 'Prefer not to say', value: 'Prefer not to say' },
+      { label: 'Other', value: 'Other' },
+    ];
+
+    const ethnicGroupOptions = [
+      { label: 'Maguindanao', value: 'Maguindanao' },
+      { label: 'Maranao', value: 'Maranao' },
+      { label: 'Tausug', value: 'Tausug' },
+      { label: 'Yakan', value: 'Yakan' },
+      { label: 'Sama', value: 'Sama' },
+      { label: 'Badjao', value: 'Badjao' },
+      { label: 'Subanen', value: 'Subanen' },
+      { label: 'Manobo', value: 'Manobo' },
+      { label: 'Bagobo', value: 'Bagobo' },
+      { label: 'Bukidnon', value: 'Bukidnon' },
+      { label: 'Higaonon', value: 'Higaonon' },
+      { label: 'Bilaan', value: 'Bilaan' },
+      { label: 'Tboli', value: 'Tboli' },
+      { label: 'Tiruray', value: 'Tiruray' },
+      { label: 'Kalagan', value: 'Kalagan' },
+      { label: 'Mansaka', value: 'Mansaka' },
+      { label: 'Mandaya', value: 'Mandaya' },
+      { label: 'Lumad', value: 'Lumad' },
+      { label: 'Moro', value: 'Moro' },
+      { label: 'Bisaya', value: 'Bisaya' },
+      { label: 'Cebuano', value: 'Cebuano' },
+      { label: 'Hiligaynon', value: 'Hiligaynon' },
+      { label: 'Waray', value: 'Waray' },
+      { label: 'Ilonggo', value: 'Ilonggo' },
+      { label: 'Aklanon', value: 'Aklanon' },
+      { label: 'Capiznon', value: 'Capiznon' },
+      { label: 'Surigaonon', value: 'Surigaonon' },
+      { label: 'Kinaray-a', value: 'Kinaray-a' },
+      { label: 'Romblomanon', value: 'Romblomanon' },
+      { label: 'Masbateño', value: 'Masbateño' },
+      { label: 'Boholano', value: 'Boholano' },
+      { label: 'Porohanon', value: 'Porohanon' },
+      { label: 'Cuyonon', value: 'Cuyonon' },
+      { label: 'Tagalog', value: 'Tagalog' },
+      { label: 'Ilocano', value: 'Ilocano' },
+      { label: 'Bicolano', value: 'Bicolano' },
+      { label: 'Kapampangan', value: 'Kapampangan' },
+      { label: 'Pangasinense', value: 'Pangasinense' },
+      { label: 'Ivatan', value: 'Ivatan' },
+      { label: 'Ibanag', value: 'Ibanag' },
+      { label: 'Gaddang', value: 'Gaddang' },
+      { label: 'Sambal', value: 'Sambal' },
+      { label: 'Chinese Filipino', value: 'Chinese Filipino' },
+      { label: 'Spanish Filipino', value: 'Spanish Filipino' },
+      { label: 'Mixed Race', value: 'Mixed Race' },
+      { label: 'Prefer not to say', value: 'Prefer not to say' },
+      { label: 'Other', value: 'Other' },
+    ];
+
+    const pwdOptions = [
+      'Psychosocial Disability',
+      'Disability caused by chronic illness',
+      'Learning Disability',
+      'Mental Disability',
+      'Visual Disability',
+      'Orthopedic Disability',
+      'Communication Disability',
+    ];
+
+    // ── Side navigation ──────────────────────────────────────────
+    const sections = [
+      { id: 'section-photo', label: 'Photo & Name', icon: 'photo_camera' },
+      { id: 'section-personal', label: 'Personal Information', icon: 'person' },
+      { id: 'section-upload-pds', label: 'Upload PDS', icon: 'description' },
+      { id: 'section-family', label: 'Family Background', icon: 'family_restroom' },
+      { id: 'section-education', label: 'Educational Background', icon: 'school' },
+      { id: 'section-eligibility', label: 'Civil Service Eligibility', icon: 'verified' },
+      { id: 'section-work', label: 'Work Experience', icon: 'work' },
+      { id: 'section-voluntary', label: 'Voluntary Work', icon: 'volunteer_activism' },
+      { id: 'section-training', label: 'L&D Interventions', icon: 'menu_book' },
+      { id: 'section-other', label: 'Other Information', icon: 'info' },
+      { id: 'section-references', label: 'References', icon: 'contacts' },
+      { id: 'section-declarations', label: 'Declarations', icon: 'fact_check' },
+      { id: 'section-other-documents', label: 'Other Documents', icon: 'folder' },
+    ];
+
+    const activeSection = ref('section-photo');
+    let sectionObserver = null;
+    let isScrolling = false;
+    let scrollTimeout = null;
+    let isManualScroll = false;
+
+    // ── Navigation Functions ──────────────────────────────────────
+    function goBack() {
+      if (window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/jobList');
       }
     }
 
-    nextTick(() => {
-      setupSectionObserver();
-      window.addEventListener('scroll', handleScrollEnd);
-    });
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
 
-    loadPDSData();
-  });
+      isManualScroll = true;
+      isScrolling = true;
+      activeSection.value = id;
 
-  function handleScrollEnd() {
-    if (isScrolling || isManualScroll) return;
+      const appHeaderHeight = getAppHeaderHeight();
+      const offset = appHeaderHeight + stickyBarHeight.value + mobileNavHeight.value + 20;
+      const elementPosition = el.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - offset;
 
-    try {
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      });
 
-      if (scrollY + windowHeight >= documentHeight - 100) {
-        const lastSection = sections[sections.length - 1];
-        if (lastSection) {
-          activeSection.value = lastSection.id;
-        }
-      }
-    } catch {
-      // Ignore scroll errors
-    }
-  }
-
-  onUnmounted(() => {
-    try {
-      barResizeObserver?.disconnect();
-      mobileNavResizeObserver?.disconnect();
-      sectionObserver?.disconnect();
-      window.removeEventListener('scroll', handleScrollEnd);
       clearTimeout(scrollTimeout);
-      clearTimeout(setupObserverTimeout);
-    } catch {
-      // Ignore cleanup errors
+      scrollTimeout = setTimeout(() => {
+        isScrolling = false;
+        isManualScroll = false;
+      }, 800);
     }
-  });
 
-  // ── Keep the active chip centered ──────────────────────────────────
-  const mobileNavScrollRef = ref(null);
-  const chipRefs = {};
+    // ── Sticky bar offset ────────────────────────────────────────────
+    const stickyBarRef = ref(null);
+    const stickyBarHeight = ref(56);
+    const mobileNavRef = ref(null);
+    const mobileNavHeight = ref(0);
+    let barResizeObserver = null;
+    let mobileNavResizeObserver = null;
+    let setupObserverTimeout = null;
 
-  function setChipRef(id, el) {
-    if (el) chipRefs[id] = el;
-    else delete chipRefs[id];
-  }
-
-  function centerActiveChip(id) {
-    try {
-      const container = mobileNavScrollRef.value;
-      const chipEl = chipRefs[id]?.$el ?? chipRefs[id];
-      if (!container || !chipEl) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const chipRect = chipEl.getBoundingClientRect();
-      const delta =
-        chipRect.left + chipRect.width / 2 - (containerRect.left + containerRect.width / 2);
-      container.scrollBy({ left: delta, behavior: 'smooth' });
-    } catch {
-      // Ignore centering errors
-    }
-  }
-
-  watch(activeSection, (id) => {
-    nextTick(() => centerActiveChip(id));
-  });
-
-  // ── Form State ──────────────────────────────────────────────
-  const form = reactive({
-    personal: {
-      firstname: '',
-      lastname: '',
-      middlename: '',
-      name_extension: '',
-      date_of_birth: '',
-      place_of_birth: '',
-      sex: '',
-      civil_status: '',
-      blood_type: '',
-      height: '',
-      weight: '',
-      cellphone_number: '',
-      telephone_number: '',
-      email_address: '',
-      citizenship: '',
-      religion: '',
-      gender_reference: '',
-      gender_other: '',
-      ethnic_group: '',
-      ethnic_other: '',
-      gsis_no: '',
-      pagibig_no: '',
-      philhealth_no: '',
-      sss_no: '',
-      tin_no: '',
-      agency_employee_no: '',
-    },
-    residential: {
-      house: '',
-      street: '',
-      subdivision: '',
-      barangay: '',
-      city: '',
-      province: '',
-      region: '',
-      zip: '',
-    },
-    permanent: {
-      house: '',
-      street: '',
-      subdivision: '',
-      barangay: '',
-      city: '',
-      province: '',
-      region: '',
-      zip: '',
-    },
-    family: {
-      spouse_firstname: '',
-      spouse_name: '',
-      spouse_middlename: '',
-      spouse_occupation: '',
-      spouse_employer: '',
-      spouse_employer_address: '',
-      spouse_employer_telephone: '',
-      father_firstname: '',
-      father_lastname: '',
-      father_middlename: '',
-      mother_firstname: '',
-      mother_lastname: '',
-      mother_middlename: '',
-    },
-    children: [],
-    education: [],
-    eligibility: [],
-    workExperience: [],
-    voluntaryWork: [],
-    training: [],
-    skills: [],
-    distinctions: [],
-    memberships: [],
-    references: [],
-    otherDocuments: [],
-    pdsFile: null,
-  });
-
-  // ── Personal Background Questionnaire ──────────────────────────
-  const formData = reactive({
-    relationThirdDegree: 'No',
-    relationFourthDegree: 'No',
-    relationDetails: '',
-    administrativeOffense: 'No',
-    administrativeOffenseDetails: '',
-    criminallyCharged: 'No',
-    criminalCaseDateFiled: '',
-    criminalCaseStatus: '',
-    convicted: 'No',
-    convictedDetails: '',
-    separatedFromService: 'No',
-    separatedFromServiceDetails: '',
-    electionCandidate: 'No',
-    electionCandidateDetails: '',
-    resignedForCampaign: 'No',
-    resignedForCampaignDetails: '',
-    immigrant: 'No',
-    immigrantDetails: '',
-    indigenous: 'No',
-    indigenousDetails: '',
-    pwd: 'No',
-    pwdTypes: [],
-    soloParent: 'No',
-    soloParentDetails: '',
-  });
-
-  // ── Same as residential toggle ──────────────────────────────────
-  const sameAsResidential = ref(false);
-  function onSameAddressToggle(val) {
-    if (val) {
+    function getAppHeaderHeight() {
       try {
-        Object.assign(form.permanent, { ...form.residential });
+        const value = getComputedStyle(document.documentElement).getPropertyValue(
+          '--app-header-height',
+        );
+        return parseFloat(value) || 0;
       } catch {
-        // Ignore
+        return 0;
       }
     }
-  }
 
-  watch(
-    () => {
-      try {
-        return { ...form.residential };
-      } catch {
-        return {};
+    // ── Improved Intersection Observer ──────────────────────────────────
+    function setupSectionObserver() {
+      const targets = sections.map((s) => document.getElementById(s.id)).filter(Boolean);
+
+      const appHeaderHeight = getAppHeaderHeight() || 0;
+      const barHeight = stickyBarHeight.value || 56;
+      const navHeight = mobileNavHeight.value || 0;
+      const stickyOffset = appHeaderHeight + barHeight + navHeight + 20;
+
+      if (sectionObserver) {
+        sectionObserver.disconnect();
       }
-    },
-    (val) => {
-      if (sameAsResidential.value) {
+
+      sectionObserver = new IntersectionObserver(
+        (entries) => {
+          if (isScrolling || isManualScroll) return;
+
+          const visibleSections = entries
+            .filter((entry) => entry.isIntersecting)
+            .map((entry) => ({
+              id: entry.target.id,
+              ratio: entry.intersectionRatio,
+              boundingRect: entry.boundingRect,
+              isAtTop: entry.boundingRect.top <= stickyOffset + 50 && entry.boundingRect.top >= -50,
+            }))
+            .sort((a, b) => {
+              if (a.isAtTop && !b.isAtTop) return -1;
+              if (!a.isAtTop && b.isAtTop) return 1;
+              return b.ratio - a.ratio;
+            });
+
+          if (visibleSections.length === 0) return;
+
+          const bestSection = visibleSections[0];
+
+          if (bestSection.ratio > 0.15 || bestSection.isAtTop) {
+            if (sections.some((s) => s.id === bestSection.id)) {
+              activeSection.value = bestSection.id;
+            }
+          }
+        },
+        {
+          rootMargin: `-${Math.max(stickyOffset, 10)}px 0px -30% 0px`,
+          threshold: [0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0],
+        },
+      );
+
+      targets.forEach((t) => sectionObserver.observe(t));
+    }
+
+    onMounted(() => {
+      const barEl = stickyBarRef.value?.$el ?? stickyBarRef.value;
+      if (barEl) {
         try {
-          Object.assign(form.permanent, val);
+          stickyBarHeight.value = Math.round(barEl.getBoundingClientRect().height) || 56;
+          barResizeObserver = new ResizeObserver((entries) => {
+            if (entries[0]) {
+              stickyBarHeight.value = Math.round(entries[0].contentRect.height) || 56;
+              clearTimeout(setupObserverTimeout);
+              setupObserverTimeout = setTimeout(setupSectionObserver, 100);
+            }
+          });
+          barResizeObserver.observe(barEl);
+        } catch (e) {
+          console.warn('Error setting up bar resize observer:', e);
+          stickyBarHeight.value = 56;
+        }
+      }
+
+      if (mobileNavRef.value) {
+        try {
+          mobileNavHeight.value = Math.round(mobileNavRef.value.getBoundingClientRect().height) || 0;
+          mobileNavResizeObserver = new ResizeObserver((entries) => {
+            if (entries[0]) {
+              mobileNavHeight.value = Math.round(entries[0].contentRect.height) || 0;
+              clearTimeout(setupObserverTimeout);
+              setupObserverTimeout = setTimeout(setupSectionObserver, 100);
+            }
+          });
+          mobileNavResizeObserver.observe(mobileNavRef.value);
+        } catch (e) {
+          console.warn('Error setting up mobile nav resize observer:', e);
+          mobileNavHeight.value = 0;
+        }
+      }
+
+      nextTick(() => {
+        setupSectionObserver();
+        window.addEventListener('scroll', handleScrollEnd);
+      });
+
+      loadPDSData();
+    });
+
+    function handleScrollEnd() {
+      if (isScrolling || isManualScroll) return;
+
+      try {
+        const scrollY = window.scrollY;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+
+        if (scrollY + windowHeight >= documentHeight - 100) {
+          const lastSection = sections[sections.length - 1];
+          if (lastSection) {
+            activeSection.value = lastSection.id;
+          }
+        }
+      } catch {
+        // Ignore scroll errors
+      }
+    }
+
+    onUnmounted(() => {
+      try {
+        barResizeObserver?.disconnect();
+        mobileNavResizeObserver?.disconnect();
+        sectionObserver?.disconnect();
+        window.removeEventListener('scroll', handleScrollEnd);
+        clearTimeout(scrollTimeout);
+        clearTimeout(setupObserverTimeout);
+      } catch {
+        // Ignore cleanup errors
+      }
+    });
+
+    // ── Keep the active chip centered ──────────────────────────────────
+    const mobileNavScrollRef = ref(null);
+    const chipRefs = {};
+
+    function setChipRef(id, el) {
+      if (el) chipRefs[id] = el;
+      else delete chipRefs[id];
+    }
+
+    function centerActiveChip(id) {
+      try {
+        const container = mobileNavScrollRef.value;
+        const chipEl = chipRefs[id]?.$el ?? chipRefs[id];
+        if (!container || !chipEl) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const chipRect = chipEl.getBoundingClientRect();
+        const delta =
+          chipRect.left + chipRect.width / 2 - (containerRect.left + containerRect.width / 2);
+        container.scrollBy({ left: delta, behavior: 'smooth' });
+      } catch {
+        // Ignore centering errors
+      }
+    }
+
+    watch(activeSection, (id) => {
+      nextTick(() => centerActiveChip(id));
+    });
+
+    // ── Form State ──────────────────────────────────────────────
+    const form = reactive({
+      personal: {
+        firstname: '',
+        lastname: '',
+        middlename: '',
+        name_extension: '',
+        date_of_birth: '',
+        place_of_birth: '',
+        sex: '',
+        civil_status: '',
+        blood_type: '',
+        height: '',
+        weight: '',
+        cellphone_number: '',
+        telephone_number: '',
+        email_address: '',
+        citizenship: '',
+        religion: '',
+        gender_reference: '',
+        gender_other: '',
+        ethnic_group: '',
+        ethnic_other: '',
+        gsis_no: '',
+        pagibig_no: '',
+        philhealth_no: '',
+        sss_no: '',
+        tin_no: '',
+        agency_employee_no: '',
+      },
+      residential: {
+        house: '',
+        street: '',
+        subdivision: '',
+        barangay: '',
+        city: '',
+        province: '',
+        region: '',
+        zip: '',
+      },
+      permanent: {
+        house: '',
+        street: '',
+        subdivision: '',
+        barangay: '',
+        city: '',
+        province: '',
+        region: '',
+        zip: '',
+      },
+      family: {
+        spouse_firstname: '',
+        spouse_name: '',
+        spouse_middlename: '',
+        spouse_occupation: '',
+        spouse_employer: '',
+        spouse_employer_address: '',
+        spouse_employer_telephone: '',
+        father_firstname: '',
+        father_lastname: '',
+        father_middlename: '',
+        mother_firstname: '',
+        mother_lastname: '',
+        mother_middlename: '',
+      },
+      children: [],
+      education: [],
+      eligibility: [],
+      workExperience: [],
+      voluntaryWork: [],
+      training: [],
+      skills: [],
+      distinctions: [],
+      memberships: [],
+      references: [],
+      otherDocuments: [],
+      pdsFile: null,
+    });
+
+    // ── Personal Background Questionnaire ──────────────────────────
+    const formData = reactive({
+      relationThirdDegree: 'No',
+      relationFourthDegree: 'No',
+      relationDetails: '',
+      administrativeOffense: 'No',
+      administrativeOffenseDetails: '',
+      criminallyCharged: 'No',
+      criminalCaseDateFiled: '',
+      criminalCaseStatus: '',
+      convicted: 'No',
+      convictedDetails: '',
+      separatedFromService: 'No',
+      separatedFromServiceDetails: '',
+      electionCandidate: 'No',
+      electionCandidateDetails: '',
+      resignedForCampaign: 'No',
+      resignedForCampaignDetails: '',
+      immigrant: 'No',
+      immigrantDetails: '',
+      indigenous: 'No',
+      indigenousDetails: '',
+      pwd: 'No',
+      pwdTypes: [],
+      soloParent: 'No',
+      soloParentDetails: '',
+    });
+
+    // ── Same as residential toggle ──────────────────────────────────
+    const sameAsResidential = ref(false);
+    function onSameAddressToggle(val) {
+      if (val) {
+        try {
+          Object.assign(form.permanent, { ...form.residential });
         } catch {
           // Ignore
         }
       }
-    },
-  );
-
-  // ── Photo upload ──────────────────────────────────────────────
-  const fileInputRef = ref(null);
-  const photoFile = ref(null);
-  const photoPreview = ref('');
-
-  function triggerFileSelect() {
-    fileInputRef.value?.click();
-  }
-
-  function onPhotoSelected(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      $q.notify({ type: 'negative', message: 'Please select an image file.' });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      $q.notify({ type: 'negative', message: 'Image must be smaller than 5MB.' });
-      return;
     }
 
-    if (photoPreview.value?.startsWith('blob:')) {
-      try {
-        URL.revokeObjectURL(photoPreview.value);
-      } catch {
-        // Ignore
+    watch(
+      () => {
+        try {
+          return { ...form.residential };
+        } catch {
+          return {};
+        }
+      },
+      (val) => {
+        if (sameAsResidential.value) {
+          try {
+            Object.assign(form.permanent, val);
+          } catch {
+            // Ignore
+          }
+        }
+      },
+    );
+
+    // ── Photo upload ──────────────────────────────────────────────
+    const fileInputRef = ref(null);
+    const photoFile = ref(null);
+    const photoPreview = ref('');
+
+    function triggerFileSelect() {
+      fileInputRef.value?.click();
+    }
+
+    function onPhotoSelected(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        $q.notify({ type: 'negative', message: 'Please select an image file.' });
+        return;
       }
-    }
-    photoFile.value = file;
-    photoPreview.value = URL.createObjectURL(file);
-    photoChanged.value = true;
-  }
-
-  onUnmounted(() => {
-    if (photoPreview.value?.startsWith('blob:')) {
-      try {
-        URL.revokeObjectURL(photoPreview.value);
-      } catch {
-        // Ignore
-      }
-    }
-  });
-
-  // ── WES Download ──────────────────────────────────────────────────
-  const workExperienceDocxUrl = '/CS Form No. 212 Attachment - Work Experience Sheet.docx';
-
-  function downloadWES() {
-    try {
-      const a = document.createElement('a');
-      a.href = workExperienceDocxUrl;
-      a.download = 'CS Form No. 212 Attachment - Work Experience Sheet.docx';
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      $q.notify({
-        type: 'positive',
-        message: 'Downloading Work Experience Sheet template...',
-      });
-    } catch {
-      $q.notify({
-        type: 'negative',
-        message: 'Failed to download WES template.',
-      });
-    }
-  }
-
-  // ── Dynamic row helpers ──────────────────────────────────────────
-  function addChild() {
-    form.children.push({ child_name: '', birth_date: '' });
-  }
-  function removeChild(idx) {
-    form.children.splice(idx, 1);
-  }
-
-  function addEducation() {
-    form.education.push({
-      level: '',
-      school_name: '',
-      degree: '',
-      attendance_from: '',
-      attendance_to: '',
-      highest_units: '',
-      year_graduated: '',
-      scholarship: '',
-      graduated: '',
-      file: null,
-      existingAttachment: null,
-      existingAttachmentUrl: null,
-      replaceFile: false,
-    });
-  }
-
-  function addEligibility() {
-    form.eligibility.push({
-      eligibility: '',
-      rating: '',
-      date_of_examination: '',
-      place_of_examination: '',
-      license_number: '',
-      date_of_validity: '',
-      file: null,
-      existingAttachment: null,
-      existingAttachmentUrl: null,
-      replaceFile: false,
-    });
-  }
-
-  function addWork() {
-    form.workExperience.push({
-      work_date_from: '',
-      work_date_to: '',
-      position_title: '',
-      department: '',
-      monthly_salary: '',
-      salary_grade: '',
-      status_of_appointment: '',
-      government_service: '',
-      currently_working: false,
-      file: null,
-      existingAttachment: null,
-      existingAttachmentUrl: null,
-      replaceFile: false,
-    });
-  }
-
-  function addVoluntary() {
-    form.voluntaryWork.push({
-      organization_name: '',
-      inclusive_date_from: '',
-      inclusive_date_to: '',
-      number_of_hours: '',
-      position: '',
-    });
-  }
-
-  function addTraining() {
-    form.training.push({
-      training_title: '',
-      inclusive_date_from: '',
-      inclusive_date_to: '',
-      number_of_hours: '',
-      type: '',
-      conducted_by: '',
-      file: null,
-      existingAttachment: null,
-      existingAttachmentUrl: null,
-      replaceFile: false,
-    });
-  }
-
-  function addSkill() {
-    form.skills.push({ skill: '' });
-  }
-
-  function addDistinction() {
-    form.distinctions.push({ non_academic: '' });
-  }
-
-  function addMembership() {
-    form.memberships.push({
-      organization: '',
-      position: '',
-      inclusive_date_from: '',
-      inclusive_date_to: '',
-    });
-  }
-
-  function addReference() {
-    form.references.push({ full_name: '', address: '', contact_number: '' });
-  }
-
-  function addOtherDocument() {
-    form.otherDocuments.push({
-      document_name: '',
-      file: null,
-    });
-  }
-
-  function removeRow(section, idx) {
-    try {
-      form[section].splice(idx, 1);
-    } catch {
-      // Ignore
-    }
-  }
-
-  // ── Load PDS Data ──────────────────────────────────────────────────
-  async function loadPDSData() {
-    isLoading.value = true;
-    try {
-      const email = localStorage.getItem('userEmail');
-      if (!email) {
-        $q.notify({
-          type: 'warning',
-          message: 'No email found. Please login again.',
-          position: 'top',
-        });
+      if (file.size > 5 * 1024 * 1024) {
+        $q.notify({ type: 'negative', message: 'Image must be smaller than 5MB.' });
         return;
       }
 
-      form.personal.email_address = email;
+      if (photoPreview.value?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(photoPreview.value);
+        } catch {
+          // Ignore
+        }
+      }
+      photoFile.value = file;
+      photoPreview.value = URL.createObjectURL(file);
+      photoChanged.value = true;
+    }
 
-      const result = await pdsStore.fetchPDS(email);
+    onUnmounted(() => {
+      if (photoPreview.value?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(photoPreview.value);
+        } catch {
+          // Ignore
+        }
+      }
+    });
 
-      if (result.success && result.data) {
-        hasExistingPDS.value = true;
-        populateFormWithData(result.data);
+    // ── WES Download ──────────────────────────────────────────────────
+    const workExperienceDocxUrl = '/CS Form No. 212 Attachment - Work Experience Sheet.docx';
+
+    function downloadWES() {
+      try {
+        const a = document.createElement('a');
+        a.href = workExperienceDocxUrl;
+        a.download = 'CS Form No. 212 Attachment - Work Experience Sheet.docx';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
         $q.notify({
           type: 'positive',
-          message: 'PDS data loaded successfully. You can update your information.',
-          position: 'top',
-          timeout: 3000,
+          message: 'Downloading Work Experience Sheet template...',
         });
-      } else {
+      } catch {
+        $q.notify({
+          type: 'negative',
+          message: 'Failed to download WES template.',
+        });
+      }
+    }
+
+    // ── Dynamic row helpers ──────────────────────────────────────────
+    function addChild() {
+      form.children.push({ child_name: '', birth_date: '' });
+    }
+    function removeChild(idx) {
+      form.children.splice(idx, 1);
+    }
+
+    function addEducation() {
+      form.education.push({
+        level: '',
+        school_name: '',
+        degree: '',
+        attendance_from: '',
+        attendance_to: '',
+        highest_units: '',
+        year_graduated: '',
+        scholarship: '',
+        graduated: '',
+        file: null,
+        existingAttachment: null,
+        existingAttachmentUrl: null,
+        replaceFile: false,
+      });
+    }
+
+    function addEligibility() {
+      form.eligibility.push({
+        eligibility: '',
+        rating: '',
+        date_of_examination: '',
+        place_of_examination: '',
+        license_number: '',
+        date_of_validity: '',
+        file: null,
+        existingAttachment: null,
+        existingAttachmentUrl: null,
+        replaceFile: false,
+      });
+    }
+
+    function addWork() {
+      form.workExperience.push({
+        work_date_from: '',
+        work_date_to: '',
+        position_title: '',
+        department: '',
+        monthly_salary: '',
+        salary_grade: '',
+        status_of_appointment: '',
+        government_service: '',
+        currently_working: false,
+        file: null,
+        existingAttachment: null,
+        existingAttachmentUrl: null,
+        replaceFile: false,
+      });
+    }
+
+    function addVoluntary() {
+      form.voluntaryWork.push({
+        organization_name: '',
+        inclusive_date_from: '',
+        inclusive_date_to: '',
+        number_of_hours: '',
+        position: '',
+      });
+    }
+
+    function addTraining() {
+      form.training.push({
+        training_title: '',
+        inclusive_date_from: '',
+        inclusive_date_to: '',
+        number_of_hours: '',
+        type: '',
+        conducted_by: '',
+        file: null,
+        existingAttachment: null,
+        existingAttachmentUrl: null,
+        replaceFile: false,
+      });
+    }
+
+    function addSkill() {
+      form.skills.push({ skill: '' });
+    }
+
+    function addDistinction() {
+      form.distinctions.push({ non_academic: '' });
+    }
+
+    function addMembership() {
+      form.memberships.push({
+        organization: '',
+        position: '',
+        inclusive_date_from: '',
+        inclusive_date_to: '',
+      });
+    }
+
+    function addReference() {
+      form.references.push({ full_name: '', address: '', contact_number: '' });
+    }
+
+    function addOtherDocument() {
+      form.otherDocuments.push({
+        document_name: '',
+        file: null,
+      });
+    }
+
+    function removeRow(section, idx) {
+      try {
+        form[section].splice(idx, 1);
+      } catch {
+        // Ignore
+      }
+    }
+
+    // ── Load PDS Data ──────────────────────────────────────────────────
+    async function loadPDSData() {
+      isLoading.value = true;
+      try {
+        const email = localStorage.getItem('userEmail');
+        if (!email) {
+          $q.notify({
+            type: 'warning',
+            message: 'No email found. Please login again.',
+            position: 'top',
+          });
+          return;
+        }
+
+        form.personal.email_address = email;
+
+        const result = await pdsStore.fetchPDS(email);
+
+        if (result.success && result.data) {
+          hasExistingPDS.value = true;
+          populateFormWithData(result.data);
+          $q.notify({
+            type: 'positive',
+            message: 'PDS data loaded successfully. You can update your information.',
+            position: 'top',
+            timeout: 3000,
+          });
+        } else {
+          hasExistingPDS.value = false;
+          $q.notify({
+            type: 'info',
+            message: 'No existing PDS found. Please fill out the form.',
+            position: 'top',
+            timeout: 3000,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading PDS:', error);
         hasExistingPDS.value = false;
         $q.notify({
-          type: 'info',
-          message: 'No existing PDS found. Please fill out the form.',
+          type: 'negative',
+          message: 'Error loading PDS data. Please refresh and try again.',
           position: 'top',
-          timeout: 3000,
         });
+      } finally {
+        isLoading.value = false;
       }
-    } catch (error) {
-      console.error('Error loading PDS:', error);
-      hasExistingPDS.value = false;
-      $q.notify({
-        type: 'negative',
-        message: 'Error loading PDS data. Please refresh and try again.',
-        position: 'top',
+    }
+
+    // ── Populate Form with Data ──────────────────────────────────────
+    function populateFormWithData(data) {
+      try {
+        form.personal.firstname = data.firstname || '';
+        form.personal.lastname = data.lastname || '';
+        form.personal.middlename = data.middlename || '';
+        form.personal.name_extension = data.name_extension || '';
+        form.personal.date_of_birth = data.date_of_birth || '';
+        form.personal.place_of_birth = data.place_of_birth || '';
+        form.personal.sex = data.sex || '';
+        form.personal.civil_status = data.civil_status || '';
+        form.personal.blood_type = data.blood_type || '';
+        form.personal.height = data.height || '';
+        form.personal.weight = data.weight || '';
+        form.personal.cellphone_number = data.cellphone_number || '';
+        form.personal.telephone_number = data.telephone_number || '';
+        form.personal.email_address = data.email_address || '';
+        form.personal.citizenship = data.citizenship || '';
+        form.personal.religion = data.religion || '';
+        form.personal.gender_reference = data.gender_prefer || '';
+        form.personal.gender_other = data.other_specify || '';
+        form.personal.ethnic_group = data.ethnic_group || '';
+        form.personal.ethnic_other = data.ethnic_specify || '';
+        form.personal.gsis_no = data.gsis_no || '';
+        form.personal.pagibig_no = data.pagibig_no || '';
+        form.personal.philhealth_no = data.philhealth_no || '';
+        form.personal.sss_no = data.sss_no || '';
+        form.personal.tin_no = data.tin_no || '';
+        form.personal.agency_employee_no = data.agency_employee_no || '';
+
+        form.residential.house = data.residential_house || '';
+        form.residential.street = data.Rpurok || data.residential_street || '';
+        form.residential.subdivision = data.residential_subdivision || '';
+        form.residential.barangay = data.residential_barangay || '';
+        form.residential.city = data.residential_city || '';
+        form.residential.province = data.residential_province || '';
+        form.residential.region = data.residential_region || '';
+        form.residential.zip = data.residential_zip || '';
+
+        form.permanent.house = data.permanent_house || '';
+        form.permanent.street = data.Ppurok || data.permanent_street || '';
+        form.permanent.subdivision = data.permanent_subdivision || '';
+        form.permanent.barangay = data.permanent_barangay || '';
+        form.permanent.city = data.permanent_city || '';
+        form.permanent.province = data.permanent_province || '';
+        form.permanent.region = data.permanent_region || '';
+        form.permanent.zip = data.permanent_zip || '';
+
+        if (data.family) {
+          form.family.spouse_firstname = data.family.spouse_firstname || '';
+          form.family.spouse_name = data.family.spouse_name || '';
+          form.family.spouse_middlename = data.family.spouse_middlename || '';
+          form.family.spouse_occupation = data.family.spouse_occupation || '';
+          form.family.spouse_employer = data.family.spouse_employer || '';
+          form.family.spouse_employer_address = data.family.spouse_employer_address || '';
+          form.family.spouse_employer_telephone = data.family.spouse_employer_telephone || '';
+          form.family.father_firstname = data.family.father_firstname || '';
+          form.family.father_lastname = data.family.father_lastname || '';
+          form.family.father_middlename = data.family.father_middlename || '';
+          form.family.mother_firstname = data.family.mother_firstname || '';
+          form.family.mother_lastname = data.family.mother_lastname || '';
+          form.family.mother_middlename = data.family.mother_middlename || '';
+        }
+
+        if (data.children && data.children.length > 0) {
+          form.children = data.children.map((child) => ({
+            child_name: child.child_name || '',
+            birth_date: child.birth_date || '',
+          }));
+        }
+
+        if (data.education && data.education.length > 0) {
+          form.education = data.education.map((edu) => ({
+            level: edu.level || '',
+            school_name: edu.school_name || '',
+            degree: edu.degree || '',
+            attendance_from: edu.attendance_from || '',
+            attendance_to: edu.attendance_to || '',
+            highest_units: edu.highest_units || '',
+            year_graduated: edu.year_graduated || '',
+            scholarship: edu.scholarship || '',
+            graduated: edu.graduated || '',
+            file: null,
+            existingAttachment: edu.attachment_path || null,
+            existingAttachmentUrl: edu.attachment_path ? buildViewUrl(edu.attachment_path) : null,
+            replaceFile: false,
+          }));
+        }
+
+        if (data.work_experience && data.work_experience.length > 0) {
+          form.workExperience = data.work_experience.map((work) => ({
+            work_date_from: work.work_date_from || '',
+            work_date_to: work.work_date_to || '',
+            position_title: work.position_title || '',
+            department: work.department || '',
+            monthly_salary: work.monthly_salary || '',
+            salary_grade: work.salary_grade || '',
+            status_of_appointment: work.status_of_appointment || '',
+            government_service: work.government_service || '',
+            currently_working: (work.work_date_to || '').toUpperCase() === 'PRESENT',
+            file: null,
+            existingAttachment: work.attachment_path || null,
+            existingAttachmentUrl: work.attachment_path ? buildViewUrl(work.attachment_path) : null,
+            replaceFile: false,
+          }));
+        }
+
+        if (data.training && data.training.length > 0) {
+          form.training = data.training.map((train) => ({
+            training_title: train.training_title || '',
+            inclusive_date_from: train.inclusive_date_from || '',
+            inclusive_date_to: train.inclusive_date_to || '',
+            number_of_hours: train.number_of_hours || '',
+            type: train.type || '',
+            conducted_by: train.conducted_by || '',
+            file: null,
+            existingAttachment: train.attachment_path || null,
+            existingAttachmentUrl: train.attachment_path ? buildViewUrl(train.attachment_path) : null,
+            replaceFile: false,
+          }));
+        }
+
+        if (data.eligibity && data.eligibity.length > 0) {
+          form.eligibility = data.eligibity.map((elig) => ({
+            eligibility: elig.eligibility || '',
+            rating: elig.rating || '',
+            date_of_examination: elig.date_of_examination || '',
+            place_of_examination: elig.place_of_examination || '',
+            license_number: elig.license_number || '',
+            date_of_validity: elig.date_of_validity || '',
+            file: null,
+            existingAttachment: elig.attachment_path || null,
+            existingAttachmentUrl: elig.attachment_path ? buildViewUrl(elig.attachment_path) : null,
+            replaceFile: false,
+          }));
+        }
+
+        // ── Fetch/populate previously uploaded files (PDS & Other Documents) ──
+        existingPdsFiles.value = (data.file?.pds_file || []).map((url) => ({
+          url,
+          path: stripStorageUrl(url),
+          name: getFileNameFromPath(url),
+        }));
+        replacePds.value = false;
+
+        existingOtherDocuments.value = (data.file?.other_document || []).map((url) => ({
+          url,
+          path: stripStorageUrl(url),
+          name: getFileNameFromPath(url),
+        }));
+
+        // Set photo from existing data
+        if (data.image_url) {
+          photoPreview.value = data.image_url;
+          photoFile.value = null;
+          photoChanged.value = false;
+        }
+
+        const residentialStr = `${form.residential.house}${form.residential.street}${form.residential.subdivision}${form.residential.barangay}${form.residential.city}${form.residential.province}${form.residential.zip}`;
+        const permanentStr = `${form.permanent.house}${form.permanent.street}${form.permanent.subdivision}${form.permanent.barangay}${form.permanent.city}${form.permanent.province}${form.permanent.zip}`;
+        sameAsResidential.value = residentialStr === permanentStr && residentialStr !== '';
+
+        if (data.personal_declarations && data.personal_declarations.length > 0) {
+          const dec = data.personal_declarations[0];
+          formData.relationThirdDegree = dec.question_34a || 'No';
+          formData.relationFourthDegree = dec.question_34b || 'No';
+          formData.relationDetails = dec.response_34 || '';
+          formData.administrativeOffense = dec.question_35a || 'No';
+          formData.administrativeOffenseDetails = dec.response_35a || '';
+          formData.criminallyCharged = dec.question_35b || 'No';
+          formData.criminalCaseDateFiled = dec.response_35b_date || '';
+          formData.criminalCaseStatus = dec.response_35b_status || '';
+          formData.convicted = dec.question_36 || 'No';
+          formData.convictedDetails = dec.response_36 || '';
+          formData.separatedFromService = dec.question_37 || 'No';
+          formData.separatedFromServiceDetails = dec.response_37 || '';
+          formData.electionCandidate = dec.question_38a || 'No';
+          formData.electionCandidateDetails = dec.response_38a || '';
+          formData.resignedForCampaign = dec.question_38b || 'No';
+          formData.resignedForCampaignDetails = dec.response_38b || '';
+          formData.immigrant = dec.question_39 || 'No';
+          formData.immigrantDetails = dec.response_39 || '';
+          formData.indigenous = dec.question_40a || 'No';
+          formData.indigenousDetails = dec.response_40a || '';
+          formData.pwd = dec.question_40b || 'No';
+
+          const pwdTypes = [];
+          if (dec.chronic === '1') pwdTypes.push('Disability caused by chronic illness');
+          if (dec.Psychosocial === '1') pwdTypes.push('Psychosocial Disability');
+          if (dec.Orthopedic === '1') pwdTypes.push('Orthopedic Disability');
+          if (dec.Communication === '1') pwdTypes.push('Communication Disability');
+          if (dec.Learning === '1') pwdTypes.push('Learning Disability');
+          if (dec.Mental === '1') pwdTypes.push('Mental Disability');
+          if (dec.Visual === '1') pwdTypes.push('Visual Disability');
+          formData.pwdTypes = pwdTypes;
+
+          formData.soloParent = dec.question_40c || 'No';
+          formData.soloParentDetails = dec.response_40c || '';
+        }
+      } catch (error) {
+        console.error('Error populating form with data:', error);
+      }
+    }
+
+    // ── Build Payload ──────────────────────────────────────────────────
+     async  function buildPayload() {
+      const payload = {
+        email_checker: form.personal.email_address,
+        job_batches_rsp_id: localStorage.getItem('selectedJobId') || '',
+        lastname: form.personal.lastname,
+        firstname: form.personal.firstname,
+        middlename: form.personal.middlename || '',
+        name_extension: form.personal.name_extension || '',
+        date_of_birth: form.personal.date_of_birth,
+        sex: form.personal.sex,
+        place_of_birth: form.personal.place_of_birth,
+        weight: form.personal.weight,
+        height: form.personal.height,
+        blood_type: form.personal.blood_type || '',
+        gsis_no: form.personal.gsis_no || '',
+        pagibig_no: form.personal.pagibig_no || '',
+        philhealth_no: form.personal.philhealth_no || '',
+        sss_no: form.personal.sss_no || '',
+        tin_no: form.personal.tin_no || '',
+        civil_status: form.personal.civil_status,
+        citizenship: form.personal.citizenship || 'Filipino',
+        citizenship_status: '',
+        residential_house: form.residential.house || '',
+        residential_street: form.residential.street || '',
+        residential_subdivision: form.residential.subdivision || '',
+        residential_barangay: form.residential.barangay || '',
+        residential_city: form.residential.city || '',
+        residential_province: form.residential.province || '',
+        residential_zip: form.residential.zip || '',
+        permanent_house: form.permanent.house || '',
+        permanent_street: form.permanent.street || '',
+        permanent_subdivision: form.permanent.subdivision || '',
+        permanent_barangay: form.permanent.barangay || '',
+        permanent_city: form.permanent.city || '',
+        permanent_province: form.permanent.province || '',
+        permanent_zip: form.permanent.zip || '',
+        telephone_number: form.personal.telephone_number || '',
+        cellphone_number: form.personal.cellphone_number || '',
+        email_address: form.personal.email_address,
+        agency_employee_no: form.personal.agency_employee_no || '',
+        umId: '',
+        philSys: '',
+        pwd: formData.pwd === 'Yes' ? 'Yes' : 'No',
+        gender_prefer: form.personal.gender_reference || '',
+        other_specify: form.personal.gender_other || '',
+        Ppurok: form.permanent.street || '',
+        Rpurok: form.residential.street || '',
+        ethnic_group: form.personal.ethnic_group || '',
+        ethnic_specify: form.personal.ethnic_other || '',
+        spouse_name: form.family.spouse_name || '',
+        spouse_firstname: form.family.spouse_firstname || '',
+        spouse_middlename: form.family.spouse_middlename || '',
+        spouse_extension: '',
+        spouse_occupation: form.family.spouse_occupation || '',
+        spouse_employer: form.family.spouse_employer || '',
+        spouse_employer_address: form.family.spouse_employer_address || '',
+        spouse_employer_telephone: form.family.spouse_employer_telephone || '',
+        father_lastname: form.family.father_lastname || '',
+        father_firstname: form.family.father_firstname || '',
+        father_middlename: form.family.father_middlename || '',
+        father_extension: '',
+        mother_lastname: form.family.mother_lastname || '',
+        mother_firstname: form.family.mother_firstname || '',
+        mother_middlename: form.family.mother_middlename || '',
+        mother_maidenname: '',
+      };
+
+       const pendingFileConversions = [];
+
+      // ── Children ──────────────────────────────────────────────
+      form.children.forEach((child, index) => {
+        payload[`children[${index}][child_name]`] = child.child_name || '';
+        payload[`children[${index}][birth_date]`] = child.birth_date || '';
       });
-    } finally {
-      isLoading.value = false;
+
+  // ── Education (School) ────────────────────────────────────
+  form.education.forEach((edu, index) => {
+    payload[`school[${index}][degree]`] = edu.degree || '';
+    payload[`school[${index}][attendance_from]`] = edu.attendance_from || '';
+    payload[`school[${index}][attendance_to]`] = edu.attendance_to || '';
+    payload[`school[${index}][highest_units]`] = edu.highest_units || '';
+    payload[`school[${index}][year_graduated]`] = edu.year_graduated || '';
+    payload[`school[${index}][scholarship]`] = edu.scholarship || '';
+    payload[`school[${index}][level]`] = edu.level || '';
+    payload[`school[${index}][school_name]`] = edu.school_name || '';
+
+    if (edu.file && edu.file.length > 0) {
+      const file = edu.file[0] || edu.file;
+      if (file instanceof File) {
+        payload[`school[${index}][attachment_path]`] = file;
+      }
+    } else if (edu.existingAttachment && !edu.replaceFile) {
+      pendingFileConversions.push({
+        key: `school[${index}][attachment_path]`,
+        url: buildCorsProxyUrl(edu.existingAttachmentUrl || edu.existingAttachment),
+        filename: getFileNameFromPath(edu.existingAttachment),
+      });
     }
-  }
+  }); // ← closing brace ng else-if, ng forEach callback, at ng .forEach() call
 
-  // ── Populate Form with Data ──────────────────────────────────────
-  function populateFormWithData(data) {
-    try {
-      form.personal.firstname = data.firstname || '';
-      form.personal.lastname = data.lastname || '';
-      form.personal.middlename = data.middlename || '';
-      form.personal.name_extension = data.name_extension || '';
-      form.personal.date_of_birth = data.date_of_birth || '';
-      form.personal.place_of_birth = data.place_of_birth || '';
-      form.personal.sex = data.sex || '';
-      form.personal.civil_status = data.civil_status || '';
-      form.personal.blood_type = data.blood_type || '';
-      form.personal.height = data.height || '';
-      form.personal.weight = data.weight || '';
-      form.personal.cellphone_number = data.cellphone_number || '';
-      form.personal.telephone_number = data.telephone_number || '';
-      form.personal.email_address = data.email_address || '';
-      form.personal.citizenship = data.citizenship || '';
-      form.personal.religion = data.religion || '';
-      form.personal.gender_reference = data.gender_prefer || '';
-      form.personal.gender_other = data.other_specify || '';
-      form.personal.ethnic_group = data.ethnic_group || '';
-      form.personal.ethnic_other = data.ethnic_specify || '';
-      form.personal.gsis_no = data.gsis_no || '';
-      form.personal.pagibig_no = data.pagibig_no || '';
-      form.personal.philhealth_no = data.philhealth_no || '';
-      form.personal.sss_no = data.sss_no || '';
-      form.personal.tin_no = data.tin_no || '';
-      form.personal.agency_employee_no = data.agency_employee_no || '';
+  // ── Training ──────────────────────────────────────────────
+  form.training.forEach((train, index) => {
+    payload[`training[${index}][training_title]`] = train.training_title || '';
+    payload[`training[${index}][inclusive_date_from]`] = train.inclusive_date_from || '';
+    payload[`training[${index}][inclusive_date_to]`] = train.inclusive_date_to || '';
+    payload[`training[${index}][number_of_hours]`] = train.number_of_hours || '';
+    payload[`training[${index}][type]`] = train.type || '';
+    payload[`training[${index}][conducted_by]`] = train.conducted_by || '';
 
-      form.residential.house = data.residential_house || '';
-      form.residential.street = data.Rpurok || data.residential_street || '';
-      form.residential.subdivision = data.residential_subdivision || '';
-      form.residential.barangay = data.residential_barangay || '';
-      form.residential.city = data.residential_city || '';
-      form.residential.province = data.residential_province || '';
-      form.residential.region = data.residential_region || '';
-      form.residential.zip = data.residential_zip || '';
-
-      form.permanent.house = data.permanent_house || '';
-      form.permanent.street = data.Ppurok || data.permanent_street || '';
-      form.permanent.subdivision = data.permanent_subdivision || '';
-      form.permanent.barangay = data.permanent_barangay || '';
-      form.permanent.city = data.permanent_city || '';
-      form.permanent.province = data.permanent_province || '';
-      form.permanent.region = data.permanent_region || '';
-      form.permanent.zip = data.permanent_zip || '';
-
-      if (data.family) {
-        form.family.spouse_firstname = data.family.spouse_firstname || '';
-        form.family.spouse_name = data.family.spouse_name || '';
-        form.family.spouse_middlename = data.family.spouse_middlename || '';
-        form.family.spouse_occupation = data.family.spouse_occupation || '';
-        form.family.spouse_employer = data.family.spouse_employer || '';
-        form.family.spouse_employer_address = data.family.spouse_employer_address || '';
-        form.family.spouse_employer_telephone = data.family.spouse_employer_telephone || '';
-        form.family.father_firstname = data.family.father_firstname || '';
-        form.family.father_lastname = data.family.father_lastname || '';
-        form.family.father_middlename = data.family.father_middlename || '';
-        form.family.mother_firstname = data.family.mother_firstname || '';
-        form.family.mother_lastname = data.family.mother_lastname || '';
-        form.family.mother_middlename = data.family.mother_middlename || '';
+    if (train.file && train.file.length > 0) {
+      const file = train.file[0] || train.file;
+      if (file instanceof File) {
+        payload[`training[${index}][attachment_path]`] = file;
       }
-
-      if (data.children && data.children.length > 0) {
-        form.children = data.children.map((child) => ({
-          child_name: child.child_name || '',
-          birth_date: child.birth_date || '',
-        }));
-      }
-
-      if (data.education && data.education.length > 0) {
-        form.education = data.education.map((edu) => ({
-          level: edu.level || '',
-          school_name: edu.school_name || '',
-          degree: edu.degree || '',
-          attendance_from: edu.attendance_from || '',
-          attendance_to: edu.attendance_to || '',
-          highest_units: edu.highest_units || '',
-          year_graduated: edu.year_graduated || '',
-          scholarship: edu.scholarship || '',
-          graduated: edu.graduated || '',
-          file: null,
-          existingAttachment: edu.attachment_path || null,
-          existingAttachmentUrl: edu.attachment_path ? buildViewUrl(edu.attachment_path) : null,
-          replaceFile: false,
-        }));
-      }
-
-      if (data.work_experience && data.work_experience.length > 0) {
-        form.workExperience = data.work_experience.map((work) => ({
-          work_date_from: work.work_date_from || '',
-          work_date_to: work.work_date_to || '',
-          position_title: work.position_title || '',
-          department: work.department || '',
-          monthly_salary: work.monthly_salary || '',
-          salary_grade: work.salary_grade || '',
-          status_of_appointment: work.status_of_appointment || '',
-          government_service: work.government_service || '',
-          currently_working: (work.work_date_to || '').toUpperCase() === 'PRESENT',
-          file: null,
-          existingAttachment: work.attachment_path || null,
-          existingAttachmentUrl: work.attachment_path ? buildViewUrl(work.attachment_path) : null,
-          replaceFile: false,
-        }));
-      }
-
-      if (data.training && data.training.length > 0) {
-        form.training = data.training.map((train) => ({
-          training_title: train.training_title || '',
-          inclusive_date_from: train.inclusive_date_from || '',
-          inclusive_date_to: train.inclusive_date_to || '',
-          number_of_hours: train.number_of_hours || '',
-          type: train.type || '',
-          conducted_by: train.conducted_by || '',
-          file: null,
-          existingAttachment: train.attachment_path || null,
-          existingAttachmentUrl: train.attachment_path ? buildViewUrl(train.attachment_path) : null,
-          replaceFile: false,
-        }));
-      }
-
-      if (data.eligibity && data.eligibity.length > 0) {
-        form.eligibility = data.eligibity.map((elig) => ({
-          eligibility: elig.eligibility || '',
-          rating: elig.rating || '',
-          date_of_examination: elig.date_of_examination || '',
-          place_of_examination: elig.place_of_examination || '',
-          license_number: elig.license_number || '',
-          date_of_validity: elig.date_of_validity || '',
-          file: null,
-          existingAttachment: elig.attachment_path || null,
-          existingAttachmentUrl: elig.attachment_path ? buildViewUrl(elig.attachment_path) : null,
-          replaceFile: false,
-        }));
-      }
-
-      // ── Fetch/populate previously uploaded files (PDS & Other Documents) ──
-      existingPdsFiles.value = (data.file?.pds_file || []).map((url) => ({
-        url,
-        path: stripStorageUrl(url),
-        name: getFileNameFromPath(url),
-      }));
-      replacePds.value = false;
-
-      existingOtherDocuments.value = (data.file?.other_document || []).map((url) => ({
-        url,
-        path: stripStorageUrl(url),
-        name: getFileNameFromPath(url),
-      }));
-
-      // Set photo from existing data
-      if (data.image_url) {
-        photoPreview.value = data.image_url;
-        photoFile.value = null;
-        photoChanged.value = false;
-      }
-
-      const residentialStr = `${form.residential.house}${form.residential.street}${form.residential.subdivision}${form.residential.barangay}${form.residential.city}${form.residential.province}${form.residential.zip}`;
-      const permanentStr = `${form.permanent.house}${form.permanent.street}${form.permanent.subdivision}${form.permanent.barangay}${form.permanent.city}${form.permanent.province}${form.permanent.zip}`;
-      sameAsResidential.value = residentialStr === permanentStr && residentialStr !== '';
-
-      if (data.personal_declarations && data.personal_declarations.length > 0) {
-        const dec = data.personal_declarations[0];
-        formData.relationThirdDegree = dec.question_34a || 'No';
-        formData.relationFourthDegree = dec.question_34b || 'No';
-        formData.relationDetails = dec.response_34 || '';
-        formData.administrativeOffense = dec.question_35a || 'No';
-        formData.administrativeOffenseDetails = dec.response_35a || '';
-        formData.criminallyCharged = dec.question_35b || 'No';
-        formData.criminalCaseDateFiled = dec.response_35b_date || '';
-        formData.criminalCaseStatus = dec.response_35b_status || '';
-        formData.convicted = dec.question_36 || 'No';
-        formData.convictedDetails = dec.response_36 || '';
-        formData.separatedFromService = dec.question_37 || 'No';
-        formData.separatedFromServiceDetails = dec.response_37 || '';
-        formData.electionCandidate = dec.question_38a || 'No';
-        formData.electionCandidateDetails = dec.response_38a || '';
-        formData.resignedForCampaign = dec.question_38b || 'No';
-        formData.resignedForCampaignDetails = dec.response_38b || '';
-        formData.immigrant = dec.question_39 || 'No';
-        formData.immigrantDetails = dec.response_39 || '';
-        formData.indigenous = dec.question_40a || 'No';
-        formData.indigenousDetails = dec.response_40a || '';
-        formData.pwd = dec.question_40b || 'No';
-
-        const pwdTypes = [];
-        if (dec.chronic === '1') pwdTypes.push('Disability caused by chronic illness');
-        if (dec.Psychosocial === '1') pwdTypes.push('Psychosocial Disability');
-        if (dec.Orthopedic === '1') pwdTypes.push('Orthopedic Disability');
-        if (dec.Communication === '1') pwdTypes.push('Communication Disability');
-        if (dec.Learning === '1') pwdTypes.push('Learning Disability');
-        if (dec.Mental === '1') pwdTypes.push('Mental Disability');
-        if (dec.Visual === '1') pwdTypes.push('Visual Disability');
-        formData.pwdTypes = pwdTypes;
-
-        formData.soloParent = dec.question_40c || 'No';
-        formData.soloParentDetails = dec.response_40c || '';
-      }
-    } catch (error) {
-      console.error('Error populating form with data:', error);
+    } else if (train.existingAttachment && !train.replaceFile) {
+      pendingFileConversions.push({
+        key: `training[${index}][attachment_path]`,
+        url: buildCorsProxyUrl(train.existingAttachmentUrl || train.existingAttachment),
+        filename: getFileNameFromPath(train.existingAttachment),
+      });
     }
-  }
-
-  // ── Build Payload ──────────────────────────────────────────────────
-  function buildPayload() {
-    const payload = {
-      email_checker: form.personal.email_address,
-      job_batches_rsp_id: localStorage.getItem('selectedJobId') || '',
-      lastname: form.personal.lastname,
-      firstname: form.personal.firstname,
-      middlename: form.personal.middlename || '',
-      name_extension: form.personal.name_extension || '',
-      date_of_birth: form.personal.date_of_birth,
-      sex: form.personal.sex,
-      place_of_birth: form.personal.place_of_birth,
-      weight: form.personal.weight,
-      height: form.personal.height,
-      blood_type: form.personal.blood_type || '',
-      gsis_no: form.personal.gsis_no || '',
-      pagibig_no: form.personal.pagibig_no || '',
-      philhealth_no: form.personal.philhealth_no || '',
-      sss_no: form.personal.sss_no || '',
-      tin_no: form.personal.tin_no || '',
-      civil_status: form.personal.civil_status,
-      citizenship: form.personal.citizenship || 'Filipino',
-      citizenship_status: '',
-      residential_house: form.residential.house || '',
-      residential_street: form.residential.street || '',
-      residential_subdivision: form.residential.subdivision || '',
-      residential_barangay: form.residential.barangay || '',
-      residential_city: form.residential.city || '',
-      residential_province: form.residential.province || '',
-      residential_zip: form.residential.zip || '',
-      permanent_house: form.permanent.house || '',
-      permanent_street: form.permanent.street || '',
-      permanent_subdivision: form.permanent.subdivision || '',
-      permanent_barangay: form.permanent.barangay || '',
-      permanent_city: form.permanent.city || '',
-      permanent_province: form.permanent.province || '',
-      permanent_zip: form.permanent.zip || '',
-      telephone_number: form.personal.telephone_number || '',
-      cellphone_number: form.personal.cellphone_number || '',
-      email_address: form.personal.email_address,
-      agency_employee_no: form.personal.agency_employee_no || '',
-      umId: '',
-      philSys: '',
-      pwd: formData.pwd === 'Yes' ? 'Yes' : 'No',
-      gender_prefer: form.personal.gender_reference || '',
-      other_specify: form.personal.gender_other || '',
-      Ppurok: form.permanent.street || '',
-      Rpurok: form.residential.street || '',
-      ethnic_group: form.personal.ethnic_group || '',
-      ethnic_specify: form.personal.ethnic_other || '',
-      spouse_name: form.family.spouse_name || '',
-      spouse_firstname: form.family.spouse_firstname || '',
-      spouse_middlename: form.family.spouse_middlename || '',
-      spouse_extension: '',
-      spouse_occupation: form.family.spouse_occupation || '',
-      spouse_employer: form.family.spouse_employer || '',
-      spouse_employer_address: form.family.spouse_employer_address || '',
-      spouse_employer_telephone: form.family.spouse_employer_telephone || '',
-      father_lastname: form.family.father_lastname || '',
-      father_firstname: form.family.father_firstname || '',
-      father_middlename: form.family.father_middlename || '',
-      father_extension: '',
-      mother_lastname: form.family.mother_lastname || '',
-      mother_firstname: form.family.mother_firstname || '',
-      mother_middlename: form.family.mother_middlename || '',
-      mother_maidenname: '',
-    };
-
-    // ── Children ──────────────────────────────────────────────
-    form.children.forEach((child, index) => {
-      payload[`children[${index}][child_name]`] = child.child_name || '';
-      payload[`children[${index}][birth_date]`] = child.birth_date || '';
-    });
-
-    // ── Education (School) ────────────────────────────────────
-    form.education.forEach((edu, index) => {
-      payload[`school[${index}][degree]`] = edu.degree || '';
-      payload[`school[${index}][attendance_from]`] = edu.attendance_from || '';
-      payload[`school[${index}][attendance_to]`] = edu.attendance_to || '';
-      payload[`school[${index}][highest_units]`] = edu.highest_units || '';
-      payload[`school[${index}][year_graduated]`] = edu.year_graduated || '';
-      payload[`school[${index}][scholarship]`] = edu.scholarship || '';
-      payload[`school[${index}][level]`] = edu.level || '';
-      payload[`school[${index}][school_name]`] = edu.school_name || '';
-
-      if (edu.file && edu.file.length > 0) {
-        const file = edu.file[0] || edu.file;
-        if (file instanceof File) {
-          payload[`school[${index}][attachment_path]`] = file;
-        }
-      } else if (edu.existingAttachment && !edu.replaceFile) {
-        // Unchanged — resend the existing (relative) attachment path as-is.
-        payload[`school[${index}][attachment_path]`] = edu.existingAttachment;
-      }
-    });
-
-    // ── Training ──────────────────────────────────────────────
-    form.training.forEach((train, index) => {
-      payload[`training[${index}][training_title]`] = train.training_title || '';
-      payload[`training[${index}][inclusive_date_from]`] = train.inclusive_date_from || '';
-      payload[`training[${index}][inclusive_date_to]`] = train.inclusive_date_to || '';
-      payload[`training[${index}][number_of_hours]`] = train.number_of_hours || '';
-      payload[`training[${index}][type]`] = train.type || '';
-      payload[`training[${index}][conducted_by]`] = train.conducted_by || '';
-
-      if (train.file && train.file.length > 0) {
-        const file = train.file[0] || train.file;
-        if (file instanceof File) {
-          payload[`training[${index}][attachment_path]`] = file;
-        }
-      } else if (train.existingAttachment && !train.replaceFile) {
-        payload[`training[${index}][attachment_path]`] = train.existingAttachment;
-      }
-    });
+  });
 
     // ── Work Experience ────────────────────────────────────────
     form.workExperience.forEach((work, index) => {
@@ -4351,18 +4392,21 @@
           payload[`experience[${index}][attachment_path]`] = file;
         }
       } else if (work.existingAttachment && !work.replaceFile) {
-        payload[`experience[${index}][attachment_path]`] = work.existingAttachment;
+      pendingFileConversions.push({
+    key: `experience[${index}][attachment_path]`,
+    url: buildCorsProxyUrl(work.existingAttachmentUrl || work.existingAttachment),
+    filename: getFileNameFromPath(work.existingAttachment),
+  });
       }
     });
-
-    // ── Voluntary Work ────────────────────────────────────────
-    form.voluntaryWork.forEach((vol, index) => {
-      payload[`voluntary[${index}][organization_name]`] = vol.organization_name || '';
-      payload[`voluntary[${index}][inclusive_date_from]`] = vol.inclusive_date_from || '';
-      payload[`voluntary[${index}][inclusive_date_to]`] = vol.inclusive_date_to || '';
-      payload[`voluntary[${index}][number_of_hours]`] = vol.number_of_hours || '';
-      payload[`voluntary[${index}][position]`] = vol.position || '';
-    });
+      // ── Voluntary Work ────────────────────────────────────────
+      form.voluntaryWork.forEach((vol, index) => {
+        payload[`voluntary[${index}][organization_name]`] = vol.organization_name || '';
+        payload[`voluntary[${index}][inclusive_date_from]`] = vol.inclusive_date_from || '';
+        payload[`voluntary[${index}][inclusive_date_to]`] = vol.inclusive_date_to || '';
+        payload[`voluntary[${index}][number_of_hours]`] = vol.number_of_hours || '';
+        payload[`voluntary[${index}][position]`] = vol.position || '';
+      });
 
     // ── Eligibility ────────────────────────────────────────────
     form.eligibility.forEach((elig, index) => {
@@ -4379,112 +4423,125 @@
           payload[`eligibility[${index}][attachment_path]`] = file;
         }
       } else if (elig.existingAttachment && !elig.replaceFile) {
-        payload[`eligibility[${index}][attachment_path]`] = elig.existingAttachment;
+    pendingFileConversions.push({
+    key: `eligibility[${index}][attachment_path]`,
+    url: buildCorsProxyUrl(elig.existingAttachmentUrl || elig.existingAttachment),
+    filename: getFileNameFromPath(elig.existingAttachment),
+  });
       }
     });
+      // ── Skills, Distinctions, Memberships ────────────────────
+      form.skills.forEach((skill, index) => {
+        payload[`skill[${index}][skill]`] = skill.skill || '';
+      });
 
-    // ── Skills, Distinctions, Memberships ────────────────────
-    form.skills.forEach((skill, index) => {
-      payload[`skill[${index}][skill]`] = skill.skill || '';
-    });
+      form.distinctions.forEach((dist, index) => {
+        payload[`skill[${index}][non_academic]`] = dist.non_academic || '';
+      });
 
-    form.distinctions.forEach((dist, index) => {
-      payload[`skill[${index}][non_academic]`] = dist.non_academic || '';
-    });
+      form.memberships.forEach((mem, index) => {
+        payload[`skill[${index}][organization]`] = mem.organization || '';
+      });
 
-    form.memberships.forEach((mem, index) => {
-      payload[`skill[${index}][organization]`] = mem.organization || '';
-    });
+      // ── References ─────────────────────────────────────────────
+      form.references.forEach((ref, index) => {
+        payload[`reference[${index}][full_name]`] = ref.full_name || '';
+        payload[`reference[${index}][address]`] = ref.address || '';
+        payload[`reference[${index}][contact_number]`] = ref.contact_number || '';
+      });
 
-    // ── References ─────────────────────────────────────────────
-    form.references.forEach((ref, index) => {
-      payload[`reference[${index}][full_name]`] = ref.full_name || '';
-      payload[`reference[${index}][address]`] = ref.address || '';
-      payload[`reference[${index}][contact_number]`] = ref.contact_number || '';
-    });
+      // ── Personal Declarations ──────────────────────────────────
+      payload[`personal_declaration[0][question_34a]`] = formData.relationThirdDegree;
+      payload[`personal_declaration[0][question_34b]`] = formData.relationFourthDegree;
+      payload[`personal_declaration[0][response_34]`] = formData.relationDetails || '';
+      payload[`personal_declaration[0][question_35a]`] = formData.administrativeOffense;
+      payload[`personal_declaration[0][response_35a]`] = formData.administrativeOffenseDetails || '';
+      payload[`personal_declaration[0][question_35b]`] = formData.criminallyCharged;
+      payload[`personal_declaration[0][response_35b_date]`] = formData.criminalCaseDateFiled || '';
+      payload[`personal_declaration[0][response_35b_status]`] = formData.criminalCaseStatus || '';
+      payload[`personal_declaration[0][question_36]`] = formData.convicted;
+      payload[`personal_declaration[0][response_36]`] = formData.convictedDetails || '';
+      payload[`personal_declaration[0][question_37]`] = formData.separatedFromService;
+      payload[`personal_declaration[0][response_37]`] = formData.separatedFromServiceDetails || '';
+      payload[`personal_declaration[0][question_38a]`] = formData.electionCandidate;
+      payload[`personal_declaration[0][response_38a]`] = formData.electionCandidateDetails || '';
+      payload[`personal_declaration[0][question_38b]`] = formData.resignedForCampaign;
+      payload[`personal_declaration[0][response_38b]`] = formData.resignedForCampaignDetails || '';
+      payload[`personal_declaration[0][question_39]`] = formData.immigrant;
+      payload[`personal_declaration[0][response_39]`] = formData.immigrantDetails || '';
+      payload[`personal_declaration[0][question_40a]`] = formData.indigenous;
+      payload[`personal_declaration[0][response_40a]`] = formData.indigenousDetails || '';
+      payload[`personal_declaration[0][question_40b]`] = formData.pwd;
+      payload[`personal_declaration[0][response_40b]`] =
+        formData.pwdTypes.length > 0 ? formData.pwdTypes.join(', ') : '';
+      payload[`personal_declaration[0][question_40c]`] = formData.soloParent;
+      payload[`personal_declaration[0][response_40c]`] = formData.soloParentDetails || '';
 
-    // ── Personal Declarations ──────────────────────────────────
-    payload[`personal_declaration[0][question_34a]`] = formData.relationThirdDegree;
-    payload[`personal_declaration[0][question_34b]`] = formData.relationFourthDegree;
-    payload[`personal_declaration[0][response_34]`] = formData.relationDetails || '';
-    payload[`personal_declaration[0][question_35a]`] = formData.administrativeOffense;
-    payload[`personal_declaration[0][response_35a]`] = formData.administrativeOffenseDetails || '';
-    payload[`personal_declaration[0][question_35b]`] = formData.criminallyCharged;
-    payload[`personal_declaration[0][response_35b_date]`] = formData.criminalCaseDateFiled || '';
-    payload[`personal_declaration[0][response_35b_status]`] = formData.criminalCaseStatus || '';
-    payload[`personal_declaration[0][question_36]`] = formData.convicted;
-    payload[`personal_declaration[0][response_36]`] = formData.convictedDetails || '';
-    payload[`personal_declaration[0][question_37]`] = formData.separatedFromService;
-    payload[`personal_declaration[0][response_37]`] = formData.separatedFromServiceDetails || '';
-    payload[`personal_declaration[0][question_38a]`] = formData.electionCandidate;
-    payload[`personal_declaration[0][response_38a]`] = formData.electionCandidateDetails || '';
-    payload[`personal_declaration[0][question_38b]`] = formData.resignedForCampaign;
-    payload[`personal_declaration[0][response_38b]`] = formData.resignedForCampaignDetails || '';
-    payload[`personal_declaration[0][question_39]`] = formData.immigrant;
-    payload[`personal_declaration[0][response_39]`] = formData.immigrantDetails || '';
-    payload[`personal_declaration[0][question_40a]`] = formData.indigenous;
-    payload[`personal_declaration[0][response_40a]`] = formData.indigenousDetails || '';
-    payload[`personal_declaration[0][question_40b]`] = formData.pwd;
-    payload[`personal_declaration[0][response_40b]`] =
-      formData.pwdTypes.length > 0 ? formData.pwdTypes.join(', ') : '';
-    payload[`personal_declaration[0][question_40c]`] = formData.soloParent;
-    payload[`personal_declaration[0][response_40c]`] = formData.soloParentDetails || '';
-
-    // PWD flags
-    payload[`personal_declaration[0][chronic]`] = formData.pwdTypes.includes(
-      'Disability caused by chronic illness',
-    )
-      ? '1'
-      : '0';
-    payload[`personal_declaration[0][Psychosocial]`] = formData.pwdTypes.includes(
-      'Psychosocial Disability',
-    )
-      ? '1'
-      : '0';
-    payload[`personal_declaration[0][Orthopedic]`] = formData.pwdTypes.includes(
-      'Orthopedic Disability',
-    )
-      ? '1'
-      : '0';
-    payload[`personal_declaration[0][Communication]`] = formData.pwdTypes.includes(
-      'Communication Disability',
-    )
-      ? '1'
-      : '0';
-    payload[`personal_declaration[0][Learning]`] = formData.pwdTypes.includes('Learning Disability')
-      ? '1'
-      : '0';
-    payload[`personal_declaration[0][Mental]`] = formData.pwdTypes.includes('Mental Disability')
-      ? '1'
-      : '0';
-    payload[`personal_declaration[0][Visual]`] = formData.pwdTypes.includes('Visual Disability')
-      ? '1'
-      : '0';
-
+      // PWD flags
+      payload[`personal_declaration[0][chronic]`] = formData.pwdTypes.includes(
+        'Disability caused by chronic illness',
+      )
+        ? '1'
+        : '0';
+      payload[`personal_declaration[0][Psychosocial]`] = formData.pwdTypes.includes(
+        'Psychosocial Disability',
+      )
+        ? '1'
+        : '0';
+      payload[`personal_declaration[0][Orthopedic]`] = formData.pwdTypes.includes(
+        'Orthopedic Disability',
+      )
+        ? '1'
+        : '0';
+      payload[`personal_declaration[0][Communication]`] = formData.pwdTypes.includes(
+        'Communication Disability',
+      )
+        ? '1'
+        : '0';
+      payload[`personal_declaration[0][Learning]`] = formData.pwdTypes.includes('Learning Disability')
+        ? '1'
+        : '0';
+      payload[`personal_declaration[0][Mental]`] = formData.pwdTypes.includes('Mental Disability')
+        ? '1'
+        : '0';
+      payload[`personal_declaration[0][Visual]`] = formData.pwdTypes.includes('Visual Disability')
+        ? '1'
+        : '0';
+   // ── Photo ──────────────────────────────────────────────────
     if (photoFile.value && photoFile.value instanceof File) {
       payload['image_path'] = photoFile.value;
     } else if (photoPreview.value) {
-      // If it's a full URL, strip to relative path
-      payload['image_path'] = photoPreview.value;
+      if (photoPreview.value.startsWith('http')) {
+         pendingFileConversions.push({
+      key: 'image_path',
+      url: buildCorsProxyUrl(photoPreview.value),
+      filename: getFileNameFromPath(photoPreview.value) || 'photo.jpg',
+    });
+      } else {
+        payload['image_path'] = photoPreview.value;
+      }
     }
-
-    // ── PDS File(s) ──────────────────────────────────────────────
+      // ── PDS File(s) ──────────────────────────────────────────────
     if (form.pdsFile && form.pdsFile instanceof File) {
       payload['pds[0][pds_file]'] = form.pdsFile;
     } else if (existingPdsFiles.value.length > 0 && !replacePds.value) {
-      // Send the relative path (without storage URL)
-      existingPdsFiles.value.forEach((item, idx) => {
-        payload[`pds[${idx}][pds_file]`] = item.url;
-      });
-    }
-
-    // ── Other Documents ────────────────────────────────────────
-    // Previously uploaded documents that were not modified
-    existingOtherDocuments.value.forEach((item, idx) => {
-      payload[`other_document[${idx}][document]`] = item.url;
+     existingPdsFiles.value.forEach((item, idx) => {
+    pendingFileConversions.push({
+      key: `pds[${idx}][pds_file]`,
+      url: buildCorsProxyUrl(item.url),
+      filename: item.name,
     });
+  });
+    }
+    // ── Other Documents ────────────────────────────────────────
+  existingOtherDocuments.value.forEach((item, idx) => {
+    pendingFileConversions.push({
+      key: `other_document[${idx}][document]`,
+      url: buildCorsProxyUrl(item.url),
+      filename: item.name,
+    });
+  });
 
-    // Newly added documents by the user (multiple allowed, never disabled).
     const existingOtherDocsCount = existingOtherDocuments.value.length;
     form.otherDocuments.forEach((doc, index) => {
       if (doc.file && doc.file instanceof File) {
@@ -4492,158 +4549,179 @@
       }
     });
 
+    // ── Resolve lahat ng pending URL → File conversions nang sabay ──
+    const conversions = await Promise.all(
+      pendingFileConversions.map(async (item) => {
+        const file = await urlToFile(item.url, item.filename);
+        return { key: item.key, file, url: item.url };
+      }),
+    );
+
+    conversions.forEach(({ key, file, url }) => {
+      if (file) {
+        payload[key] = file;
+      } else {
+        // Fallback: hindi na-fetch (CORS / network) — ipasa na lang yung URL string
+        console.warn(`Fallback to URL string for ${key} (fetch failed):`, url);
+        payload[key] = url;
+      }
+    });
+
+    console.log('📦 Final payload before submission:', payload);
+
     return payload;
   }
 
-  // ── Form-wide validation before submit ─────────────────────────────
-  function validateFormBeforeSubmit() {
-    const errors = [];
+    // ── Form-wide validation before submit ─────────────────────────────
+    function validateFormBeforeSubmit() {
+      const errors = [];
 
-    if (!form.personal.firstname || !form.personal.firstname.trim()) {
-      errors.push('First Name is required.');
-    } else if (!onlyLettersAndSpaces(form.personal.firstname)) {
-      errors.push('First Name must contain letters only.');
-    }
-
-    if (!form.personal.lastname || !form.personal.lastname.trim()) {
-      errors.push('Last Name is required.');
-    } else if (!onlyLettersAndSpaces(form.personal.lastname)) {
-      errors.push('Last Name must contain letters only.');
-    }
-
-    if (!form.personal.date_of_birth) {
-      errors.push('Date of Birth is required.');
-    } else if (!isValidDate(form.personal.date_of_birth)) {
-      errors.push('Date of Birth is not a valid date (DD/MM/YYYY).');
-    } else if (!isNotFutureDate(form.personal.date_of_birth)) {
-      errors.push('Date of Birth cannot be in the future.');
-    }
-
-    if (!form.personal.cellphone_number) {
-      errors.push('Cellphone Number is required.');
-    }
-
-    if (!form.personal.email_address) {
-      errors.push('Email Address is required.');
-    }
-
-    // PDS File validation — required only if there's no existing PDS on record
-    // (or the user chose to replace it but hasn't picked a new file yet).
-    if (existingPdsFiles.value.length === 0 && !form.pdsFile) {
-      errors.push('PDS file is required. Please upload your Personal Data Sheet.');
-    } else if (replacePds.value && !form.pdsFile) {
-      errors.push('Please upload the replacement PDS file, or click "Cancel Replace".');
-    }
-
-    // Check if photo is present
-    if (!photoPreview.value) {
-      errors.push('2x2 ID picture is required. Please upload a photo.');
-    }
-
-    form.education.forEach((edu, idx) => {
-      if (edu.highest_units && !isFiniteNumber(edu.highest_units)) {
-        errors.push(`Education Row #${idx + 1}: Highest Units Earned must be a number.`);
+      if (!form.personal.firstname || !form.personal.firstname.trim()) {
+        errors.push('First Name is required.');
+      } else if (!onlyLettersAndSpaces(form.personal.firstname)) {
+        errors.push('First Name must contain letters only.');
       }
-      if (edu.replaceFile && !edu.file) {
-        errors.push(
-          `Education Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
-        );
-      }
-    });
 
-    form.eligibility.forEach((elig, idx) => {
-      if (elig.replaceFile && !elig.file) {
-        errors.push(
-          `Eligibility Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
-        );
+      if (!form.personal.lastname || !form.personal.lastname.trim()) {
+        errors.push('Last Name is required.');
+      } else if (!onlyLettersAndSpaces(form.personal.lastname)) {
+        errors.push('Last Name must contain letters only.');
       }
-    });
 
-    form.workExperience.forEach((work, idx) => {
-      if (work.work_date_from && !isValidDate(work.work_date_from)) {
-        errors.push(`Work Experience Row #${idx + 1}: "From" date is invalid.`);
+      if (!form.personal.date_of_birth) {
+        errors.push('Date of Birth is required.');
+      } else if (!isValidDate(form.personal.date_of_birth)) {
+        errors.push('Date of Birth is not a valid date (DD/MM/YYYY).');
+      } else if (!isNotFutureDate(form.personal.date_of_birth)) {
+        errors.push('Date of Birth cannot be in the future.');
       }
-      if (!work.currently_working && work.work_date_to && !isValidDate(work.work_date_to)) {
-        errors.push(`Work Experience Row #${idx + 1}: "To" date is invalid.`);
-      }
-      if (work.replaceFile && !work.file) {
-        errors.push(
-          `Work Experience Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
-        );
-      }
-    });
 
-    form.training.forEach((train, idx) => {
-      if (train.replaceFile && !train.file) {
-        errors.push(
-          `L&D Intervention Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
-        );
+      if (!form.personal.cellphone_number) {
+        errors.push('Cellphone Number is required.');
       }
-    });
 
-    return errors;
-  }
+      if (!form.personal.email_address) {
+        errors.push('Email Address is required.');
+      }
 
-  // ── Submit Form ──────────────────────────────────────────────────
-  async function submitForm() {
-    const errors = validateFormBeforeSubmit();
-    if (errors.length > 0) {
-      $q.notify({
-        type: 'negative',
-        message: errors[0],
-        caption: errors.length > 1 ? `+${errors.length - 1} more issue(s) to fix` : undefined,
-        position: 'top',
-        timeout: 4000,
+      // PDS File validation — required only if there's no existing PDS on record
+      // (or the user chose to replace it but hasn't picked a new file yet).
+      if (existingPdsFiles.value.length === 0 && !form.pdsFile) {
+        errors.push('PDS file is required. Please upload your Personal Data Sheet.');
+      } else if (replacePds.value && !form.pdsFile) {
+        errors.push('Please upload the replacement PDS file, or click "Cancel Replace".');
+      }
+
+      // Check if photo is present
+      if (!photoPreview.value) {
+        errors.push('2x2 ID picture is required. Please upload a photo.');
+      }
+
+      form.education.forEach((edu, idx) => {
+        if (edu.highest_units && !isFiniteNumber(edu.highest_units)) {
+          errors.push(`Education Row #${idx + 1}: Highest Units Earned must be a number.`);
+        }
+        if (edu.replaceFile && !edu.file) {
+          errors.push(
+            `Education Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+          );
+        }
       });
-      return;
+
+      form.eligibility.forEach((elig, idx) => {
+        if (elig.replaceFile && !elig.file) {
+          errors.push(
+            `Eligibility Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+          );
+        }
+      });
+
+      form.workExperience.forEach((work, idx) => {
+        if (work.work_date_from && !isValidDate(work.work_date_from)) {
+          errors.push(`Work Experience Row #${idx + 1}: "From" date is invalid.`);
+        }
+        if (!work.currently_working && work.work_date_to && !isValidDate(work.work_date_to)) {
+          errors.push(`Work Experience Row #${idx + 1}: "To" date is invalid.`);
+        }
+        if (work.replaceFile && !work.file) {
+          errors.push(
+            `Work Experience Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+          );
+        }
+      });
+
+      form.training.forEach((train, idx) => {
+        if (train.replaceFile && !train.file) {
+          errors.push(
+            `L&D Intervention Row #${idx + 1}: Please upload the replacement file, or cancel the replace action.`,
+          );
+        }
+      });
+
+      return errors;
     }
 
-    isSubmitting.value = true;
-
-    try {
-      // Build the payload (includes all files including photo)
-      const payload = buildPayload();
-
-      // Use the store's submitApplication method
-      // Pass null for photo since it's already in the payload
-      const result = await pdsStore.submitApplication(payload, null);
-
-      if (result.success) {
-        const successMessage = result.message || 'Application submitted successfully!';
-        $q.notify({
-          type: 'positive',
-          message: successMessage,
-          position: 'top',
-          timeout: 3000,
-        });
-
-        console.log('Response data:', result.data);
-        emit('submit', payload);
-
-        setTimeout(() => {
-          router.push('/page');
-        }, 1500);
-      } else {
-        const errorMessage = result.error || 'Failed to submit application. Please try again.';
+    // ── Submit Form ──────────────────────────────────────────────────
+    async function submitForm() {
+      const errors = validateFormBeforeSubmit();
+      if (errors.length > 0) {
         $q.notify({
           type: 'negative',
-          message: errorMessage,
+          message: errors[0],
+          caption: errors.length > 1 ? `+${errors.length - 1} more issue(s) to fix` : undefined,
           position: 'top',
           timeout: 4000,
         });
+        return;
       }
-    } catch (error) {
-      console.error('Submit error:', error);
-      $q.notify({
-        type: 'negative',
-        message: error.message || 'An unexpected error occurred. Please try again.',
-        position: 'top',
-        timeout: 4000,
-      });
-    } finally {
-      isSubmitting.value = false;
+
+      isSubmitting.value = true;
+
+      try {
+        // Build the payload (includes all files including photo)
+          const payload = await buildPayload();   // ✅ i-await
+
+
+        // Use the store's submitApplication method
+        // Pass null for photo since it's already in the payload
+        const result = await pdsStore.submitApplication(payload, null);
+
+        if (result.success) {
+          const successMessage = result.message || 'Application submitted successfully!';
+          $q.notify({
+            type: 'positive',
+            message: successMessage,
+            position: 'top',
+            timeout: 3000,
+          });
+
+          console.log('Response data:', result.data);
+          emit('submit', payload);
+
+          setTimeout(() => {
+            router.push('/page');
+          }, 1500);
+        } else {
+          const errorMessage = result.error || 'Failed to submit application. Please try again.';
+          $q.notify({
+            type: 'negative',
+            message: errorMessage,
+            position: 'top',
+            timeout: 4000,
+          });
+        }
+      } catch (error) {
+        console.error('Submit error:', error);
+        $q.notify({
+          type: 'negative',
+          message: error.message || 'An unexpected error occurred. Please try again.',
+          position: 'top',
+          timeout: 4000,
+        });
+      } finally {
+        isSubmitting.value = false;
+      }
     }
-  }
 </script>
 
 <style scoped>
